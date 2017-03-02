@@ -34,6 +34,11 @@ enum class ControlMode
   disabled = 0, manual, autopilot
 };
 
+// This may be used to organize more mutexs (in the future)
+enum class CriticalRegion
+{
+};
+
 Euler quaternionToEuler(geometry_msgs::Quaternion q);
 void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg, const int uavID);
 void uavCommander(ros::Rate rate);
@@ -199,7 +204,7 @@ int main(int argc, char **argv)
         if (!tokens[0].compare("disable"))
         {
           int uavID = std::stoi(tokens[1]);
-          if (uavID >= 0 && uavID <= nUAV)
+          if (uavID >= 0 && uavID < nUAV)
           {
             mut[uavID].lock();
             controlMode[uavID] = ControlMode::disabled;
@@ -210,7 +215,7 @@ int main(int argc, char **argv)
         else if (!tokens[0].compare("manual"))
         {
           int uavID = std::stoi(tokens[1]);
-          if (uavID >= 0 && uavID <= nUAV)
+          if (uavID >= 0 && uavID < nUAV)
           {
             mut[uavID].lock();
             destReached[uavID] = false;
@@ -222,7 +227,7 @@ int main(int argc, char **argv)
         else if (!tokens[0].compare("auto"))
         {
           int uavID = std::stoi(tokens[1]);
-          if (uavID >= 0 && uavID <= nUAV)
+          if (uavID >= 0 && uavID < nUAV)
           {
             mut[uavID].lock();
             destReached[uavID] = false;
@@ -235,7 +240,7 @@ int main(int argc, char **argv)
         else if (!tokens[0].compare("land"))
         {
           int uavID = std::stoi(tokens[1]);
-          if (uavID >= 0 && uavID <= nUAV)
+          if (uavID >= 0 && uavID < nUAV)
           {
             mut[uavID].lock();
             controlMode[uavID] = ControlMode::manual;
