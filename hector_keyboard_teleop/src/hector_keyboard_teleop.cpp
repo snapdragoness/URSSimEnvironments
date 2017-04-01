@@ -39,7 +39,7 @@ enum class CriticalRegion
 {
 };
 
-Euler quaternionToEuler(geometry_msgs::Quaternion q);
+Euler quaternionToEuler(const geometry_msgs::Quaternion::ConstPtr& q);
 void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg, const int uavID);
 void uavCommander(ros::Rate rate);
 void printControlStatus();
@@ -296,26 +296,26 @@ int main(int argc, char **argv)
   }
 }
 
-Euler quaternionToEuler(geometry_msgs::Quaternion q)
+Euler quaternionToEuler(const geometry_msgs::Quaternion::ConstPtr& q)
 {
   Euler euler;
 
-  double ysqr = q.y * q.y;
+  double ysqr = q->y * q->y;
 
   // roll (x-axis rotation)
-  double t0 = +2.0 * (q.w * q.x + q.y * q.z);
-  double t1 = +1.0 - 2.0 * (q.x * q.x + ysqr);
+  double t0 = +2.0 * (q->w * q->x + q->y * q->z);
+  double t1 = +1.0 - 2.0 * (q->x * q->x + ysqr);
   euler.roll = std::atan2(t0, t1);
 
   // pitch (y-axis rotation)
-  double t2 = +2.0 * (q.w * q.y - q.z * q.x);
+  double t2 = +2.0 * (q->w * q->y - q->z * q->x);
   t2 = t2 > 1.0 ? 1.0 : t2;
   t2 = t2 < -1.0 ? -1.0 : t2;
   euler.pitch = std::asin(t2);
 
   // yaw (z-axis rotation)
-  double t3 = +2.0 * (q.w * q.z + q.x * q.y);
-  double t4 = +1.0 - 2.0 * (ysqr + q.z * q.z);
+  double t3 = +2.0 * (q->w * q->z + q->x * q->y);
+  double t4 = +1.0 - 2.0 * (ysqr + q->z * q->z);
   euler.yaw = std::atan2(t3, t4);
 
   return euler;
@@ -324,7 +324,7 @@ Euler quaternionToEuler(geometry_msgs::Quaternion q)
 // PID Control
 void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg, int uavID)
 {
-  Euler euler = quaternionToEuler(msg->pose.orientation);
+  Euler euler = quaternionToEuler(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
 
   uavPose[uavID].position.x = msg->pose.position.x;
   uavPose[uavID].position.y = msg->pose.position.y;

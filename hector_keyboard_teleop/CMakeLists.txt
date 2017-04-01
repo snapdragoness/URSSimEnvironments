@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(hector_keyboard_controller)
+project(hector_keyboard_teleop)
 
 ## Add support for C++11, supported in ROS Kinetic and newer
 add_definitions(-std=c++11)
@@ -122,7 +122,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/hector_keyboard_controller.cpp
+#   src/${PROJECT_NAME}/hector_keyboard_teleop.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -133,7 +133,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/hector_keyboard_controller_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/hector_keyboard_teleop_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -190,7 +190,7 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_hector_keyboard_controller.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_hector_keyboard_teleop.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
@@ -200,5 +200,5 @@ include_directories(
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_executable(hector_keyboard_controller src/hector_keyboard_controller.cpp)
-target_link_libraries(hector_keyboard_controller ${catkin_LIBRARIES})
+add_executable(hector_keyboard_teleop src/hector_keyboard_teleop.cpp)
+target_link_libraries(hector_keyboard_teleop ${catkin_LIBRARIES})
