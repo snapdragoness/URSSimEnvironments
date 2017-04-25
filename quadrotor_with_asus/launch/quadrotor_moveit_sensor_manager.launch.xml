@@ -1,0 +1,3 @@
+<launch>
+  <rosparam command="load" file="$(find quadrotor_with_asus)/config/sensors_asus.yaml" />
+</launch>
