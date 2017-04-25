@@ -3,7 +3,7 @@
 <launch>
   <include file="$(find hector_gazebo_worlds)/launch/sick_robot_day_2014.launch" />
 
-	<arg name="model" default="$(find hector_quadrotor_description)/urdf/quadrotor_with_kinect.gazebo.xacro" />
+  <arg name="model" default="$(find hector_quadrotor_description)/urdf/quadrotor_with_kinect.gazebo.xacro" />
    
   <group ns="uav0">
     <include file="$(find hector_quadrotor_gazebo)/launch/spawn_quadrotor.launch">
