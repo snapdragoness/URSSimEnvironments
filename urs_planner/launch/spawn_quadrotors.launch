@@ -3,7 +3,7 @@
 <launch>
   <include file="$(find hector_gazebo_worlds)/launch/willow_garage.launch" />
 
-	<arg name="model" default="$(find hector_quadrotor_description)/urdf/quadrotor_with_asus.gazebo.xacro" />
+	<arg name="model" default="$(find hector_quadrotor_description)/urdf/quadrotor_with_kinect.gazebo.xacro" />
 	
 	<include file="$(find hector_quadrotor_gazebo)/launch/spawn_quadrotor.launch">
 		<arg name="model" value="$(arg model)" />
