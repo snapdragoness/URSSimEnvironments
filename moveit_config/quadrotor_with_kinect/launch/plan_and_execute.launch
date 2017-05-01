@@ -1,7 +1,4 @@
 <launch>
-  <!-- rosrun action_controller action_controller -->
-  <!-- <node name="action_controller" pkg="action_controller" type="action_controller" /> -->
-
   <!-- Run the main MoveIt executable -->
   <include file="$(find quadrotor_with_kinect)/launch/move_group.launch">
     <arg name="allow_trajectory_execution" value="true"/>
