@@ -31,29 +31,22 @@ typedef struct Euler
   double yaw;
 } Euler;
 
-Euler quaternionToEuler(const geometry_msgs::Quaternion::ConstPtr& q)
+double quaternionToYaw(const geometry_msgs::Quaternion::ConstPtr& q)
 {
-  Euler euler;
-
   double ysqr = q->y * q->y;
 
-  // roll (x-axis rotation)
-  double t0 = +2.0 * (q->w * q->x + q->y * q->z);
-  double t1 = +1.0 - 2.0 * (q->x * q->x + ysqr);
-  euler.roll = std::atan2(t0, t1);
-
-  // pitch (y-axis rotation)
-  double t2 = +2.0 * (q->w * q->y - q->z * q->x);
-  t2 = t2 > 1.0 ? 1.0 : t2;
-  t2 = t2 < -1.0 ? -1.0 : t2;
-  euler.pitch = std::asin(t2);
-
-  // yaw (z-axis rotation)
   double t3 = +2.0 * (q->w * q->z + q->x * q->y);
   double t4 = +1.0 - 2.0 * (ysqr + q->z * q->z);
-  euler.yaw = std::atan2(t3, t4);
 
-  return euler;
+  // yaw (z-axis rotation)
+  //           PI/2
+  //             ^
+  //             |
+  //  PI, -PI <--+--> 0
+  //             |
+  //             v
+  //          -PI/2
+  return std::atan2(t3, t4);
 }
 
 class Controller
@@ -73,7 +66,6 @@ public:
     empty.angular.z = 0;
     empty.angular.y = 0;
     empty.angular.x = 0;
-    action_server_.start();
 
 ///////////////////////////////////////////////
     // create a service client
@@ -90,18 +82,21 @@ public:
     uavPose = msg->pose;
 
     dest = uavPose;
-    dest.position.z += 1;        // start at 1 meter above its starting point
+    dest.position.z += 1.0;     // start at 1 meter above its starting point
+    destReached = false;
 
     error.position.x = 0;
     error.position.y = 0;
     error.position.z = 0;
-    error.orientation.x = 0;
-    error.orientation.y = 0;
     error.orientation.z = 0;
 
-    pub_topic = node_.advertise<geometry_msgs::Twist>("/cmd_vel", 100);
+    pub_topic = node_.advertise<geometry_msgs::Twist>("/cmd_vel", 100, false);
     uavSub = node_.subscribe<geometry_msgs::PoseStamped>("/ground_truth_to_tf/pose", 100, &Controller::uavController, this);
 
+    cmd.angular.x = 0;
+    cmd.angular.y = 0;
+///////////////////////////////////////////////
+    action_server_.start();
     ROS_INFO_STREAM("Node ready!");
   }
 
@@ -121,7 +116,7 @@ private:
   trajectory_msgs::MultiDOFJointTrajectory_<std::allocator<void> > toExecute;
 
 ////////////////////////////////////////////
-  bool destReached = false;
+  bool destReached;
 
   PID pidConst = {0.5, 0.0002, 0.00005};
   const double tolerance = 0.5;
@@ -157,7 +152,7 @@ private:
         pthread_cancel(trajectoryExecutor);
         creato = 0;
       }
-      pub_topic.publish(empty);
+      //pub_topic.publish(empty);
 
       // Marks the current goal as canceled.
       active_goal_.setCanceled();
@@ -175,7 +170,7 @@ private:
         pthread_cancel(trajectoryExecutor);
         creato = 0;
       }
-      pub_topic.publish(empty);
+      //pub_topic.publish(empty);
 
       // Marks the current goal as canceled.
       active_goal_.setCanceled();
@@ -219,11 +214,43 @@ private:
         mut.lock();
         dest.position.x = punto.translation.x;
         dest.position.y = punto.translation.y;
-        dest.position.z = punto.translation.z;
-        dest.orientation.z = punto.rotation.z;
-        mut.unlock();
+        dest.position.z = punto.translation.z ;
+
+        if (k == toExecute.points.size() - 1) {
+          double yaw = quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(punto.rotation));
+          if (yaw < 0.0) {
+            yaw += M_PI + M_PI;
+          }
+          dest.orientation.z = yaw;
+        } else {
+          double yaw = std::atan2(dest.position.y - uavPose.position.y, dest.position.x - uavPose.position.x) - std::atan2(0, 1);
+          if (yaw < 0.0) {
+            yaw += M_PI + M_PI;
+          }
+          dest.orientation.z = yaw;
+          dest.position.z += 0.1;
+        }
 
         destReached = false;
+        mut.unlock();
+
+        std::cout << "Point #" << k << std::endl;
+        std::cout << "Pose x = " << uavPose.position.x
+            << ", y = " << uavPose.position.y
+            << ", z = " << uavPose.position.z
+            << ", ow = " << uavPose.orientation.w
+            << ", ox = " << uavPose.orientation.x
+            << ", oy = " << uavPose.orientation.y
+            << ", oz = " << uavPose.orientation.z
+            << std::endl;
+        std::cout << "Transform x = " << punto.translation.x
+            << ", y = " << punto.translation.y
+            << ", z = " << punto.translation.z
+            << ", ow = " << punto.rotation.w
+            << ", ox = " << punto.rotation.x
+            << ", oy = " << punto.rotation.y
+            << ", oz = " << punto.rotation.z
+            << std::endl;
 
         while (!destReached);
 
@@ -254,7 +281,6 @@ private:
     active_goal_.setSucceeded();
     has_active_goal_ = false;
     creato = 0;
-
   }
 
   bool publishTranslationComand(geometry_msgs::Transform_<std::allocator<void> > punto, bool anyway)
@@ -311,12 +337,17 @@ private:
   // PID Control
   void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg)
   {
-    Euler euler = quaternionToEuler(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
+    double yaw = quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
+    if (yaw < 0.0) {
+      yaw += M_PI + M_PI;
+    }
 
+    mut.lock();
     uavPose.position.x = msg->pose.position.x;
     uavPose.position.y = msg->pose.position.y;
     uavPose.position.z = msg->pose.position.z;
-    uavPose.orientation.z = msg->pose.orientation.z;
+    uavPose.orientation.z = yaw;  // this is NOT a z component of Quaternion coordinate
+    mut.unlock();
 
     prevError.position.x = error.position.x;
     prevError.position.y = error.position.y;
@@ -327,6 +358,11 @@ private:
     error.position.y = dest.position.y - uavPose.position.y;
     error.position.z = dest.position.z - uavPose.position.z;
     error.orientation.z = dest.orientation.z - uavPose.orientation.z;
+    if (error.orientation.z < -1.0 * M_PI) {
+      error.orientation.z += M_PI + M_PI;
+    } else if (error.orientation.z > M_PI) {
+      error.orientation.z -= M_PI + M_PI;
+    }
     mut.unlock();
 
     proportional.position.x = pidConst.p * error.position.x;
@@ -349,20 +385,22 @@ private:
     oz = proportional.orientation.z + integral.orientation.z + derivation.orientation.z;
 
     double rx, ry;
-    rx = x * cos(-1 * euler.yaw) - y * sin(-1 * euler.yaw);
-    ry = x * sin(-1 * euler.yaw) + y * cos(-1 * euler.yaw);
+    rx = x * std::cos(-1 * yaw) - y * std::sin(-1 * yaw);
+    ry = x * std::sin(-1 * yaw) + y * std::cos(-1 * yaw);
 
     cmd.linear.x = rx;
     cmd.linear.y = ry;
     cmd.linear.z = z;
-    cmd.angular.z = oz;
+    cmd.angular.z = oz * 4;
 
     pub_topic.publish(cmd);
 
     if ((std::fabs(error.position.x) < tolerance) && (std::fabs(error.position.y) < tolerance)
         && (std::fabs(error.position.z) < tolerance) && (std::fabs(error.orientation.z) < tolerance))
     {
+      mut.lock();
       destReached = true;
+      mut.unlock();
     }
   }
 };
