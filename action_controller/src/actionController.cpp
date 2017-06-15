@@ -143,14 +143,18 @@ private:
 
   void cancelCB(GoalHandle gh)
   {
+    std::cout << "-> cancelCB" << std::endl;
     if (active_goal_ == gh)
     {
       // Stops the controller.
       if (creato)
       {
-        ROS_INFO_STREAM("Stop thread");
-        pthread_cancel(trajectoryExecutor);
-        creato = 0;
+        if (pthread_cancel(trajectoryExecutor) == 0) {
+          ROS_INFO_STREAM("[OK] Thread for trajectory execution canceled");
+          creato = 0;
+        } else {
+          ROS_INFO_STREAM("[ERROR] Thread for trajectory execution not canceled");
+        }
       }
       //pub_topic.publish(empty);
 
@@ -162,13 +166,18 @@ private:
 
   void goalCB(GoalHandle gh)
   {
+    std::cout << "-> goalCB" << std::endl;
     if (has_active_goal_)
     {
       // Stops the controller.
       if (creato)
       {
-        pthread_cancel(trajectoryExecutor);
-        creato = 0;
+        if (pthread_cancel(trajectoryExecutor) == 0) {
+          ROS_INFO_STREAM("[OK] Thread for trajectory execution canceled");
+          creato = 0;
+        } else {
+          ROS_INFO_STREAM("[ERROR] Thread for trajectory execution not canceled");
+        }
       }
       //pub_topic.publish(empty);
 
