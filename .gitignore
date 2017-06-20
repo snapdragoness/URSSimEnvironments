@@ -1,3 +1,5 @@
 /CMakeLists.txt
 beginner_tutorials/
 multimaster_fkie/
+mastering_ros/
+quadrotor_moveit_nav/

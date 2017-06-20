@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>urs_planner</name>
+  <name>urs_wearable</name>
   <version>0.0.0</version>
-  <description>The urs_planner package</description>
+  <description>The urs_wearable package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->

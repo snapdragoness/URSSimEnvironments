@@ -80,7 +80,7 @@ boost::mutex mut[nUAV];
 int main(int argc, char **argv)
 {
   // initializes ROS, and sets up a node
-  ros::init(argc, argv, "hector_keyboard_controller");
+  ros::init(argc, argv, "keyboard_teleop");
 
   ros::NodeHandlePtr nh = boost::make_shared<ros::NodeHandle>();
 

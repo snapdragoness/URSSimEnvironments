@@ -3,7 +3,7 @@
 <launch>
   <include file="$(find hector_gazebo_worlds)/launch/sick_robot_day_2014.launch" />
 
-  <arg name="model" default="$(find hector_quadrotor_description)/urdf/quadrotor_with_kinect.gazebo.xacro" />
+  <arg name="model" default="$(find hector_quadrotor_description)/urdf/quadrotor_hokuyo_utm30lx.gazebo.xacro" />
    
   <group ns="uav0">
     <include file="$(find hector_quadrotor_gazebo)/launch/spawn_quadrotor.launch">
@@ -45,5 +45,5 @@
   </group>
 
   <!-- Start rviz visualization with preset config -->
-  <!--node pkg="rviz" type="rviz" name="rviz" args="-d $(find hector_quadrotor_demo)/rviz_cfg/urs_wearable.rviz" /-->
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find hector_keyboard_teleop)/rviz_cfg/hector_keyboard_teleop.rviz" />
 </launch>
