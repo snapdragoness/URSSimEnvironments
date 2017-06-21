@@ -13,6 +13,8 @@
 #include <boost/thread.hpp>
 #include <boost/tokenizer.hpp>
 
+#include <termios.h>
+
 #define ENABLE_MOTORS_SERVICE "/enable_motors"
 
 typedef struct PID
@@ -29,53 +31,45 @@ typedef struct Euler
   double yaw;
 } Euler;
 
-enum class ControlMode
-{
-  disabled = 0, manual, autopilot
-};
-
-// This may be used to organize more mutexs (in the future)
-enum class CriticalRegion
-{
-};
-
-Euler quaternionToEuler(const geometry_msgs::Quaternion::ConstPtr& q);
+double quaternionToYaw(const geometry_msgs::Quaternion::ConstPtr& q);
 void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg, const int uavID);
 void uavCommander(ros::Rate rate);
-void printControlStatus();
 
-const unsigned int nUAV = 1;
-const unsigned int nWaypoint = 4;
+void initTermios(int echo);
+void resetTermios(void);
+char getch_(int echo);
+char getch(void);
+char getche(void);
 
-std::string nsUAV[nUAV];
-ControlMode controlMode[nUAV] = {ControlMode::disabled};
+const unsigned int nUAV = 4;    // the total number of the UAVs
+std::string nsUAV[nUAV];        // namespaces of the UAVs
 
-// waypoints for 4 UAVs
-geometry_msgs::Pose waypoint[nUAV][nWaypoint];
+ros::Subscriber poseSub[nUAV];    // subscribers of each UAV's ground truth
+geometry_msgs::Twist cmd[nUAV];   // a twist message to be sent to /cmd_vel
 
-// manually-set destinations for nUAV
-geometry_msgs::Pose dest[nUAV];
+geometry_msgs::Pose pose[nUAV];   // UAV's position from ground truth
+geometry_msgs::Pose dest[nUAV];   // manually-set destinations of the UAVs
+bool destReached[nUAV] = {false}; // used in uavController to indicate that the UAV
+                                  // has reached the manually-set destination
 
-bool destReached[nUAV] = {false};
-
-PID pidConst = {0.5, 0.0002, 0.00005};
-const double tolerance = 0.5;
-
-int waypointNumber = 0;
-
-geometry_msgs::Pose uavPose[nUAV];     // real location of the UAVs
+// the maximum error allowed to be considered reaching the destination
+const double positionErrorTolerance = 0.5;
+const double orientationErrorTolerance = 0.5;
 
 /* for PID control */
+PID pidConst = {0.5, 0.0002, 0.00005};
 geometry_msgs::Pose error[nUAV];
 geometry_msgs::Pose prevError[nUAV];
 geometry_msgs::Pose proportional[nUAV];
 geometry_msgs::Pose integral[nUAV];
 geometry_msgs::Pose derivation[nUAV];
 
-// message to be send to drone
-geometry_msgs::Twist twist[nUAV];
+boost::mutex mut[nUAV];   // mutexs of each UAV
 
-boost::mutex mut[nUAV];
+unsigned int activeID = 0;  // the ID of the UAV that receive gamepad-like control from keyboard
+                            // possible values: 0 to nUAV-1
+double moveStep = 0.5;
+double rotateStep = 0.5;
 
 int main(int argc, char **argv)
 {
@@ -84,22 +78,22 @@ int main(int argc, char **argv)
 
   ros::NodeHandlePtr nh = boost::make_shared<ros::NodeHandle>();
 
-  // create subscribers
-  ros::Subscriber uavSub[nUAV];
-  ros::Subscriber keyboardInputSubscriber;// = np->subscribe<std_msgs::String>("keyboard_input", 10, updateSettings);
+  if (nUAV == 0) {
+    ROS_ERROR("No UAV to control");
+    exit(EXIT_FAILURE);
+  }
 
-  // create a service client
-  ros::ServiceClient client;
-  hector_uav_msgs::EnableMotors enable_motors_srv;
-
-  /* Initialize */
+  /* Initialization */
   for (int i = 0; i < nUAV; i++)
   {
+    // set a namespace for each uav
     nsUAV[i] = "/uav" + std::to_string(i);
 
-    client = nh->serviceClient<hector_uav_msgs::EnableMotors>(nsUAV[i] + ENABLE_MOTORS_SERVICE);
+    // create a service client
+    ros::ServiceClient serviceClient = nh->serviceClient<hector_uav_msgs::EnableMotors>(nsUAV[i] + ENABLE_MOTORS_SERVICE);
+    hector_uav_msgs::EnableMotors enable_motors_srv;
     enable_motors_srv.request.enable = true;
-    if (client.call(enable_motors_srv))
+    if (serviceClient.call(enable_motors_srv))
     {
       ROS_INFO("%s - %s\n", nh->resolveName(nsUAV[i] + ENABLE_MOTORS_SERVICE).c_str(),
                enable_motors_srv.response.success ? "successful" : "failed");
@@ -108,29 +102,21 @@ int main(int argc, char **argv)
       geometry_msgs::PoseStamped::ConstPtr msg = ros::topic::waitForMessage<geometry_msgs::PoseStamped>(
           nsUAV[i] + "/ground_truth_to_tf/pose");
 
-      uavPose[i] = msg->pose;
-      destReached[i] = false;
-      controlMode[i] = ControlMode::manual;     // should always start in manual mode
-
-      if (controlMode[i] == ControlMode::manual)
-      {
-        dest[i] = uavPose[i];
-        dest[i].position.z += 1;        // start at 1 meter above its starting point
-      }
-      else if (controlMode[i] == ControlMode::autopilot)
-      {
-        dest[i] = waypoint[i][waypointNumber];
-      }
+      // start at 1 meter above its starting point while preserve the orientation
+      dest[i].position.x = msg->pose.position.x;
+      dest[i].position.y = msg->pose.position.y;
+      dest[i].position.z = msg->pose.position.z + 1.0;
+      dest[i].orientation.z = quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
 
       error[i].position.x = 0;
       error[i].position.y = 0;
       error[i].position.z = 0;
-      error[i].orientation.x = 0;
-      error[i].orientation.y = 0;
       error[i].orientation.z = 0;
 
-      uavSub[i] = nh->subscribe<geometry_msgs::PoseStamped>(nsUAV[i] + "/ground_truth_to_tf/pose", 100,
-                                                                      boost::bind(uavController, _1, i));
+      destReached[i] = false;
+
+      poseSub[i] = nh->subscribe<geometry_msgs::PoseStamped>(nsUAV[i] + "/ground_truth_to_tf/pose", 10,
+                                                             boost::bind(uavController, _1, i));
     }
     else
     {
@@ -138,164 +124,181 @@ int main(int argc, char **argv)
     }
   }
 
-  if (nWaypoint > 0)
-  {
-    waypoint[0][0].position.x = 3; waypoint[0][0].position.y = -3; waypoint[0][0].position.z = 3;
-    waypoint[0][1].position.x = 3; waypoint[0][1].position.y = 3; waypoint[0][1].position.z = 4;
-    waypoint[0][2].position.x = -3; waypoint[0][2].position.y = 3; waypoint[0][2].position.z = 3;
-    waypoint[0][3].position.x = -3; waypoint[0][3].position.y = -3; waypoint[0][3].position.z = 2;
-  }
-  if (nWaypoint > 1)
-  {
-    waypoint[1][0].position.x = 3; waypoint[1][0].position.y = 3; waypoint[1][0].position.z = 4;
-    waypoint[1][1].position.x = -3; waypoint[1][1].position.y = 3; waypoint[1][1].position.z = 3;
-    waypoint[1][2].position.x = -3; waypoint[1][2].position.y = -3; waypoint[1][2].position.z = 2;
-    waypoint[1][3].position.x = 3; waypoint[1][3].position.y = -3; waypoint[1][3].position.z = 3;
-  }
-  if (nWaypoint > 2)
-  {
-    waypoint[2][0].position.x = -3; waypoint[2][0].position.y = 3; waypoint[2][0].position.z = 3;
-    waypoint[2][1].position.x = -3; waypoint[2][1].position.y = -3; waypoint[2][1].position.z = 2;
-    waypoint[2][2].position.x = 3; waypoint[2][2].position.y = -3; waypoint[2][2].position.z = 3;
-    waypoint[2][3].position.x = 3; waypoint[2][3].position.y = 3; waypoint[2][3].position.z = 4;
-  }
-  if (nWaypoint > 3)
-  {
-    waypoint[3][0].position.x = -3; waypoint[3][0].position.y = -3; waypoint[3][0].position.z = 2;
-    waypoint[3][1].position.x = 3; waypoint[3][1].position.y = -3; waypoint[3][1].position.z = 3;
-    waypoint[3][2].position.x = 3; waypoint[3][2].position.y = 3; waypoint[3][2].position.z = 4;
-    waypoint[3][3].position.x = -3; waypoint[3][3].position.y = 3; waypoint[3][3].position.z = 3;
-  }
-
-  printControlStatus();
+  std::cout << "Total number of UAVs: " << nUAV
+            << " [ID: " << ((nUAV == 1)? "0": "0-" + std::to_string(nUAV - 1)) << "]" << std::endl;
+  std::cout << "Active: " << activeID << std::endl;
 
   /* spawn other threads (must be done after initialization) */
   boost::thread commanderThread(uavCommander, 10);
 
-  /* get and evaluate keyboard input */
+  /* read and evaluate keyboard input */
   ros::Rate rate(10);
   while (ros::ok())
   {
-    std::cout << ">> ";
-    std::string keyboardInput;
-    std::getline(std::cin, keyboardInput);
-
-    // remove trailing end-line characters
-    while (keyboardInput.size()
-        && (keyboardInput[keyboardInput.size() - 1] == '\n' || keyboardInput[keyboardInput.size() - 1] == '\r'))
+    char key = getch();
+    switch (key)
     {
-      keyboardInput = keyboardInput.substr(0, keyboardInput.size() - 1);
-    }
+      case 'w':
+      case 'W':
+        mut[activeID].lock();
+        dest[activeID].position.x = pose[activeID].position.x + moveStep;
+        destReached[activeID] = false;
+        mut[activeID].unlock();
+        break;
+      case 's':
+      case 'S':
+        mut[activeID].lock();
+        dest[activeID].position.x = pose[activeID].position.x - moveStep;
+        destReached[activeID] = false;
+        mut[activeID].unlock();
+        break;
+      case 'a':
+      case 'A':
+        mut[activeID].lock();
+        dest[activeID].position.y = pose[activeID].position.y + moveStep;
+        destReached[activeID] = false;
+        mut[activeID].unlock();
+        break;
+      case 'd':
+      case 'D':
+        mut[activeID].lock();
+        dest[activeID].position.y = pose[activeID].position.y - moveStep;
+        destReached[activeID] = false;
+        mut[activeID].unlock();
+        break;
+      case 'r':
+      case 'R':
+        mut[activeID].lock();
+        dest[activeID].position.z = pose[activeID].position.z + moveStep;
+        destReached[activeID] = false;
+        mut[activeID].unlock();
+        break;
+      case 'f':
+      case 'F':
+        mut[activeID].lock();
+        dest[activeID].position.z = pose[activeID].position.z - moveStep;
+        destReached[activeID] = false;
+        mut[activeID].unlock();
+        break;
+      case 'q':
+      case 'Q':
+        mut[activeID].lock();
+        dest[activeID].orientation.z = pose[activeID].orientation.z + rotateStep;
+        destReached[activeID] = false;
+        mut[activeID].unlock();
+        break;
+      case 'e':
+      case 'E':
+        mut[activeID].lock();
+        dest[activeID].orientation.z = pose[activeID].orientation.z - rotateStep;
+        destReached[activeID] = false;
+        mut[activeID].unlock();
+        break;
+      case 't':
+      case 'T':
+        moveStep += 0.1;
+        std::cout << "move step = " << std::setprecision(1) << std::fixed << moveStep << std::endl;
+        break;
+      case 'g':
+      case 'G':
+        moveStep -= 0.1;
+        std::cout << "move step = " << std::setprecision(1) << std::fixed << moveStep << std::endl;
+        break;
+      case 'y':
+      case 'Y':
+        rotateStep += 0.1;
+        std::cout << "rotate step = " << std::setprecision(1) << std::fixed << rotateStep << std::endl;
+        break;
+      case 'h':
+      case 'H':
+        rotateStep -= 0.1;
+        std::cout << "rotate step = " << std::setprecision(1) << std::fixed << rotateStep << std::endl;
+        break;
+      case ':':
+        std::cout << ": " << std::endl;
+        std::string keyboardInput;
+        std::getline(std::cin, keyboardInput);
 
-    if (keyboardInput.size())
-    {
-      // break the input into tokens
-      std::vector<std::string> tokens;
-      boost::char_separator<char> sep {" "};
-      boost::tokenizer<boost::char_separator<char>> tok {keyboardInput, sep};
-      for (const auto &token : tok)
-      {
-        tokens.push_back(token);
-      }
+        // remove trailing end-line characters
+        while (keyboardInput.size()
+            && (keyboardInput[keyboardInput.size() - 1] == '\n' || keyboardInput[keyboardInput.size() - 1] == '\r'))
+        {
+          keyboardInput = keyboardInput.substr(0, keyboardInput.size() - 1);
+        }
+        if (keyboardInput.size())
+        {
+          // break the input into tokens
+          std::vector<std::string> tokens;
+          boost::char_separator<char> sep {" "};
+          boost::tokenizer<boost::char_separator<char>> tok {keyboardInput, sep};
+          for (const auto &token : tok)
+          {
+            tokens.push_back(token);
+          }
 
-      // check the input
-      try
-      {
-        if (!tokens[0].compare("disable"))
-        {
-          int uavID = std::stoi(tokens[1]);
-          if (uavID >= 0 && uavID < nUAV)
+          // check the input
+          try
           {
-            mut[uavID].lock();
-            controlMode[uavID] = ControlMode::disabled;
-            mut[uavID].unlock();
-            printControlStatus();
-          }
-        }
-        else if (!tokens[0].compare("manual"))
-        {
-          int uavID = std::stoi(tokens[1]);
-          if (uavID >= 0 && uavID < nUAV)
-          {
-            mut[uavID].lock();
-            destReached[uavID] = false;
-            controlMode[uavID] = ControlMode::manual;
-            mut[uavID].unlock();
-            printControlStatus();
-          }
-        }
-        else if (!tokens[0].compare("auto"))
-        {
-          int uavID = std::stoi(tokens[1]);
-          if (uavID >= 0 && uavID < nUAV)
-          {
-            mut[uavID].lock();
-            destReached[uavID] = false;
-            controlMode[uavID] = ControlMode::autopilot;
-            dest[uavID] = waypoint[uavID][waypointNumber];
-            mut[uavID].unlock();
-            printControlStatus();
-          }
-        }
-        else if (!tokens[0].compare("land"))
-        {
-          int uavID = std::stoi(tokens[1]);
-          if (uavID >= 0 && uavID < nUAV)
-          {
-            mut[uavID].lock();
-            controlMode[uavID] = ControlMode::manual;
-            destReached[uavID] = false;
-            dest[uavID].position.z = 0.5;
-            mut[uavID].unlock();
-            printControlStatus();
-          }
-        }
-        else if (!tokens[0].compare("move"))
-        {
-          for (int i = 0; i < nUAV; i++)
-          {
-            mut[i].lock();
-            if (controlMode[i] == ControlMode::manual)
+            if (tokens.size() == 2 && !tokens[0].compare("land"))
             {
-              destReached[i] = false;
-              dest[i].position.x += std::stod(tokens[1]);
-              dest[i].position.y += std::stod(tokens[2]);
-              dest[i].position.z += std::stod(tokens[3]);
+              int uavID = std::stoi(tokens[1]);
+              if (uavID >= 0 && uavID < nUAV)
+              {
+                mut[uavID].lock();
+                dest[uavID].position.z = 0.5;
+                destReached[uavID] = false;
+                mut[uavID].unlock();
+              }
             }
-            mut[i].unlock();
-          }
-        }
-        else if (!tokens[0].compare("goto"))
-        {
-          for (int i = 0; i < nUAV; i++)
-          {
-            mut[i].lock();
-            if (controlMode[i] == ControlMode::manual)
+            else if (tokens.size() == 5 && !tokens[0].compare("move"))
             {
-              destReached[i] = false;
-              dest[i].position.x = std::stod(tokens[1]);
-              dest[i].position.y = std::stod(tokens[2]);
-              dest[i].position.z = std::stod(tokens[3]);
+              int uavID = std::stoi(tokens[1]);
+              if (uavID >= 0 && uavID < nUAV)
+              {
+                mut[uavID].lock();
+                dest[uavID].position.x += std::stod(tokens[2]);
+                dest[uavID].position.y += std::stod(tokens[3]);
+                dest[uavID].position.z += std::stod(tokens[4]);
+                destReached[uavID] = false;
+                mut[uavID].unlock();
+              }
             }
-            mut[i].unlock();
+            else if (tokens.size() == 5 && !tokens[0].compare("goto"))
+            {
+              int uavID = std::stoi(tokens[1]);
+              if (uavID >= 0 && uavID < nUAV)
+              {
+                mut[uavID].lock();
+                dest[uavID].position.x = std::stod(tokens[2]);
+                dest[uavID].position.y = std::stod(tokens[3]);
+                dest[uavID].position.z = std::stod(tokens[4]);
+                destReached[uavID] = false;
+                mut[uavID].unlock();
+              }
+            }
+            else if (tokens.size() == 1)
+            {
+              int uavID = std::stoi(tokens[0]);
+              if (uavID >= 0 && uavID < nUAV)
+              {
+                activeID = uavID;
+                std::cout << "Active: " << activeID << std::endl;
+              }
+            }
+          }
+          catch (...)
+          {
+            std::cout << "Error parsing some parameters" << std::endl;
           }
         }
-        else
-        {
-          std::cout << "Invalid command" << std::endl;
-        }
-      }
-      catch (...)
-      {
-        std::cout << "Error parsing some parameters" << std::endl;
-      }
+        break;
     }
-
     ros::spinOnce();
     rate.sleep();
   }
 }
 
+/*
 Euler quaternionToEuler(const geometry_msgs::Quaternion::ConstPtr& q)
 {
   Euler euler;
@@ -320,144 +323,157 @@ Euler quaternionToEuler(const geometry_msgs::Quaternion::ConstPtr& q)
 
   return euler;
 }
+*/
+
+double quaternionToYaw(const geometry_msgs::Quaternion::ConstPtr& q)
+{
+  double ysqr = q->y * q->y;
+
+  double t3 = +2.0 * (q->w * q->z + q->x * q->y);
+  double t4 = +1.0 - 2.0 * (ysqr + q->z * q->z);
+
+  // yaw (z-axis rotation)
+  //           PI/2
+  //             ^
+  //             |
+  //  PI, -PI <--+--> 0
+  //             |
+  //             v
+  //          -PI/2
+  double yaw = std::atan2(t3, t4);
+  return (yaw < 0.0)? yaw + 2 * M_PI: yaw;
+}
 
 // PID Control
 void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg, int uavID)
 {
-  Euler euler = quaternionToEuler(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
+  double yaw = quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
 
-  uavPose[uavID].position.x = msg->pose.position.x;
-  uavPose[uavID].position.y = msg->pose.position.y;
-  uavPose[uavID].position.z = msg->pose.position.z;
-//  uavPose[uavID].orientation.z = msg->pose.orientation.z;
+  mut[uavID].lock();    // lock pose
+  pose[uavID].position.x = msg->pose.position.x;
+  pose[uavID].position.y = msg->pose.position.y;
+  pose[uavID].position.z = msg->pose.position.z;
+  pose[uavID].orientation.z = yaw;  // this is NOT the z component of a quaternion
+  mut[uavID].unlock();  // unlock pose
 
   prevError[uavID].position.x = error[uavID].position.x;
   prevError[uavID].position.y = error[uavID].position.y;
   prevError[uavID].position.z = error[uavID].position.z;
-//  prevError[uavID].orientation.z = error[uavID].orientation.z;
-  mut[uavID].lock();
-  error[uavID].position.x = dest[uavID].position.x - uavPose[uavID].position.x;
-  error[uavID].position.y = dest[uavID].position.y - uavPose[uavID].position.y;
-  error[uavID].position.z = dest[uavID].position.z - uavPose[uavID].position.z;
-//  error[uavID].orientation.z = 0 - uavPose[uavID].orientation.z;
-  mut[uavID].unlock();
+  prevError[uavID].orientation.z = error[uavID].orientation.z;
+
+  mut[uavID].lock();    // lock dest
+  error[uavID].position.x = dest[uavID].position.x - pose[uavID].position.x;
+  error[uavID].position.y = dest[uavID].position.y - pose[uavID].position.y;
+  error[uavID].position.z = dest[uavID].position.z - pose[uavID].position.z;
+  error[uavID].orientation.z = dest[uavID].orientation.z - pose[uavID].orientation.z;
+  mut[uavID].unlock();  // unlock dest
+
+  if (error[uavID].orientation.z < -1.0 * M_PI) {
+    error[uavID].orientation.z += M_PI + M_PI;
+  } else if (error[uavID].orientation.z > M_PI) {
+    error[uavID].orientation.z -= M_PI + M_PI;
+  }
 
   proportional[uavID].position.x = pidConst.p * error[uavID].position.x;
   proportional[uavID].position.y = pidConst.p * error[uavID].position.y;
   proportional[uavID].position.z = pidConst.p * error[uavID].position.z;
-//  proportional[uavID].orientation.z = pidConst.p * error[uavID].orientation.z;
+  proportional[uavID].orientation.z = pidConst.p * error[uavID].orientation.z;
   integral[uavID].position.x += pidConst.i * error[uavID].position.x;
   integral[uavID].position.y += pidConst.i * error[uavID].position.y;
   integral[uavID].position.z += pidConst.i * error[uavID].position.z;
-//  integral[uavID].orientation.z += pidConst.i * error[uavID].orientation.z;
+  integral[uavID].orientation.z += pidConst.i * error[uavID].orientation.z;
   derivation[uavID].position.x = pidConst.d * (error[uavID].position.x - prevError[uavID].position.x);
   derivation[uavID].position.y = pidConst.d * (error[uavID].position.y - prevError[uavID].position.y);
   derivation[uavID].position.z = pidConst.d * (error[uavID].position.z - prevError[uavID].position.z);
-//  derivation[uavID].orientation.z = pidConst.d * (error[uavID].orientation.z - prevError[uavID].orientation.z);
+  derivation[uavID].orientation.z = pidConst.d * (error[uavID].orientation.z - prevError[uavID].orientation.z);
 
-  double x, y, z;
+  double x, y, z, oz;
   x = proportional[uavID].position.x + integral[uavID].position.x + derivation[uavID].position.x;
   y = proportional[uavID].position.y + integral[uavID].position.y + derivation[uavID].position.y;
   z = proportional[uavID].position.z + integral[uavID].position.z + derivation[uavID].position.z;
-//  action.orientation.z = proportional[uavID].orientation.z + integral[uavID].orientation.z + derivation[uavID].orientation.z;
+  oz = proportional[uavID].orientation.z + integral[uavID].orientation.z + derivation[uavID].orientation.z;
+
   double rx, ry;
-  rx = x * cos(-1 * euler.yaw) - y * sin(-1 * euler.yaw);
-  ry = x * sin(-1 * euler.yaw) + y * cos(-1 * euler.yaw);
+  rx = x * std::cos(-1 * yaw) - y * std::sin(-1 * yaw);
+  ry = x * std::sin(-1 * yaw) + y * std::cos(-1 * yaw);
 
-  mut[uavID].lock();
-  twist[uavID].linear.x = rx;
-  twist[uavID].linear.y = ry;
-  twist[uavID].linear.z = z;
-  mut[uavID].unlock();
+  mut[uavID].lock();    // lock cmd, destReached
+  cmd[uavID].linear.x = rx;
+  cmd[uavID].linear.y = ry;
+  cmd[uavID].linear.z = z;
+  cmd[uavID].angular.z = oz * 4;
 
-  if ((std::fabs(error[uavID].position.x) < tolerance) && (std::fabs(error[uavID].position.y) < tolerance)
-      && (std::fabs(error[uavID].position.z) < tolerance))
-  {
-    mut[uavID].lock();
+  if (!destReached[uavID] &&
+      std::fabs(error[uavID].position.x) < positionErrorTolerance &&
+      std::fabs(error[uavID].position.y) < positionErrorTolerance &&
+      std::fabs(error[uavID].position.z) < positionErrorTolerance &&
+      std::fabs(error[uavID].orientation.z) < orientationErrorTolerance) {
     destReached[uavID] = true;
-    mut[uavID].unlock();
   }
+  mut[uavID].unlock();  // unlock cmd, destReached
 }
 
 void uavCommander(ros::Rate rate)
 {
   ros::NodeHandlePtr nh = boost::make_shared<ros::NodeHandle>();
-  ros::Publisher uavPub[nUAV];
+  ros::Publisher cmdPub[nUAV];
 
   for (int i = 0; i < nUAV; i++)
   {
-    uavPub[i] = nh->advertise<geometry_msgs::Twist>(nsUAV[i] + "/cmd_vel", 100, false);
+    cmdPub[i] = nh->advertise<geometry_msgs::Twist>(nsUAV[i] + "/cmd_vel", 100, false);
   }
 
   while (ros::ok())
   {
-    bool allAutopilotReachedDest = true;
-    int nAutopilotUAV = 0;
     for (int i = 0; i < nUAV; i++)
     {
-      mut[i].lock();
-      if (controlMode[i] != ControlMode::disabled)
-      {
-        uavPub[i].publish(twist[i]);
-
-        if (controlMode[i] == ControlMode::autopilot)
-        {
-          allAutopilotReachedDest = allAutopilotReachedDest && destReached[i];
-          nAutopilotUAV++;
-        }
-      }
-      mut[i].unlock();
+      mut[i].lock();    // lock cmd
+      cmdPub[i].publish(cmd[i]);
+      mut[i].unlock();  // unlock cmd
     }
-
-    if (allAutopilotReachedDest && nAutopilotUAV)
-    {
-      if (++waypointNumber >= nWaypoint)
-      {
-        waypointNumber = 0;
-      }
-      for (int i = 0; i < nUAV; i++)
-      {
-        mut[i].lock();
-        if (controlMode[i] == ControlMode::autopilot)
-        {
-          destReached[i] = false;
-          dest[i] = waypoint[i][waypointNumber];
-        }
-        mut[i].unlock();
-      }
-    }
-
     ros::spinOnce();
     rate.sleep();
   }
 }
 
-void printControlStatus()
+//////////////////////////////////////////////////////////////////////////////
+struct termios old_t, new_t;
+
+/* Initialize new terminal i/o settings */
+void initTermios(int echo)
 {
-  for (int i = 0; i < nUAV; i++)
-  {
-    std::cout << "UAV" << i << " - ";
-    mut[i].lock();
-    switch (controlMode[i])
-    {
-      case ControlMode::disabled:
-        std::cout << "disabled";
-        break;
-      case ControlMode::manual:
-        std::cout << "manual";
-        break;
-      case ControlMode::autopilot:
-        std::cout << "autopilot";
-        break;
-    }
-    mut[i].unlock();
-    if (i < nUAV - 1)
-    {
-      std::cout << "; ";
-    }
-    else
-    {
-      std::cout << std::endl;
-    }
-  }
+  tcgetattr(0, &old_t); /* grab old terminal i/o settings */
+  new_t = old_t; /* make new settings same as old settings */
+  new_t.c_lflag &= ~ICANON; /* disable buffered i/o */
+  new_t.c_lflag &= echo ? ECHO : ~ECHO; /* set echo mode */
+  tcsetattr(0, TCSANOW, &new_t); /* use these new terminal i/o settings now */
 }
+
+/* Restore old terminal i/o settings */
+void resetTermios(void)
+{
+  tcsetattr(0, TCSANOW, &old_t);
+}
+
+/* Read 1 character - echo defines echo mode */
+char getch_(int echo)
+{
+  char ch;
+  initTermios(echo);
+  ch = getchar();
+  resetTermios();
+  return ch;
+}
+
+/* Read 1 character without echo */
+char getch(void)
+{
+  return getch_(0);
+}
+
+/* Read 1 character with echo */
+char getche(void)
+{
+  return getch_(1);
+}
+
