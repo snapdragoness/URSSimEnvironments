@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 
   std::cout << "Total number of UAVs: " << nUAV
             << " [ID: " << ((nUAV == 1)? "0": "0-" + std::to_string(nUAV - 1)) << "]" << std::endl;
-  std::cout << "Active: " << activeID << std::endl;
+  std::cout << "Active ID: " << activeID << std::endl;
 
   /* spawn other threads (must be done after initialization) */
   boost::thread commanderThread(uavCommander, 10);
@@ -215,7 +215,7 @@ int main(int argc, char **argv)
         std::cout << "rotate step = " << std::setprecision(1) << std::fixed << rotateStep << std::endl;
         break;
       case ':':
-        std::cout << ": " << std::endl;
+        std::cout << ": ";
         std::string keyboardInput;
         std::getline(std::cin, keyboardInput);
 
@@ -282,7 +282,7 @@ int main(int argc, char **argv)
               if (uavID >= 0 && uavID < nUAV)
               {
                 activeID = uavID;
-                std::cout << "Active: " << activeID << std::endl;
+                std::cout << "Active ID: " << activeID << std::endl;
               }
             }
           }
