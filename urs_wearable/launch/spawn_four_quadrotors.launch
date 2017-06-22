@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-  <arg name="model" default="$(find hector_quadrotor_description)/urdf/quadrotor_hokuyo_utm30lx.gazebo.xacro" />
+  <arg name="model" default="$(find urs_wearable)/urdf/quadrotor.gazebo.xacro" />
 
   <group ns="uav0">
     <include file="$(find hector_quadrotor_gazebo)/launch/spawn_quadrotor.launch">
@@ -43,5 +43,5 @@
   </group>
 
   <!-- Start rviz visualization with preset config -->
-  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find urs_wearable)/rviz_cfg/four_quadrotors.rviz" />
+  <!-- node pkg="rviz" type="rviz" name="rviz" args="-d $(find urs_wearable)/rviz_cfg/four_quadrotors.rviz" /-->
 </launch>
