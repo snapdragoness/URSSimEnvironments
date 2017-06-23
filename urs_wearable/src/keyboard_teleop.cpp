@@ -3,6 +3,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/Twist.h>
+#include <sensor_msgs/LaserScan.h>
 #include <hector_uav_msgs/EnableMotors.h>
 
 #include <iostream>
@@ -33,7 +34,9 @@ typedef struct Euler
 
 double quaternionToYaw(const geometry_msgs::Quaternion::ConstPtr& q);
 void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg, const int uavID);
-void uavCommander(ros::Rate rate);
+void uavCommander(ros::Rate rate, const int uavID);
+void readLaserScan(const sensor_msgs::LaserScan::ConstPtr& msg, const int uavID);
+void navigate(const int uavID, double x, double y, double z);
 
 void initTermios(int echo);
 void resetTermios(void);
@@ -41,10 +44,11 @@ char getch_(int echo);
 char getch(void);
 char getche(void);
 
-const unsigned int nUAV = 4;    // the total number of the UAVs
-std::string nsUAV[nUAV];        // namespaces of the UAVs
+const unsigned int nUAV = 4;      // the total number of the UAVs
+std::string nsUAV[nUAV];          // namespaces of the UAVs
 
 ros::Subscriber poseSub[nUAV];    // subscribers of each UAV's ground truth
+ros::Subscriber laserSub[nUAV];   // subscribers of each UAV's laser scanner
 geometry_msgs::Twist cmd[nUAV];   // a twist message to be sent to /cmd_vel
 
 geometry_msgs::Pose pose[nUAV];   // UAV's position from ground truth
@@ -64,18 +68,23 @@ geometry_msgs::Pose proportional[nUAV];
 geometry_msgs::Pose integral[nUAV];
 geometry_msgs::Pose derivation[nUAV];
 
-boost::mutex mut[nUAV];   // mutexs of each UAV
-
 unsigned int activeID = 0;  // the ID of the UAV that receive gamepad-like control from keyboard
                             // possible values: 0 to nUAV-1
 double moveStep = 0.5;
 double rotateStep = 0.5;
 
+double frontObs[nUAV];   // TODO
+
+/* a mutex should be defined for each critical variable */
+boost::mutex mut_cmd[nUAV];
+boost::mutex mut_dest[nUAV];
+boost::mutex mut_laser[nUAV];
+boost::mutex mut_pose[nUAV];
+
 int main(int argc, char **argv)
 {
   // initializes ROS, and sets up a node
   ros::init(argc, argv, "keyboard_teleop");
-
   ros::NodeHandlePtr nh = boost::make_shared<ros::NodeHandle>();
 
   if (nUAV == 0) {
@@ -84,7 +93,7 @@ int main(int argc, char **argv)
   }
 
   /* Initialization */
-  for (int i = 0; i < nUAV; i++)
+  for (unsigned int i = 0; i < nUAV; i++)
   {
     // set a namespace for each uav
     nsUAV[i] = "/uav" + std::to_string(i);
@@ -117,6 +126,8 @@ int main(int argc, char **argv)
 
       poseSub[i] = nh->subscribe<geometry_msgs::PoseStamped>(nsUAV[i] + "/ground_truth_to_tf/pose", 10,
                                                              boost::bind(uavController, _1, i));
+      laserSub[i] = nh->subscribe<sensor_msgs::LaserScan>(nsUAV[i] + "/scan", 10,
+                                                             boost::bind(readLaserScan, _1, i));
     }
     else
     {
@@ -129,7 +140,11 @@ int main(int argc, char **argv)
   std::cout << "Active ID: " << activeID << std::endl;
 
   /* spawn other threads (must be done after initialization) */
-  boost::thread commanderThread(uavCommander, 10);
+  boost::thread commanderThread[nUAV];
+
+  for (unsigned int i = 0; i < nUAV; i++) {
+    commanderThread[i] = boost::thread(uavCommander, 10, i);
+  }
 
   /* read and evaluate keyboard input */
   ros::Rate rate(10);
@@ -140,59 +155,51 @@ int main(int argc, char **argv)
     {
       case 'w':
       case 'W':
-        mut[activeID].lock();
-        dest[activeID].position.x = pose[activeID].position.x + moveStep;
-        destReached[activeID] = false;
-        mut[activeID].unlock();
+        mut_dest[activeID].lock();
+        dest[activeID].position.x += moveStep;
+        mut_dest[activeID].unlock();
         break;
       case 's':
       case 'S':
-        mut[activeID].lock();
-        dest[activeID].position.x = pose[activeID].position.x - moveStep;
-        destReached[activeID] = false;
-        mut[activeID].unlock();
+        mut_dest[activeID].lock();
+        dest[activeID].position.x -= moveStep;
+        mut_dest[activeID].unlock();
         break;
       case 'a':
       case 'A':
-        mut[activeID].lock();
-        dest[activeID].position.y = pose[activeID].position.y + moveStep;
-        destReached[activeID] = false;
-        mut[activeID].unlock();
+        mut_dest[activeID].lock();
+        dest[activeID].position.y += moveStep;
+        mut_dest[activeID].unlock();
         break;
       case 'd':
       case 'D':
-        mut[activeID].lock();
-        dest[activeID].position.y = pose[activeID].position.y - moveStep;
-        destReached[activeID] = false;
-        mut[activeID].unlock();
+        mut_dest[activeID].lock();
+        dest[activeID].position.y -= moveStep;
+        mut_dest[activeID].unlock();
         break;
       case 'r':
       case 'R':
-        mut[activeID].lock();
-        dest[activeID].position.z = pose[activeID].position.z + moveStep;
-        destReached[activeID] = false;
-        mut[activeID].unlock();
+        mut_dest[activeID].lock();
+        dest[activeID].position.z += moveStep;
+        mut_dest[activeID].unlock();
         break;
       case 'f':
       case 'F':
-        mut[activeID].lock();
-        dest[activeID].position.z = pose[activeID].position.z - moveStep;
-        destReached[activeID] = false;
-        mut[activeID].unlock();
+        mut_dest[activeID].lock();
+        dest[activeID].position.z -= moveStep;
+        mut_dest[activeID].unlock();
         break;
       case 'q':
       case 'Q':
-        mut[activeID].lock();
-        dest[activeID].orientation.z = pose[activeID].orientation.z + rotateStep;
-        destReached[activeID] = false;
-        mut[activeID].unlock();
+        mut_dest[activeID].lock();
+        dest[activeID].orientation.z += rotateStep;
+        mut_dest[activeID].unlock();
         break;
       case 'e':
       case 'E':
-        mut[activeID].lock();
-        dest[activeID].orientation.z = pose[activeID].orientation.z - rotateStep;
-        destReached[activeID] = false;
-        mut[activeID].unlock();
+        mut_dest[activeID].lock();
+        dest[activeID].orientation.z -= rotateStep;
+        mut_dest[activeID].unlock();
         break;
       case 't':
       case 'T':
@@ -244,10 +251,9 @@ int main(int argc, char **argv)
               int uavID = std::stoi(tokens[1]);
               if (uavID >= 0 && uavID < nUAV)
               {
-                mut[uavID].lock();
-                dest[uavID].position.z = 0.5;
-                destReached[uavID] = false;
-                mut[uavID].unlock();
+                mut_dest[uavID].lock();
+                dest[uavID].position.z = 0.5;   // TODO: should actually check from the downward sonar sensor
+                mut_dest[uavID].unlock();
               }
             }
             else if (tokens.size() == 5 && !tokens[0].compare("move"))
@@ -255,12 +261,19 @@ int main(int argc, char **argv)
               int uavID = std::stoi(tokens[1]);
               if (uavID >= 0 && uavID < nUAV)
               {
-                mut[uavID].lock();
+                mut_dest[uavID].lock();
+                /*
                 dest[uavID].position.x += std::stod(tokens[2]);
                 dest[uavID].position.y += std::stod(tokens[3]);
                 dest[uavID].position.z += std::stod(tokens[4]);
                 destReached[uavID] = false;
-                mut[uavID].unlock();
+                */
+                boost::thread navigateThread(navigate, uavID,
+                                       pose[uavID].position.x + std::stod(tokens[2]),
+                                       pose[uavID].position.y + std::stod(tokens[3]),
+                                       pose[uavID].position.z + std::stod(tokens[4]));
+
+                mut_dest[uavID].unlock();
               }
             }
             else if (tokens.size() == 5 && !tokens[0].compare("goto"))
@@ -268,12 +281,19 @@ int main(int argc, char **argv)
               int uavID = std::stoi(tokens[1]);
               if (uavID >= 0 && uavID < nUAV)
               {
-                mut[uavID].lock();
+                mut_dest[uavID].lock();
+                /*
                 dest[uavID].position.x = std::stod(tokens[2]);
                 dest[uavID].position.y = std::stod(tokens[3]);
                 dest[uavID].position.z = std::stod(tokens[4]);
                 destReached[uavID] = false;
-                mut[uavID].unlock();
+                */
+                boost::thread navigateThread(navigate, uavID,
+                                       std::stod(tokens[2]),
+                                       std::stod(tokens[3]),
+                                       std::stod(tokens[4]));
+
+                mut_dest[uavID].unlock();
               }
             }
             else if (tokens.size() == 1)
@@ -332,41 +352,51 @@ double quaternionToYaw(const geometry_msgs::Quaternion::ConstPtr& q)
   double t3 = +2.0 * (q->w * q->z + q->x * q->y);
   double t4 = +1.0 - 2.0 * (ysqr + q->z * q->z);
 
-  // yaw (z-axis rotation)
-  //           PI/2
-  //             ^
-  //             |
-  //  PI, -PI <--+--> 0
-  //             |
-  //             v
-  //          -PI/2
+  //  yaw (z-axis rotation)
+  //          PI/2
+  //            ^
+  //            |
+  //  PI,-PI <--+--> 0
+  //            |
+  //            v
+  //         -PI/2
   double yaw = std::atan2(t3, t4);
+
+  //  return the converted version
+  //          PI/2
+  //            ^
+  //            |
+  //      PI <--+--> 0
+  //            |
+  //            v
+  //          3PI/2
   return (yaw < 0.0)? yaw + 2 * M_PI: yaw;
 }
 
 // PID Control
-void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg, int uavID)
+void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg, const int uavID)
 {
   double yaw = quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
 
-  mut[uavID].lock();    // lock pose
+  mut_pose[uavID].lock();
   pose[uavID].position.x = msg->pose.position.x;
   pose[uavID].position.y = msg->pose.position.y;
   pose[uavID].position.z = msg->pose.position.z;
   pose[uavID].orientation.z = yaw;  // this is NOT the z component of a quaternion
-  mut[uavID].unlock();  // unlock pose
+                                    // instead, we use it to hold the yaw component of Euler angles
+  mut_pose[uavID].unlock();
 
   prevError[uavID].position.x = error[uavID].position.x;
   prevError[uavID].position.y = error[uavID].position.y;
   prevError[uavID].position.z = error[uavID].position.z;
   prevError[uavID].orientation.z = error[uavID].orientation.z;
 
-  mut[uavID].lock();    // lock dest
-  error[uavID].position.x = dest[uavID].position.x - pose[uavID].position.x;
-  error[uavID].position.y = dest[uavID].position.y - pose[uavID].position.y;
-  error[uavID].position.z = dest[uavID].position.z - pose[uavID].position.z;
-  error[uavID].orientation.z = dest[uavID].orientation.z - pose[uavID].orientation.z;
-  mut[uavID].unlock();  // unlock dest
+  mut_dest[uavID].lock();
+  error[uavID].position.x = dest[uavID].position.x - msg->pose.position.x;
+  error[uavID].position.y = dest[uavID].position.y - msg->pose.position.y;
+  error[uavID].position.z = dest[uavID].position.z - msg->pose.position.z;
+  error[uavID].orientation.z = dest[uavID].orientation.z - yaw;
+  mut_dest[uavID].unlock();
 
   if (error[uavID].orientation.z < -1.0 * M_PI) {
     error[uavID].orientation.z += M_PI + M_PI;
@@ -397,43 +427,92 @@ void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg, int uavID)
   rx = x * std::cos(-1 * yaw) - y * std::sin(-1 * yaw);
   ry = x * std::sin(-1 * yaw) + y * std::cos(-1 * yaw);
 
-  mut[uavID].lock();    // lock cmd, destReached
+  mut_cmd[uavID].lock();
   cmd[uavID].linear.x = rx;
   cmd[uavID].linear.y = ry;
   cmd[uavID].linear.z = z;
   cmd[uavID].angular.z = oz * 4;
+  mut_cmd[uavID].unlock();
 
-  if (!destReached[uavID] &&
-      std::fabs(error[uavID].position.x) < positionErrorTolerance &&
-      std::fabs(error[uavID].position.y) < positionErrorTolerance &&
-      std::fabs(error[uavID].position.z) < positionErrorTolerance &&
-      std::fabs(error[uavID].orientation.z) < orientationErrorTolerance) {
-    destReached[uavID] = true;
-  }
-  mut[uavID].unlock();  // unlock cmd, destReached
+//  if (!destReached[uavID] &&
+//      // we are not checking real distance here, but rather Manhattan distance
+//      // TODO: may change to real distance
+//      std::fabs(error[uavID].position.x) < positionErrorTolerance &&
+//      std::fabs(error[uavID].position.y) < positionErrorTolerance &&
+//      std::fabs(error[uavID].position.z) < positionErrorTolerance &&
+//      std::fabs(error[uavID].orientation.z) < orientationErrorTolerance) {
+//    destReached[uavID] = true;
+//  }
 }
 
-void uavCommander(ros::Rate rate)
+void uavCommander(ros::Rate rate, const int uavID)
 {
   ros::NodeHandlePtr nh = boost::make_shared<ros::NodeHandle>();
-  ros::Publisher cmdPub[nUAV];
-
-  for (int i = 0; i < nUAV; i++)
-  {
-    cmdPub[i] = nh->advertise<geometry_msgs::Twist>(nsUAV[i] + "/cmd_vel", 100, false);
-  }
+  ros::Publisher cmdPub;
+  cmdPub = nh->advertise<geometry_msgs::Twist>(nsUAV[uavID] + "/cmd_vel", 10, false);
 
   while (ros::ok())
   {
-    for (int i = 0; i < nUAV; i++)
-    {
-      mut[i].lock();    // lock cmd
-      cmdPub[i].publish(cmd[i]);
-      mut[i].unlock();  // unlock cmd
-    }
+    mut_cmd[uavID].lock();
+    cmdPub.publish(cmd[uavID]);
+    mut_cmd[uavID].unlock();
     ros::spinOnce();
     rate.sleep();
   }
+}
+
+// TODO
+void readLaserScan(const sensor_msgs::LaserScan::ConstPtr& msg, const int uavID) {
+  mut_laser[uavID].lock();
+  frontObs[uavID] = msg->ranges[1080/2];
+  mut_laser[uavID].unlock();
+}
+
+// TODO
+void navigate(const int uavID, double x, double y, double z) {
+//  mut[uavID].lock();
+//  double vx = x - pose[uavID].position.x;
+//  double vy = y - pose[uavID].position.y;
+//  double vz = z - pose[uavID].position.z;
+//
+//  double yaw = std::atan2(y - pose[uavID].position.y, x - pose[uavID].position.x) - std::atan2(0, 1);
+//  if (yaw < 0.0) {
+//    yaw += M_PI + M_PI;
+//  }
+//  dest[uavID].orientation.z = yaw;
+//  destReached[uavID] = false;
+//  mut[uavID].unlock();
+//
+//  double max;
+//  if (vx >= vy && vy >= vz) {
+//    max = vx;
+//  } else if (vy >= vx && vy >= vz) {
+//    max = vy;
+//  } else if (vz >= vx && vz >= vy) {
+//    max = vz;
+//  }
+//  while (!destReached[uavID]);
+//
+//  while (true) {
+//    mut[uavID].lock();
+//    if (std::fabs(pose[uavID].position.x - x) < positionErrorTolerance &&
+//        std::fabs(pose[uavID].position.y - y) < positionErrorTolerance &&
+//        std::fabs(pose[uavID].position.z - z) < positionErrorTolerance) {
+//      break;
+//    }
+//
+//    if (frontObs[uavID] < 1) {
+//      dest[uavID].position.z = pose[uavID].position.z + moveStep;
+//    } else {
+//      dest[uavID].position.x = pose[uavID].position.x + vx / max * moveStep;
+//      dest[uavID].position.y = pose[uavID].position.y + vy / max * moveStep;
+//      dest[uavID].position.z = pose[uavID].position.z + vz / max * moveStep;
+//    }
+//    destReached[uavID] = false;
+//    mut[uavID].unlock();
+//
+//    while (!destReached[uavID]);
+//  }
 }
 
 //////////////////////////////////////////////////////////////////////////////
