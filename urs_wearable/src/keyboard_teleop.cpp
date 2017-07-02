@@ -4,6 +4,7 @@
 #include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/Range.h>
 #include <hector_uav_msgs/EnableMotors.h>
 
 #include <iostream>
@@ -12,6 +13,7 @@
 #include <vector>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
+#include <boost/chrono.hpp>
 #include <boost/tokenizer.hpp>
 
 #include <termios.h>
@@ -20,23 +22,27 @@
 
 typedef struct PID
 {
-  double p;
-  double i;
-  double d;
+  double p, i, d;
 } PID;
 
-typedef struct Euler
+typedef struct Pose
 {
-  double roll;
-  double pitch;
+  double x, y, z;
   double yaw;
-} Euler;
+} Pose;
 
-double quaternionToYaw(const geometry_msgs::Quaternion::ConstPtr& q);
-void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg, const int uavID);
+double quaternionToYaw(const geometry_msgs::QuaternionConstPtr& q);
+void uavController(const geometry_msgs::PoseStampedConstPtr& msg, const int uavID);
 void uavCommander(ros::Rate rate, const int uavID);
-void readLaserScan(const sensor_msgs::LaserScan::ConstPtr& msg, const int uavID);
-void navigate(const int uavID, double x, double y, double z);
+void navigate(const Pose& targetPose, const int delay, const bool orient, const int uavID);
+void wait(int milliseconds);
+void readLaserScan(const sensor_msgs::LaserScanConstPtr& msg, const int uavID);
+void readSonarDownward(const sensor_msgs::RangeConstPtr& msg, const int uavID);
+void readSonarUpward(const sensor_msgs::RangeConstPtr& msg, const int uavID);
+double getDistance(const Pose& from, const Pose& to);
+double getYawDiff(double yaw1, double yaw2);
+
+void dummy();   // only for testing
 
 void initTermios(int echo);
 void resetTermios(void);
@@ -44,46 +50,71 @@ char getch_(int echo);
 char getch(void);
 char getche(void);
 
-const unsigned int nUAV = 4;      // the total number of the UAVs
-std::string nsUAV[nUAV];          // namespaces of the UAVs
+const unsigned int nUAV = 4;  // the total number of the UAVs
+std::string nsUAV[nUAV];      // namespaces of the UAVs
 
-ros::Subscriber poseSub[nUAV];    // subscribers of each UAV's ground truth
-ros::Subscriber laserSub[nUAV];   // subscribers of each UAV's laser scanner
+ros::Subscriber poseSub[nUAV];          // subscribers of each UAV's ground truth
+ros::Subscriber laserSub[nUAV];         // subscribers of each UAV's laser scanner
+ros::Subscriber sonarDownwardSub[nUAV]; // subscribers of each UAV's downward sonar sensor
+ros::Subscriber sonarUpwardSub[nUAV];   // subscribers of each UAV's upward sonar sensor
+
 geometry_msgs::Twist cmd[nUAV];   // a twist message to be sent to /cmd_vel
 
-geometry_msgs::Pose pose[nUAV];   // UAV's position from ground truth
-geometry_msgs::Pose dest[nUAV];   // manually-set destinations of the UAVs
-bool destReached[nUAV] = {false}; // used in uavController to indicate that the UAV
-                                  // has reached the manually-set destination
-
-// the maximum error allowed to be considered reaching the destination
-const double positionErrorTolerance = 0.5;
-const double orientationErrorTolerance = 0.5;
+Pose pose[nUAV];        // UAV's position from ground truth
+Pose dest[nUAV];        // destinations of the UAVs (used in uavController())
+Pose targetDest[nUAV];  // target destinations of the UAVs to be navigated to
 
 /* for PID control */
-PID pidConst = {0.5, 0.0002, 0.00005};
-geometry_msgs::Pose error[nUAV];
-geometry_msgs::Pose prevError[nUAV];
-geometry_msgs::Pose proportional[nUAV];
-geometry_msgs::Pose integral[nUAV];
-geometry_msgs::Pose derivation[nUAV];
+//PID pidConst = {0.5, 0.0002, 0.00005};  // not good in perfect environment
 
-unsigned int activeID = 0;  // the ID of the UAV that receive gamepad-like control from keyboard
-                            // possible values: 0 to nUAV-1
-double moveStep = 0.5;
-double rotateStep = 0.5;
+// read about adjusting PID coefficients at https://oscarliang.com/quadcopter-pid-explained-tuning/
+PID pidConst = {0.5, 0.0, 0.0};
+Pose error[nUAV];
+Pose prevError[nUAV];
+Pose proportional[nUAV];
+Pose integral[nUAV];
+Pose derivation[nUAV];
 
-double frontObs[nUAV];   // TODO
+/* threads */
+boost::thread commanderThread[nUAV];
+boost::thread navigationThread[nUAV];
 
 /* a mutex should be defined for each critical variable */
 boost::mutex mut_cmd[nUAV];
 boost::mutex mut_dest[nUAV];
 boost::mutex mut_laser[nUAV];
 boost::mutex mut_pose[nUAV];
+boost::mutex mut_sonarDownward[nUAV];
+boost::mutex mut_sonarUpward[nUAV];
+
+/* for laser scan */
+sensor_msgs::LaserScan laserScan[nUAV];       // range from 0.1 - 30 meters
+const double laserAngularResolution = 0.25;   // a degree for each step
+const int laserMeasurementSteps = 1080;       // total scan steps. This indicates the number of elements in laserScan.ranges
+const int laserCenterStep = laserMeasurementSteps / 2;  // center front of the laser scanner
+
+/* for sonar scan */
+float sonarDownwardRange[nUAV];   // range from 0.03 - 3 meters
+float sonarUpwardRange[nUAV];     // range from 0.03 - 3 meters
+
+/* for navigation */
+const double maxPositionError = 0.2;      // maximum position error in meter (only non-negative values)
+const double maxOrientationError = 1.0;   // maximum orientation error in degree (only non-negative values)
+const double distFromObs = 0.1;           // minimum distance to be kept from obstacles (only non-negative values)
+                                          // the value has to be within all navigating sensors' ranges
+const double quadrotorLength = 1.0;       // suppose the quadrotors have square shape
+const double safetyMargin = quadrotorLength / 2.0 + distFromObs;  // used in navigate() to make sure there is enough space
+                                                                  // for the quadrotor at the target destination
+
+/* for keyboard teleop */
+unsigned int activeID = 0;  // the ID of the UAV that receive gamepad-like control from keyboard
+                            // possible values: 0 to nUAV-1
+double moveStep = 0.5;
+double rotateStep = 0.5;
 
 int main(int argc, char **argv)
 {
-  // initializes ROS, and sets up a node
+  /* initialize ROS, and sets up a node */
   ros::init(argc, argv, "keyboard_teleop");
   ros::NodeHandlePtr nh = boost::make_shared<ros::NodeHandle>();
 
@@ -92,7 +123,7 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-  /* Initialization */
+  /* initialize various variables */
   for (unsigned int i = 0; i < nUAV; i++)
   {
     // set a namespace for each uav
@@ -112,22 +143,24 @@ int main(int argc, char **argv)
           nsUAV[i] + "/ground_truth_to_tf/pose");
 
       // start at 1 meter above its starting point while preserve the orientation
-      dest[i].position.x = msg->pose.position.x;
-      dest[i].position.y = msg->pose.position.y;
-      dest[i].position.z = msg->pose.position.z + 1.0;
-      dest[i].orientation.z = quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
+      dest[i].x = msg->pose.position.x;
+      dest[i].y = msg->pose.position.y;
+      dest[i].z = msg->pose.position.z + 1.0;
+      dest[i].yaw = quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
 
-      error[i].position.x = 0;
-      error[i].position.y = 0;
-      error[i].position.z = 0;
-      error[i].orientation.z = 0;
-
-      destReached[i] = false;
+      error[i].x = 0;
+      error[i].y = 0;
+      error[i].z = 0;
+      error[i].yaw = 0;
 
       poseSub[i] = nh->subscribe<geometry_msgs::PoseStamped>(nsUAV[i] + "/ground_truth_to_tf/pose", 10,
                                                              boost::bind(uavController, _1, i));
       laserSub[i] = nh->subscribe<sensor_msgs::LaserScan>(nsUAV[i] + "/scan", 10,
-                                                             boost::bind(readLaserScan, _1, i));
+                                                          boost::bind(readLaserScan, _1, i));
+      sonarDownwardSub[i] = nh->subscribe<sensor_msgs::Range>(nsUAV[i] + "/sonar_downward", 10,
+                                                              boost::bind(readSonarDownward, _1, i));
+      sonarUpwardSub[i] = nh->subscribe<sensor_msgs::Range>(nsUAV[i] + "/sonar_upward", 10,
+                                                            boost::bind(readSonarUpward, _1, i));
     }
     else
     {
@@ -140,11 +173,11 @@ int main(int argc, char **argv)
   std::cout << "Active ID: " << activeID << std::endl;
 
   /* spawn other threads (must be done after initialization) */
-  boost::thread commanderThread[nUAV];
-
   for (unsigned int i = 0; i < nUAV; i++) {
     commanderThread[i] = boost::thread(uavCommander, 10, i);
   }
+
+//  boost::thread dummyThread = boost::thread(dummy);   // only for testing
 
   /* read and evaluate keyboard input */
   ros::Rate rate(10);
@@ -156,49 +189,49 @@ int main(int argc, char **argv)
       case 'w':
       case 'W':
         mut_dest[activeID].lock();
-        dest[activeID].position.x += moveStep;
+        dest[activeID].x += moveStep;
         mut_dest[activeID].unlock();
         break;
       case 's':
       case 'S':
         mut_dest[activeID].lock();
-        dest[activeID].position.x -= moveStep;
+        dest[activeID].x -= moveStep;
         mut_dest[activeID].unlock();
         break;
       case 'a':
       case 'A':
         mut_dest[activeID].lock();
-        dest[activeID].position.y += moveStep;
+        dest[activeID].y += moveStep;
         mut_dest[activeID].unlock();
         break;
       case 'd':
       case 'D':
         mut_dest[activeID].lock();
-        dest[activeID].position.y -= moveStep;
+        dest[activeID].y -= moveStep;
         mut_dest[activeID].unlock();
         break;
       case 'r':
       case 'R':
         mut_dest[activeID].lock();
-        dest[activeID].position.z += moveStep;
+        dest[activeID].z += moveStep;
         mut_dest[activeID].unlock();
         break;
       case 'f':
       case 'F':
         mut_dest[activeID].lock();
-        dest[activeID].position.z -= moveStep;
+        dest[activeID].z -= moveStep;
         mut_dest[activeID].unlock();
         break;
       case 'q':
       case 'Q':
         mut_dest[activeID].lock();
-        dest[activeID].orientation.z += rotateStep;
+        dest[activeID].yaw += rotateStep;
         mut_dest[activeID].unlock();
         break;
       case 'e':
       case 'E':
         mut_dest[activeID].lock();
-        dest[activeID].orientation.z -= rotateStep;
+        dest[activeID].yaw -= rotateStep;
         mut_dest[activeID].unlock();
         break;
       case 't':
@@ -252,7 +285,7 @@ int main(int argc, char **argv)
               if (uavID >= 0 && uavID < nUAV)
               {
                 mut_dest[uavID].lock();
-                dest[uavID].position.z = 0.5;   // TODO: should actually check from the downward sonar sensor
+                dest[uavID].z = 0.5;   // TODO: should actually check from the downward sonar sensor
                 mut_dest[uavID].unlock();
               }
             }
@@ -261,19 +294,16 @@ int main(int argc, char **argv)
               int uavID = std::stoi(tokens[1]);
               if (uavID >= 0 && uavID < nUAV)
               {
-                mut_dest[uavID].lock();
-                /*
-                dest[uavID].position.x += std::stod(tokens[2]);
-                dest[uavID].position.y += std::stod(tokens[3]);
-                dest[uavID].position.z += std::stod(tokens[4]);
-                destReached[uavID] = false;
-                */
-                boost::thread navigateThread(navigate, uavID,
-                                       pose[uavID].position.x + std::stod(tokens[2]),
-                                       pose[uavID].position.y + std::stod(tokens[3]),
-                                       pose[uavID].position.z + std::stod(tokens[4]));
+                navigationThread[uavID].interrupt();  // interrupt the old thread, if any
 
-                mut_dest[uavID].unlock();
+                mut_pose[uavID].lock();
+                targetDest[uavID].x = pose[uavID].x + std::stod(tokens[2]);
+                targetDest[uavID].y = pose[uavID].y + std::stod(tokens[3]);
+                targetDest[uavID].z = pose[uavID].z + std::stod(tokens[4]);
+                targetDest[uavID].yaw = pose[uavID].yaw;
+                mut_pose[uavID].unlock();
+
+                navigationThread[uavID] = boost::thread(navigate, targetDest[uavID], 100, false, uavID);
               }
             }
             else if (tokens.size() == 5 && !tokens[0].compare("goto"))
@@ -281,19 +311,32 @@ int main(int argc, char **argv)
               int uavID = std::stoi(tokens[1]);
               if (uavID >= 0 && uavID < nUAV)
               {
-                mut_dest[uavID].lock();
-                /*
-                dest[uavID].position.x = std::stod(tokens[2]);
-                dest[uavID].position.y = std::stod(tokens[3]);
-                dest[uavID].position.z = std::stod(tokens[4]);
-                destReached[uavID] = false;
-                */
-                boost::thread navigateThread(navigate, uavID,
-                                       std::stod(tokens[2]),
-                                       std::stod(tokens[3]),
-                                       std::stod(tokens[4]));
+                navigationThread[uavID].interrupt();  // interrupt the old thread, if any
 
-                mut_dest[uavID].unlock();
+                targetDest[uavID].x = std::stod(tokens[2]);
+                targetDest[uavID].y = std::stod(tokens[3]);
+                targetDest[uavID].z = std::stod(tokens[4]);
+                mut_pose[uavID].lock();
+                targetDest[uavID].yaw = pose[uavID].yaw;
+                mut_pose[uavID].unlock();
+
+                navigationThread[uavID] = boost::thread(navigate, targetDest[uavID], 100, false, uavID);
+              }
+            }
+            else if (tokens.size() == 3 && !tokens[0].compare("rotate"))
+            {
+              int uavID = std::stoi(tokens[1]);
+              double degree = std::stod(tokens[2]);
+              mut_dest[uavID].lock();
+              dest[uavID].yaw = degree * M_PI / 180.0;
+              mut_dest[uavID].unlock();
+            }
+            else if (tokens.size() == 2 && !tokens[0].compare("cancel"))
+            {
+              int uavID = std::stoi(tokens[1]);
+              if (uavID >= 0 && uavID < nUAV)
+              {
+                navigationThread[uavID].interrupt();
               }
             }
             else if (tokens.size() == 1)
@@ -313,39 +356,21 @@ int main(int argc, char **argv)
         }
         break;
     }
+
     ros::spinOnce();
     rate.sleep();
   }
+
+  /* clean up the subscribers */
+  for (unsigned int i = 0; i < nUAV; i++) {
+    poseSub[i].shutdown();
+    laserSub[i].shutdown();
+    sonarDownwardSub[i].shutdown();
+    sonarUpwardSub[i].shutdown();
+  }
 }
 
-/*
-Euler quaternionToEuler(const geometry_msgs::Quaternion::ConstPtr& q)
-{
-  Euler euler;
-
-  double ysqr = q->y * q->y;
-
-  // roll (x-axis rotation)
-  double t0 = +2.0 * (q->w * q->x + q->y * q->z);
-  double t1 = +1.0 - 2.0 * (q->x * q->x + ysqr);
-  euler.roll = std::atan2(t0, t1);
-
-  // pitch (y-axis rotation)
-  double t2 = +2.0 * (q->w * q->y - q->z * q->x);
-  t2 = t2 > 1.0 ? 1.0 : t2;
-  t2 = t2 < -1.0 ? -1.0 : t2;
-  euler.pitch = std::asin(t2);
-
-  // yaw (z-axis rotation)
-  double t3 = +2.0 * (q->w * q->z + q->x * q->y);
-  double t4 = +1.0 - 2.0 * (ysqr + q->z * q->z);
-  euler.yaw = std::atan2(t3, t4);
-
-  return euler;
-}
-*/
-
-double quaternionToYaw(const geometry_msgs::Quaternion::ConstPtr& q)
+double quaternionToYaw(const geometry_msgs::QuaternionConstPtr& q)
 {
   double ysqr = q->y * q->y;
 
@@ -362,7 +387,7 @@ double quaternionToYaw(const geometry_msgs::Quaternion::ConstPtr& q)
   //         -PI/2
   double yaw = std::atan2(t3, t4);
 
-  //  return the converted version
+  //  return the non-negative version
   //          PI/2
   //            ^
   //            |
@@ -374,54 +399,49 @@ double quaternionToYaw(const geometry_msgs::Quaternion::ConstPtr& q)
 }
 
 // PID Control
-void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg, const int uavID)
+void uavController(const geometry_msgs::PoseStampedConstPtr& msg, const int uavID)
 {
   double yaw = quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
 
   mut_pose[uavID].lock();
-  pose[uavID].position.x = msg->pose.position.x;
-  pose[uavID].position.y = msg->pose.position.y;
-  pose[uavID].position.z = msg->pose.position.z;
-  pose[uavID].orientation.z = yaw;  // this is NOT the z component of a quaternion
-                                    // instead, we use it to hold the yaw component of Euler angles
+  pose[uavID].x = msg->pose.position.x;
+  pose[uavID].y = msg->pose.position.y;
+  pose[uavID].z = msg->pose.position.z;
+  pose[uavID].yaw = yaw;
   mut_pose[uavID].unlock();
 
-  prevError[uavID].position.x = error[uavID].position.x;
-  prevError[uavID].position.y = error[uavID].position.y;
-  prevError[uavID].position.z = error[uavID].position.z;
-  prevError[uavID].orientation.z = error[uavID].orientation.z;
+  prevError[uavID].x = error[uavID].x;
+  prevError[uavID].y = error[uavID].y;
+  prevError[uavID].z = error[uavID].z;
+  prevError[uavID].yaw = error[uavID].yaw;
 
   mut_dest[uavID].lock();
-  error[uavID].position.x = dest[uavID].position.x - msg->pose.position.x;
-  error[uavID].position.y = dest[uavID].position.y - msg->pose.position.y;
-  error[uavID].position.z = dest[uavID].position.z - msg->pose.position.z;
-  error[uavID].orientation.z = dest[uavID].orientation.z - yaw;
+  error[uavID].x = dest[uavID].x - msg->pose.position.x;
+  error[uavID].y = dest[uavID].y - msg->pose.position.y;
+  error[uavID].z = dest[uavID].z - msg->pose.position.z;
+  error[uavID].yaw = dest[uavID].yaw - yaw;
   mut_dest[uavID].unlock();
 
-  if (error[uavID].orientation.z < -1.0 * M_PI) {
-    error[uavID].orientation.z += M_PI + M_PI;
-  } else if (error[uavID].orientation.z > M_PI) {
-    error[uavID].orientation.z -= M_PI + M_PI;
+  if (error[uavID].yaw < -M_PI) {
+    error[uavID].yaw += M_PI + M_PI;
+  } else if (error[uavID].yaw > M_PI) {
+    error[uavID].yaw -= M_PI + M_PI;
   }
 
-  proportional[uavID].position.x = pidConst.p * error[uavID].position.x;
-  proportional[uavID].position.y = pidConst.p * error[uavID].position.y;
-  proportional[uavID].position.z = pidConst.p * error[uavID].position.z;
-  proportional[uavID].orientation.z = pidConst.p * error[uavID].orientation.z;
-  integral[uavID].position.x += pidConst.i * error[uavID].position.x;
-  integral[uavID].position.y += pidConst.i * error[uavID].position.y;
-  integral[uavID].position.z += pidConst.i * error[uavID].position.z;
-  integral[uavID].orientation.z += pidConst.i * error[uavID].orientation.z;
-  derivation[uavID].position.x = pidConst.d * (error[uavID].position.x - prevError[uavID].position.x);
-  derivation[uavID].position.y = pidConst.d * (error[uavID].position.y - prevError[uavID].position.y);
-  derivation[uavID].position.z = pidConst.d * (error[uavID].position.z - prevError[uavID].position.z);
-  derivation[uavID].orientation.z = pidConst.d * (error[uavID].orientation.z - prevError[uavID].orientation.z);
+  proportional[uavID].x = pidConst.p * error[uavID].x;
+  proportional[uavID].y = pidConst.p * error[uavID].y;
+  proportional[uavID].z = pidConst.p * error[uavID].z;
+  integral[uavID].x += pidConst.i * error[uavID].x;
+  integral[uavID].y += pidConst.i * error[uavID].y;
+  integral[uavID].z += pidConst.i * error[uavID].z;
+  derivation[uavID].x = pidConst.d * (error[uavID].x - prevError[uavID].x);
+  derivation[uavID].y = pidConst.d * (error[uavID].y - prevError[uavID].y);
+  derivation[uavID].z = pidConst.d * (error[uavID].z - prevError[uavID].z);
 
-  double x, y, z, oz;
-  x = proportional[uavID].position.x + integral[uavID].position.x + derivation[uavID].position.x;
-  y = proportional[uavID].position.y + integral[uavID].position.y + derivation[uavID].position.y;
-  z = proportional[uavID].position.z + integral[uavID].position.z + derivation[uavID].position.z;
-  oz = proportional[uavID].orientation.z + integral[uavID].orientation.z + derivation[uavID].orientation.z;
+  double x, y, z;
+  x = proportional[uavID].x + integral[uavID].x + derivation[uavID].x;
+  y = proportional[uavID].y + integral[uavID].y + derivation[uavID].y;
+  z = proportional[uavID].z + integral[uavID].z + derivation[uavID].z;
 
   double rx, ry;
   rx = x * std::cos(-1 * yaw) - y * std::sin(-1 * yaw);
@@ -431,18 +451,8 @@ void uavController(const geometry_msgs::PoseStamped::ConstPtr& msg, const int ua
   cmd[uavID].linear.x = rx;
   cmd[uavID].linear.y = ry;
   cmd[uavID].linear.z = z;
-  cmd[uavID].angular.z = oz * 4;
+  cmd[uavID].angular.z = 2.0 * error[uavID].yaw;
   mut_cmd[uavID].unlock();
-
-//  if (!destReached[uavID] &&
-//      // we are not checking real distance here, but rather Manhattan distance
-//      // TODO: may change to real distance
-//      std::fabs(error[uavID].position.x) < positionErrorTolerance &&
-//      std::fabs(error[uavID].position.y) < positionErrorTolerance &&
-//      std::fabs(error[uavID].position.z) < positionErrorTolerance &&
-//      std::fabs(error[uavID].orientation.z) < orientationErrorTolerance) {
-//    destReached[uavID] = true;
-//  }
 }
 
 void uavCommander(ros::Rate rate, const int uavID)
@@ -459,60 +469,252 @@ void uavCommander(ros::Rate rate, const int uavID)
     ros::spinOnce();
     rate.sleep();
   }
+
+  /* clean up the publisher */
+  cmdPub.shutdown();
 }
 
-// TODO
-void readLaserScan(const sensor_msgs::LaserScan::ConstPtr& msg, const int uavID) {
+void dummy()
+{
+  while(true)
+  {
+    Pose currentPose;
+    mut_pose[0].lock();
+    currentPose.x = pose[0].x;
+    currentPose.y = pose[0].y;
+    currentPose.z = pose[0].z;
+    currentPose.yaw = pose[0].yaw;
+    mut_pose[0].unlock();
+
+    std::cout << "pose[0].x: " << currentPose.x << std::endl;
+    std::cout << "pose[0].y: " << currentPose.y << std::endl;
+    std::cout << "pose[0].z: " << currentPose.z << std::endl;
+    std::cout << "pose[0].yaw: " << currentPose.yaw * 180.0 / M_PI << std::endl;
+    mut_dest[0].lock();
+    std::cout << "diff = " << getDistance(currentPose, dest[0]) << std::endl;
+    mut_dest[0].unlock();
+    wait(10);
+  }
+}
+
+void navigate(const Pose& targetPose, const int delay, const bool orient, const int uavID)
+{
+  std::cout << "A navigation thread for UAV" << uavID << " to ["
+      << targetPose.x << ", " << targetPose.y << ", " << targetPose.z << "] has started" << std::endl;
+
+  try
+  {
+    Pose partialTargetPose;
+    partialTargetPose.x = targetPose.x;
+    partialTargetPose.y = targetPose.y;
+    partialTargetPose.z = targetPose.z;
+
+    int reachCount = 0;
+
+    while (true)
+    {
+      Pose currentPose;
+      mut_pose[uavID].lock();
+      currentPose.x = pose[uavID].x;
+      currentPose.y = pose[uavID].y;
+      currentPose.z = pose[uavID].z;
+      currentPose.yaw = pose[uavID].yaw;
+      mut_pose[uavID].unlock();
+
+      // if the UAV reaches the target destination
+      if (getDistance(currentPose, targetPose) <= maxPositionError)
+      {
+        if (!orient || getYawDiff(currentPose.yaw, targetPose.yaw) <= maxOrientationError * M_PI / 180.0) {
+          break;
+        }
+        else
+        {
+          mut_dest[uavID].lock();
+          dest[uavID].yaw = targetPose.yaw;
+          mut_dest[uavID].unlock();
+        }
+      }
+      else  // otherwise, begin navigating
+      {
+        // update the partial target destination if the UAV has reached it
+        if (getDistance(currentPose, partialTargetPose) <= maxPositionError)
+        {
+          if (reachCount >= 10)
+          {
+            partialTargetPose.x = targetPose.x;
+            partialTargetPose.y = targetPose.y;
+            partialTargetPose.z = targetPose.z;
+          }
+          else
+          {
+            reachCount++;
+          }
+        }
+        else
+        {
+          reachCount = 0;
+        }
+
+        double planarDistToTarget = std::sqrt(
+            (partialTargetPose.x - currentPose.x) * (partialTargetPose.x - currentPose.x)
+            + (partialTargetPose.y - currentPose.y) * (partialTargetPose.y - currentPose.y));
+        double yawHeaded;
+
+        if (planarDistToTarget > maxPositionError)  // if the quadrotor needs to move horizontally
+        {
+          yawHeaded = std::atan2(partialTargetPose.y - currentPose.y, partialTargetPose.x - currentPose.x) - std::atan2(0, 1);
+          if (yawHeaded < 0.0)
+          {
+            yawHeaded += M_PI + M_PI;
+          }
+
+          mut_dest[uavID].lock();
+          dest[uavID].yaw = yawHeaded;
+          mut_dest[uavID].unlock();
+
+//          std::cout << "yaw diff = " << getYawDiff(currentPose.yaw, yawHeaded) * 180.0 / M_PI << std::endl;
+
+          // if the quadrotor has aligned itself to the partial target destination
+          if (getYawDiff(currentPose.yaw, yawHeaded) <= M_PI / 180.0)  // allow 1.0 degree of error
+          {
+            bool obstructed = false;
+
+            double panDegree = std::atan2(safetyMargin, planarDistToTarget) * 180.0 / M_PI;
+            int panSteps = ((panDegree / laserAngularResolution) + 1 > 150)? 150 : (panDegree / laserAngularResolution) + 1;
+
+            mut_laser[uavID].lock();
+            if (!laserScan[uavID].ranges.empty())
+            {
+              if (laserScan[uavID].ranges[laserCenterStep] < planarDistToTarget + safetyMargin)
+              {
+                obstructed = true;
+              }
+              else
+              {
+                double angle = laserAngularResolution;
+                for (int i = 1; i <= panSteps; i++)
+                {
+                  double lengthRequired = (planarDistToTarget + safetyMargin) / std::cos(angle * M_PI / 180.0);
+                  if ((laserScan[uavID].ranges[laserCenterStep - i] < lengthRequired)
+                      || (laserScan[uavID].ranges[laserCenterStep + i] < lengthRequired))
+                  {
+                    obstructed = true;
+                    break;
+                  }
+                  angle += laserAngularResolution;
+                }
+              }
+            }
+            mut_laser[uavID].unlock();
+
+            if (obstructed)   // if the path is blocked, we need to find a new partial target
+            {
+              std::cout << "path blocked" << std::endl;
+              partialTargetPose.x = currentPose.x;
+              partialTargetPose.y = currentPose.y;
+              partialTargetPose.z = currentPose.z + 0.5;    // TODO: to go up, better check the sonar sensor too
+            }
+
+            mut_dest[uavID].lock();
+            dest[uavID].x = partialTargetPose.x;
+            dest[uavID].y = partialTargetPose.y;
+            dest[uavID].z = partialTargetPose.z;
+            mut_dest[uavID].unlock();
+          }
+          else    // otherwise, don't move, just rotate
+          {
+            if (getDistance(currentPose, partialTargetPose) > maxPositionError)
+            {
+              std::cout << "rotating" << std::endl;
+              partialTargetPose.x = currentPose.x;
+              partialTargetPose.y = currentPose.y;
+              partialTargetPose.z = currentPose.z;
+            }
+          }
+        }
+        else    // if the quadrotor only needs to move vertically
+        {
+          mut_dest[uavID].lock();
+          dest[uavID].z = partialTargetPose.z;
+          mut_dest[uavID].unlock();
+
+          float sonarRange;
+          if (partialTargetPose.z < currentPose.z)  // going downward
+          {
+            mut_sonarDownward[uavID].lock();
+            sonarRange = sonarDownwardRange[uavID];
+            mut_sonarDownward[uavID].unlock();
+          }
+          else  // going upward
+          {
+            mut_sonarUpward[uavID].lock();
+            sonarRange = sonarUpwardRange[uavID];
+            mut_sonarUpward[uavID].unlock();
+          }
+
+          if (sonarRange <= 1.0)  // should actually be distFromObs
+          {
+            mut_dest[uavID].lock();
+            dest[uavID].z = currentPose.z;
+            mut_dest[uavID].unlock();
+
+            std::cout << "Navigation failed" << std::endl;
+            break;
+          }
+        }
+      }
+
+      wait(delay);  // 'delay' is in milliseconds
+    }
+  }
+  catch (boost::thread_interrupted&)
+  {
+    std::cout << "A navigation thread for UAV" << uavID << " to ["
+        << targetPose.x << ", " << targetPose.y << ", " << targetPose.z << "] has been interrupted" << std::endl;
+  }
+  std::cout << "A navigation thread for UAV" << uavID << " to ["
+      << targetPose.x << ", " << targetPose.y << ", " << targetPose.z << "] has terminated" << std::endl;
+}
+
+void wait(int milliseconds)
+{
+  boost::this_thread::sleep_for(boost::chrono::milliseconds{milliseconds});
+}
+
+
+void readLaserScan(const sensor_msgs::LaserScanConstPtr& msg, const int uavID)
+{
   mut_laser[uavID].lock();
-  frontObs[uavID] = msg->ranges[1080/2];
+  laserScan[uavID] = *msg;
   mut_laser[uavID].unlock();
 }
 
-// TODO
-void navigate(const int uavID, double x, double y, double z) {
-//  mut[uavID].lock();
-//  double vx = x - pose[uavID].position.x;
-//  double vy = y - pose[uavID].position.y;
-//  double vz = z - pose[uavID].position.z;
-//
-//  double yaw = std::atan2(y - pose[uavID].position.y, x - pose[uavID].position.x) - std::atan2(0, 1);
-//  if (yaw < 0.0) {
-//    yaw += M_PI + M_PI;
-//  }
-//  dest[uavID].orientation.z = yaw;
-//  destReached[uavID] = false;
-//  mut[uavID].unlock();
-//
-//  double max;
-//  if (vx >= vy && vy >= vz) {
-//    max = vx;
-//  } else if (vy >= vx && vy >= vz) {
-//    max = vy;
-//  } else if (vz >= vx && vz >= vy) {
-//    max = vz;
-//  }
-//  while (!destReached[uavID]);
-//
-//  while (true) {
-//    mut[uavID].lock();
-//    if (std::fabs(pose[uavID].position.x - x) < positionErrorTolerance &&
-//        std::fabs(pose[uavID].position.y - y) < positionErrorTolerance &&
-//        std::fabs(pose[uavID].position.z - z) < positionErrorTolerance) {
-//      break;
-//    }
-//
-//    if (frontObs[uavID] < 1) {
-//      dest[uavID].position.z = pose[uavID].position.z + moveStep;
-//    } else {
-//      dest[uavID].position.x = pose[uavID].position.x + vx / max * moveStep;
-//      dest[uavID].position.y = pose[uavID].position.y + vy / max * moveStep;
-//      dest[uavID].position.z = pose[uavID].position.z + vz / max * moveStep;
-//    }
-//    destReached[uavID] = false;
-//    mut[uavID].unlock();
-//
-//    while (!destReached[uavID]);
-//  }
+void readSonarDownward(const sensor_msgs::RangeConstPtr& msg, const int uavID)
+{
+  mut_sonarDownward[uavID].lock();
+  sonarDownwardRange[uavID] = msg->range;
+  mut_sonarDownward[uavID].unlock();
+}
+
+void readSonarUpward(const sensor_msgs::RangeConstPtr& msg, const int uavID)
+{
+  mut_sonarUpward[uavID].lock();
+  sonarUpwardRange[uavID] = msg->range;
+  mut_sonarUpward[uavID].unlock();
+}
+
+double getDistance(const Pose& from, const Pose& to)
+{
+  return std::sqrt(
+      (to.x - from.x) * (to.x - from.x)
+      + (to.y - from.y) * (to.y - from.y)
+      + (to.z - from.z) * (to.z - from.z));
+}
+
+double getYawDiff(double yaw1, double yaw2)   // yaw1 and yaw2 are in radian
+{
+  double diff = std::fabs(yaw1 - yaw2);
+  return (diff > M_PI)? M_PI + M_PI - diff: diff;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -556,3 +758,37 @@ char getche(void)
   return getch_(1);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+/*
+typedef struct Euler
+{
+  double roll;
+  double pitch;
+  double yaw;
+} Euler;
+
+Euler quaternionToEuler(const geometry_msgs::Quaternion::ConstPtr& q)
+{
+  Euler euler;
+
+  double ysqr = q->y * q->y;
+
+  // roll (x-axis rotation)
+  double t0 = +2.0 * (q->w * q->x + q->y * q->z);
+  double t1 = +1.0 - 2.0 * (q->x * q->x + ysqr);
+  euler.roll = std::atan2(t0, t1);
+
+  // pitch (y-axis rotation)
+  double t2 = +2.0 * (q->w * q->y - q->z * q->x);
+  t2 = t2 > 1.0 ? 1.0 : t2;
+  t2 = t2 < -1.0 ? -1.0 : t2;
+  euler.pitch = std::asin(t2);
+
+  // yaw (z-axis rotation)
+  double t3 = +2.0 * (q->w * q->z + q->x * q->y);
+  double t4 = +1.0 - 2.0 * (ysqr + q->z * q->z);
+  euler.yaw = std::atan2(t3, t4);
+
+  return euler;
+}
+*/
