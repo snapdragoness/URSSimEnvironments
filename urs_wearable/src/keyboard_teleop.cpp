@@ -42,8 +42,6 @@ void readSonarUpward(const sensor_msgs::RangeConstPtr& msg, const int uavID);
 double getDistance(const Pose& from, const Pose& to);
 double getYawDiff(double yaw1, double yaw2);
 
-void dummy();   // only for testing
-
 void initTermios(int echo);
 void resetTermios(void);
 char getch_(int echo);
@@ -92,7 +90,6 @@ sensor_msgs::LaserScan laserScan[nUAV];       // range from 0.1 - 30 meters
 const double laserAngularResolution = 0.25;   // a degree for each step
 const int laserMeasurementSteps = 1080;       // total scan steps. This indicates the number of elements in laserScan.ranges
 const int laserCenterStep = laserMeasurementSteps / 2;  // center front of the laser scanner
-const double laserRangeMin = 0.0799999982119;
 
 /*
   Legal indexes (that do not get blocked by the quadrotor's legs) of the laser scan are:
@@ -194,8 +191,6 @@ int main(int argc, char **argv)
   for (unsigned int i = 0; i < nUAV; i++) {
     commanderThread[i] = boost::thread(uavCommander, 10, i);
   }
-
-//  boost::thread dummyThread = boost::thread(dummy);   // only for testing
 
   /* read and evaluate keyboard input */
   ros::Rate rate(10);
@@ -494,49 +489,6 @@ void uavCommander(ros::Rate rate, const int uavID)
   cmdPub.shutdown();
 }
 
-void dummy()
-{
-  std::set<int> blockSet;
-  while(true)
-  {
-//    Pose currentPose;
-//    mut_pose[0].lock();
-//    currentPose.x = pose[0].x;
-//    currentPose.y = pose[0].y;
-//    currentPose.z = pose[0].z;
-//    currentPose.yaw = pose[0].yaw;
-//    mut_pose[0].unlock();
-//
-//    std::cout << "pose[0].x: " << currentPose.x << std::endl;
-//    std::cout << "pose[0].y: " << currentPose.y << std::endl;
-//    std::cout << "pose[0].z: " << currentPose.z << std::endl;
-//    std::cout << "pose[0].yaw: " << currentPose.yaw * 180.0 / M_PI << std::endl;
-//    mut_dest[0].lock();
-//    std::cout << "diff = " << getDistance(currentPose, dest[0]) << std::endl;
-//    mut_dest[0].unlock();
-
-    mut_laser[0].lock();
-    if (!laserScan[0].ranges.empty())
-    {
-//      for (int i = 0; i < laserMeasurementSteps; i++)
-//      {
-//        if (laserScan[0].ranges[i] < 1.0) {
-//          blockSet.insert(i);
-//        }
-//      }
-//
-//      for (std::set<int>::iterator it=blockSet.begin(); it!=blockSet.end(); ++it)
-//      {
-//        std::cout << ' ' << *it;
-//      }
-
-      std::cout << laserScan[0].ranges[laserCenterStep] << std::endl;
-    }
-    mut_laser[0].unlock();
-    wait(10);
-  }
-}
-
 void navigate(const Pose& targetPose, const int delay, const bool orient, const int uavID)
 {
   std::cout << "A navigation thread for UAV" << uavID << " to ["
@@ -549,10 +501,12 @@ void navigate(const Pose& targetPose, const int delay, const bool orient, const 
     partialTargetPose.y = targetPose.y;
     partialTargetPose.z = targetPose.z;
 
-//    int partialTargetReachedCount = 0;
-//    int laserScanObstructedCount = 0;
-
     bool hasObstructedCenter = false;
+
+    // (int)(std::atan2(0.7, 2.0) * 180.0 / M_PI / 0.25) + 1 = 78
+    // (int)(std::atan2(0.5, 1.0) * 180.0 / M_PI / 0.25) + 1 = 57
+    // (int)(std::atan2(0.7, 1.0) * 180.0 / M_PI / 0.25) + 1 = 140
+    double sideStep = (int)(std::atan2(safetyMargin, 2.0) * 180.0 / M_PI / laserAngularResolution) + 1;
 
     while (true)
     {
@@ -582,12 +536,6 @@ void navigate(const Pose& targetPose, const int delay, const bool orient, const 
         // update the partial target destination if the UAV has reached it
         if (getDistance(currentPose, partialTargetPose) <= maxPositionError)
         {
-//          if (partialTargetReachedCount < 10)
-//          {
-//            partialTargetReachedCount++;
-//          }
-//          else
-//          {
           if (hasObstructedCenter)
           {
             partialTargetPose.x = (targetPose.x + currentPose.x) / 2;
@@ -600,20 +548,14 @@ void navigate(const Pose& targetPose, const int delay, const bool orient, const 
             partialTargetPose.x = targetPose.x;
             partialTargetPose.y = targetPose.y;
             partialTargetPose.z = targetPose.z;
-//            partialTargetReachedCount = 0;
           }
-//          }
             std::cout << uavID << "RE) " << partialTargetPose.x << ", " << partialTargetPose.y << ", " << partialTargetPose.z << std::endl;
         }
-//        else
-//        {
-//          partialTargetReachedCount = 0;
-//        }
 
         double vx = partialTargetPose.x - currentPose.x;
         double vy = partialTargetPose.y - currentPose.y;
         double planarDistToTarget = std::sqrt(vx * vx + vy * vy);
-        double yawHeaded = std::atan2(vy, vx) - std::atan2(0, 1);
+        double yawHeaded = std::atan2(vy, vx);
         if (yawHeaded < 0.0)
         {
           yawHeaded += M_PI + M_PI;
@@ -631,10 +573,10 @@ void navigate(const Pose& targetPose, const int delay, const bool orient, const 
         if (getYawDiff(currentPose.yaw, yawHeaded) <= M_PI / 180.0  // allow 1.0 degree of error
             || planarDistToTarget <= maxPositionError)              // or only needs to fly vertically
         {
-          if (planarDistToTarget > maxPositionError)  // if needs to fly horizontally
+          if (planarDistToTarget > maxPositionError)  // if needs to move horizontally
           {
             double panDegree = std::atan2(safetyMargin, planarDistToTarget) * 180.0 / M_PI;
-            int panStep = (panDegree / laserAngularResolution) + 1;
+            int panStep = (int)(panDegree / laserAngularResolution) + 1;
 
             // legal range: 390 <- 540 -> 690. The maximum steps from 540 to both side are 150
             int panStepTrimmed = (panStep > 150)? 150: panStep;
@@ -652,69 +594,42 @@ void navigate(const Pose& targetPose, const int delay, const bool orient, const 
               double obstructedCenterDist = DBL_MAX;
               double obstructedLeftDist = DBL_MAX;
               double obstructedRightDist = DBL_MAX;
-              int panStepObstructedCenter;
-              int panStepObstructedLeft;
-              int panStepObstructedRight;
 
-              if (laserScan[uavID].ranges[laserCenterStep] >= laserRangeMin
-                  && laserScan[uavID].ranges[laserCenterStep] < planarDistToTarget + safetyMargin)
+              if (laserScan[uavID].ranges[laserCenterStep] < planarDistToTarget + safetyMargin)
               {
                 obstructedCenter = true;
-                panStepObstructedCenter = 0;
                 obstructedCenterDist = laserScan[uavID].ranges[laserCenterStep];
               }
-              else
+              double upperLimit = (planarDistToTarget + safetyMargin) / std::cos(panStepTrimmed * laserAngularResolution * M_PI / 180.0);
+              if (laserScan[uavID].ranges[laserCenterStep - panStepTrimmed] < upperLimit)
               {
-//                for (int i = 1; i <= panStepTrimmed; i++)
-//                {
-//                  double upperLimit = (planarDistToTarget + safetyMargin) / std::cos(i * laserAngularResolution * M_PI / 180.0);
-//                  if (laserScan[uavID].ranges[laserCenterStep - i] < upperLimit)
-//                  {
-//                    obstructed = true;
-//                    panStepObstructed = -i;
-//                    obstructedDistance = laserScan[uavID].ranges[laserCenterStep - i];
-//                    break;
-//                  }
-//                  if (laserScan[uavID].ranges[laserCenterStep + i] < upperLimit)
-//                  {
-//                    obstructed = true;
-//                    panStepObstructed = i;
-//                    obstructedDistance = laserScan[uavID].ranges[laserCenterStep + i];
-//                    break;
-//                  }
-//                }
-
-                double upperLimit = (planarDistToTarget + safetyMargin) / std::cos(panStepTrimmed * laserAngularResolution * M_PI / 180.0);
-                if (laserScan[uavID].ranges[laserCenterStep - panStepTrimmed] < upperLimit)
-                {
-                  obstructedLeft = true;
-                  panStepObstructedLeft = -panStepTrimmed;
-                  obstructedLeftDist = laserScan[uavID].ranges[laserCenterStep - panStepTrimmed];
-                }
-                if (laserScan[uavID].ranges[laserCenterStep + panStepTrimmed] < upperLimit)
-                {
-                  obstructedRight = true;
-                  panStepObstructedRight = panStepTrimmed;
-                  obstructedRightDist = laserScan[uavID].ranges[laserCenterStep + panStepTrimmed];
-                }
+                obstructedLeft = true;
+                obstructedLeftDist = laserScan[uavID].ranges[laserCenterStep - panStepTrimmed];
+              }
+              else if (laserScan[uavID].ranges[laserCenterStep - sideStep] < upperLimit)
+              {
+                obstructedLeft = true;
+                obstructedLeftDist = laserScan[uavID].ranges[laserCenterStep - sideStep];
               }
 
-              if (obstructedCenter || obstructedLeft || obstructedRight)   // if the path is blocked, we need to devise a new partial target
+              if (laserScan[uavID].ranges[laserCenterStep + panStepTrimmed] < upperLimit)
               {
-//                if (laserScanObstructedCount < 10)
-//                {
-//                  laserScanObstructedCount++;
-//                  mut_laser[uavID].unlock();
-//                  continue;
-//                }
-//
-//                std::cout << "panStepObstructed = " << panStepObstructed << std::endl;
-//                std::cout << "degree = " << panStepObstructed * 0.25 << std::endl;
-//                std::cout << "obstructedDistance = " << obstructedDistance << std::endl;
-//
-//                // if the quadrotor is in the same level as the target
-//                if (std::fabs(currentPose.z - partialTargetPose.z) <= maxPositionError)
-//                {
+                obstructedRight = true;
+                obstructedRightDist = laserScan[uavID].ranges[laserCenterStep + panStepTrimmed];
+              }
+              else if (laserScan[uavID].ranges[laserCenterStep + sideStep] < upperLimit)
+              {
+                obstructedRight = true;
+                obstructedRightDist = laserScan[uavID].ranges[laserCenterStep + sideStep];
+              }
+
+              // if the path is blocked, we need to devise a new partial target
+              if (obstructedCenter || obstructedLeft || obstructedRight)
+              {
+                // if the quadrotor is in the same level as the target
+                if (std::fabs(currentPose.z - partialTargetPose.z) <= maxPositionError
+                    && (obstructedLeftDist < 6.0 || obstructedCenterDist < 6.0 || obstructedRightDist < 6.0))
+                {
 //                  // if the obstacle is at the (partial) target, then we deem the destination is unreachable
 //                  double lowerLimit = (planarDistToTarget - safetyMargin) / std::cos(std::abs(panStepObstructed) * laserAngularResolution * M_PI / 180.0);
 //                  if (obstructedDistance > lowerLimit)
@@ -728,37 +643,7 @@ void navigate(const Pose& targetPose, const int delay, const bool orient, const 
 //                    mut_laser[uavID].unlock();
 //                    break;
 //                  }
-//
-//                  // devise a new partial target
-//                  // check from the center [range: 390-690]
-//                  int panStepUncheckedLeft = laserCenterStep + panStepObstructed;
-//                  int panStepUncheckedRight = laserCenterStep - panStepObstructed;
-//                  int panStepToGo;
-//
-//                  if (panStepUncheckedLeft > panStepUncheckedRight)
-//                  {
-//                    if (panStepUncheckedLeft > 2 * panDegree)
-//                    {
-//                    }
-//                    if (panStepUncheckedRight > 2 * panDegree)
-//                    {
-//                    }
-//                  }
-//                  else
-//                  {
-//                  }
-//
-//                  // check from the left wing [range: 30-330]
-//  //                double newPanDegree = std::atan2(safetyMargin, laserScan[uavID].ranges[laserCenterStep + panStepObstructed]) * 180.0 / M_PI;
-//  //                int newPanStep = (newPanDegree / laserAngularResolution) + 1;
-//  //                int newPanStepTrimmed = (newPanStep > 150)? 150: newPanStep;
-//
-//                  // check from the right wing [range: 750-1050]
-//                }
 
-                if (std::fabs(currentPose.z - partialTargetPose.z) <= maxPositionError
-                    && (obstructedLeftDist < 6.0 || obstructedCenterDist < 6.0 || obstructedRightDist < 6.0))
-                {
                   if (!obstructedLeft)
                   {
 //                    if (laserScan[uavID].ranges[330] > 4.0)
@@ -858,10 +743,6 @@ void navigate(const Pose& targetPose, const int delay, const bool orient, const 
                   hasObstructedCenter = true;
                 }
               }
-//              else
-//              {
-//                laserScanObstructedCount = 0;
-//              }
             }
             mut_laser[uavID].unlock();
           }
