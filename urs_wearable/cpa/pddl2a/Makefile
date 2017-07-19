@@ -1,9 +1,9 @@
 # Makefile
 
-OBJS	= bison.o lex.o main.o define.o reader.o action.o planner.o state.o
+OBJS = bison.o lex.o main.o define.o reader.o action.o planner.o state.o
 
-CC	= g++
-CFLAGS	= -g -Wall -std=c++11 -O3
+CC = g++
+CFLAGS = -Wall -std=c++11 -O3
 
 cpa:		$(OBJS)
 		$(CC) $(CFLAGS) $(OBJS) -o cpa.pddl2pl -lfl

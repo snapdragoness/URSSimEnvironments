@@ -1,12 +1,12 @@
 # Makefile
 
-OBJS	= bison.o lex.o main.o reader.o action.o planner.o state.o 
+OBJS = bison.o lex.o main.o reader.o action.o planner.o state.o
 
-CC	= g++
-CFLAGS	=  -Wall -std=c++11 -O3
+CC = g++
+CFLAGS = -Wall -std=c++11 -O3
 
 cpa+:		$(OBJS)
-		$(CC) $(CFLAGS) $(OBJS) -o cpa+ -ll
+		$(CC) $(CFLAGS) $(OBJS) -o cpa+ -lfl
 
 lex.o:		lex.c
 		$(CC) $(CFLAGS) -c lex.c -o lex.o

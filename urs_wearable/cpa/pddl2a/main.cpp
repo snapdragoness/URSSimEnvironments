@@ -1,9 +1,9 @@
 /* main.cc */
-#include "stdio.h"
-#include "stdlib.h"
+
 #include "reader.h"
 #include "timer.h"
 #include "planner.h"
+#include <string.h>
 
 #define VERSION "1.1"
 #define DEBUG
