@@ -1,0 +1,8 @@
+==================
+ CPA(H) Planner
+==================
+
+Usage:
+
+./run_cpah.sh CPA+/ipc05/blockwork/pr01.pddl
+
