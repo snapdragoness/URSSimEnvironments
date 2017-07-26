@@ -45,5 +45,5 @@ lex.o yac.o main.o	:
 lex.o main.o		: 
 
 clean:
-	rm -f *.o *~ lex.c lex.yy.c bison.c tok.h lcp.tab.c lcp.tab.h lcp.output cpa
+	rm -f *.o *~ lex.c lex.yy.c bison.c tok.h lcp.tab.c lcp.tab.h lcp.output cpa.pddl2pl
 
