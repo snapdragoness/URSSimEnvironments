@@ -117,6 +117,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 # include_directories(include)
 include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -124,6 +125,8 @@ include_directories(
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/urs_wearable.cpp
 # )
+add_library(controller src/controller.cpp)
+add_library(navigator src/navigator.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -134,7 +137,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/urs_wearable_node.cpp)
-add_executable(keyboard_teleop src/keyboard_teleop.cpp)
+add_executable(keyboard_teleop src/keyboard_teleop.cpp src/controller.cpp src/navigator.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -148,9 +151,7 @@ add_executable(keyboard_teleop src/keyboard_teleop.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(
-  #${PROJECT_NAME}
-  keyboard_teleop
-  ${catkin_LIBRARIES}
+  keyboard_teleop controller navigator ${catkin_LIBRARIES}
 )
 
 #############
