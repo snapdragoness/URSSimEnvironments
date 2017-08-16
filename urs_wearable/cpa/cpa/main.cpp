@@ -19,7 +19,7 @@ FILE* f;
 int main(int argc, char **argv)
 {
   int i;
-  Planner planner(&reader,&timer);
+  Planner planner(&reader, &timer);
 
   //cout << "CPA+ version " << VERSION << 
 //	" - Built date: " << BUILT_DATE << endl;
@@ -28,57 +28,66 @@ int main(int argc, char **argv)
     print_usage(argv[0]);
 
   i = 2;
-  while (i < argc) {
-    if (strcmp(argv[i],"-pc") == 0) {
-	  planner.m_semantics = PC;
+  while (i < argc)
+  {
+    if (strcmp(argv[i], "-pc") == 0)
+    {
+      planner.m_semantics = PC;
     }
-    else if (strcmp(argv[i],"-ph") == 0) {
-	  planner.m_semantics = PH;
+    else if (strcmp(argv[i], "-ph") == 0)
+    {
+      planner.m_semantics = PH;
     }
-    else if (strcmp(argv[i],"-e") == 0) {
+    else if (strcmp(argv[i], "-e") == 0)
+    {
       planner.m_task = DOPLAN;
 
       if (i == argc - 1)
-		print_usage(argv[0]);
+        print_usage(argv[0]);
 
       i++;
 
-      while (i < argc && argv[i][0] != '-') {
-		planner.m_plan.push_back(string(argv[i++]));	
+      while (i < argc && argv[i][0] != '-')
+      {
+        planner.m_plan.push_back(string(argv[i++]));
       }
     }
-    else if (strcmp(argv[i],"-p") == 0) {
+    else if (strcmp(argv[i], "-p") == 0)
+    {
       planner.m_detect_essential = false;
     }
-    else if (strcmp(argv[i],"-o") == 0) {
+    else if (strcmp(argv[i], "-o") == 0)
+    {
       planner.m_output_decisive = true;
     }
-    else 
+    else
       print_usage(argv[0]);
     i++;
   }
 
-  if (freopen(argv[1], "r", stdin) == NULL) {
+  if (freopen(argv[1], "r", stdin) == NULL)
+  {
     cerr << argv[0] << ": File " << argv[1] << " cannot be opened.\n";
     exit(1);
   }
-  
-  f = fopen(argv[1],"rt");
-  char filename[81];
-  while(!feof(f))
-  {
-	fscanf(f,"%s",filename);
-        if (freopen(filename, "r", stdin) == NULL) {
-    		cerr << argv[0] << ": File " << argv[1] << " cannot be opened.\n";
-    		exit(1);
-  	}
 
-  	timer.start(READ_TIMER);
-  	reader.read();
-  	timer.end(READ_TIMER);
-	planner.main();
+  f = fopen(argv[1], "rt");
+  char filename[81];
+  while (!feof(f))
+  {
+    fscanf(f, "%s", filename);
+    if (freopen(filename, "r", stdin) == NULL)
+    {
+      cerr << argv[0] << ": File " << argv[1] << " cannot be opened.\n";
+      exit(1);
+    }
+
+    timer.start(READ_TIMER);
+    reader.read();
+    timer.end(READ_TIMER);
+    planner.main();
   }
-  planner.print_statistics(); 
+  planner.print_statistics();
 
   exit(0);
 }

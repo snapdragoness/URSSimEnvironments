@@ -20,8 +20,8 @@ int main(int argc, char **argv)
   bool b_plan = false;
   bool b_semantics = false;
   bool b_debug = false;
-  
-  Planner planner(&reader,&timer);
+
+  Planner planner(&reader, &timer);
 
   planner.completedinfo = false;
   cout << "CPA version " << VERSION << endl;
@@ -30,26 +30,28 @@ int main(int argc, char **argv)
     print_usage(argv[0]);
 
   i = 2;
-  while (i < argc) {
-    if (strcmp(argv[i],"-pc") == 0 || 
-	strcmp(argv[i],"-ph") == 0) {
+  while (i < argc)
+  {
+    if (strcmp(argv[i], "-pc") == 0 || strcmp(argv[i], "-ph") == 0)
+    {
       if (b_semantics)
-	print_usage(argv[0]);
+        print_usage(argv[0]);
 
-      if (strcmp(argv[i],"-ph") == 0)
-	planner.m_semantics = PH;
+      if (strcmp(argv[i], "-ph") == 0)
+        planner.m_semantics = PH;
       else
-	planner.m_semantics = PC;
-      
+        planner.m_semantics = PC;
+
       // stop reading plan
       b_plan = false;
 
       // mark the option
       b_semantics = true;
     }
-    else if (strcmp(argv[i],"-e") == 0) {
-      if (b_debug) 
-	print_usage(argv[0]);
+    else if (strcmp(argv[i], "-e") == 0)
+    {
+      if (b_debug)
+        print_usage(argv[0]);
 
       planner.m_task = DOPLAN;
 
@@ -57,20 +59,23 @@ int main(int argc, char **argv)
       b_debug = true;
 
       // start reading plan
-      b_plan = true;  
+      b_plan = true;
     }
-    else if (b_plan) {
+    else if (b_plan)
+    {
       planner.m_plan.push_back(string(argv[i]));
     }
-    else if (strcmp(argv[i],"-c") == 0) {
+    else if (strcmp(argv[i], "-c") == 0)
+    {
       planner.completedinfo = true;
     }
-    else 
+    else
       print_usage(argv[0]);
     ++i;
   }
 
-  if (freopen(argv[1], "r", stdin) == NULL) {
+  if (freopen(argv[1], "r", stdin) == NULL)
+  {
     cerr << argv[0] << ": File " << argv[1] << " cannot be opened.\n";
     exit(1);
   }
@@ -92,12 +97,12 @@ void print_usage(char* prog_name)
   cout << "  -[pc|ph]" << endl;
   cout << "     Select an approximation to be used: pc for" << endl;
   cout << "     the possible-change approximation; ph for " << endl;
-  cout << "     the possible-hold approximation." << endl << endl; 
+  cout << "     the possible-hold approximation." << endl << endl;
   cout << "  -e action1 action2 action3 ..." << endl;
   cout << "     Perform a sequence of actions and print out" << endl;
   cout << "     results step by step. The planner does not" << endl;
   cout << "     search for a plan." << endl << endl;
-  cout << "  -c "<<endl;
+  cout << "  -c " << endl;
   cout << "     Generate a completed initial state" << endl;
   cout << "EXAMPLES:" << endl;
   cout << "  " << prog_name << " blw.al -ph" << endl;
