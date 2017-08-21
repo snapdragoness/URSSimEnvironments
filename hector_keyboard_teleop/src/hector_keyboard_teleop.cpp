@@ -195,7 +195,7 @@ int main(int argc, char **argv)
       boost::tokenizer<boost::char_separator<char>> tok {keyboardInput, sep};
       for (const auto &token : tok)
       {
-        tokens.push_back(token);
+        tokens.push_back((std::string)token);
       }
 
       // check the input
