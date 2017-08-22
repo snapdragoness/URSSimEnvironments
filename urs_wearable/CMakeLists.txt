@@ -131,13 +131,14 @@ add_library(navigator src/navigator.cpp)
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/urs_wearable_node.cpp)
-add_executable(keyboard_teleop src/keyboard_teleop.cpp src/controller.cpp src/navigator.cpp)
+add_executable(keyboard_teleop src/keyboard_teleop.cpp)
+add_executable(exec_monitor src/exec_monitor.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -150,9 +151,8 @@ add_executable(keyboard_teleop src/keyboard_teleop.cpp src/controller.cpp src/na
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(
-  keyboard_teleop controller navigator ${catkin_LIBRARIES}
-)
+target_link_libraries(keyboard_teleop controller navigator ${catkin_LIBRARIES})
+target_link_libraries(exec_monitor controller navigator ${catkin_LIBRARIES})
 
 #############
 ## Install ##
