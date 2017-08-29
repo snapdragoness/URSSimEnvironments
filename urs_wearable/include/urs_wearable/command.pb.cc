@@ -16,7 +16,7 @@
 #include <google/protobuf/wire_format.h>
 // @@protoc_insertion_point(includes)
 
-namespace ros_protobuf {
+namespace urs_protobuf {
 
 namespace {
 
@@ -81,8 +81,8 @@ void protobuf_AddDesc_command_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\rcommand.proto\022\014ros_protobuf\"u\n\007Command"
-    "\0227\n\014command_type\030\001 \002(\0162!.ros_protobuf.Co"
+    "\n\rcommand.proto\022\014urs_protobuf\"u\n\007Command"
+    "\0227\n\014command_type\030\001 \002(\0162!.urs_protobuf.Co"
     "mmand.CommandType\022\016\n\006uav_id\030\002 \001(\005\"!\n\013Com"
     "mandType\022\010\n\004GOTO\020\000\022\010\n\004MOVE\020\001", 148);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
@@ -130,7 +130,7 @@ const int Command::kUavIdFieldNumber;
 Command::Command()
   : ::google::protobuf::Message() {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:ros_protobuf.Command)
+  // @@protoc_insertion_point(constructor:urs_protobuf.Command)
 }
 
 void Command::InitAsDefaultInstance() {
@@ -140,7 +140,7 @@ Command::Command(const Command& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
-  // @@protoc_insertion_point(copy_constructor:ros_protobuf.Command)
+  // @@protoc_insertion_point(copy_constructor:urs_protobuf.Command)
 }
 
 void Command::SharedCtor() {
@@ -151,7 +151,7 @@ void Command::SharedCtor() {
 }
 
 Command::~Command() {
-  // @@protoc_insertion_point(destructor:ros_protobuf.Command)
+  // @@protoc_insertion_point(destructor:urs_protobuf.Command)
   SharedDtor();
 }
 
@@ -205,21 +205,21 @@ bool Command::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:ros_protobuf.Command)
+  // @@protoc_insertion_point(parse_start:urs_protobuf.Command)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required .ros_protobuf.Command.CommandType command_type = 1;
+      // required .urs_protobuf.Command.CommandType command_type = 1;
       case 1: {
         if (tag == 8) {
           int value;
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    int, ::google::protobuf::internal::WireFormatLite::TYPE_ENUM>(
                  input, &value)));
-          if (::ros_protobuf::Command_CommandType_IsValid(value)) {
-            set_command_type(static_cast< ::ros_protobuf::Command_CommandType >(value));
+          if (::urs_protobuf::Command_CommandType_IsValid(value)) {
+            set_command_type(static_cast< ::urs_protobuf::Command_CommandType >(value));
           } else {
             mutable_unknown_fields()->AddVarint(1, value);
           }
@@ -259,18 +259,18 @@ bool Command::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:ros_protobuf.Command)
+  // @@protoc_insertion_point(parse_success:urs_protobuf.Command)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:ros_protobuf.Command)
+  // @@protoc_insertion_point(parse_failure:urs_protobuf.Command)
   return false;
 #undef DO_
 }
 
 void Command::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:ros_protobuf.Command)
-  // required .ros_protobuf.Command.CommandType command_type = 1;
+  // @@protoc_insertion_point(serialize_start:urs_protobuf.Command)
+  // required .urs_protobuf.Command.CommandType command_type = 1;
   if (has_command_type()) {
     ::google::protobuf::internal::WireFormatLite::WriteEnum(
       1, this->command_type(), output);
@@ -285,13 +285,13 @@ void Command::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:ros_protobuf.Command)
+  // @@protoc_insertion_point(serialize_end:urs_protobuf.Command)
 }
 
 ::google::protobuf::uint8* Command::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:ros_protobuf.Command)
-  // required .ros_protobuf.Command.CommandType command_type = 1;
+  // @@protoc_insertion_point(serialize_to_array_start:urs_protobuf.Command)
+  // required .urs_protobuf.Command.CommandType command_type = 1;
   if (has_command_type()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteEnumToArray(
       1, this->command_type(), target);
@@ -306,7 +306,7 @@ void Command::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:ros_protobuf.Command)
+  // @@protoc_insertion_point(serialize_to_array_end:urs_protobuf.Command)
   return target;
 }
 
@@ -314,7 +314,7 @@ int Command::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required .ros_protobuf.Command.CommandType command_type = 1;
+    // required .urs_protobuf.Command.CommandType command_type = 1;
     if (has_command_type()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::EnumSize(this->command_type());
@@ -403,6 +403,6 @@ void Command::Swap(Command* other) {
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace ros_protobuf
+}  // namespace urs_protobuf
 
 // @@protoc_insertion_point(global_scope)

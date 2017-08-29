@@ -27,7 +27,7 @@
 #include <google/protobuf/unknown_field_set.h>
 // @@protoc_insertion_point(includes)
 
-namespace ros_protobuf {
+namespace urs_protobuf {
 
 // Internal implementation detail -- do not call these.
 void  protobuf_AddDesc_command_2eproto();
@@ -134,12 +134,12 @@ class Command : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // required .ros_protobuf.Command.CommandType command_type = 1;
+  // required .urs_protobuf.Command.CommandType command_type = 1;
   inline bool has_command_type() const;
   inline void clear_command_type();
   static const int kCommandTypeFieldNumber = 1;
-  inline ::ros_protobuf::Command_CommandType command_type() const;
-  inline void set_command_type(::ros_protobuf::Command_CommandType value);
+  inline ::urs_protobuf::Command_CommandType command_type() const;
+  inline void set_command_type(::urs_protobuf::Command_CommandType value);
 
   // optional int32 uav_id = 2;
   inline bool has_uav_id() const;
@@ -148,7 +148,7 @@ class Command : public ::google::protobuf::Message {
   inline ::google::protobuf::int32 uav_id() const;
   inline void set_uav_id(::google::protobuf::int32 value);
 
-  // @@protoc_insertion_point(class_scope:ros_protobuf.Command)
+  // @@protoc_insertion_point(class_scope:urs_protobuf.Command)
  private:
   inline void set_has_command_type();
   inline void clear_has_command_type();
@@ -175,7 +175,7 @@ class Command : public ::google::protobuf::Message {
 
 // Command
 
-// required .ros_protobuf.Command.CommandType command_type = 1;
+// required .urs_protobuf.Command.CommandType command_type = 1;
 inline bool Command::has_command_type() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
@@ -189,15 +189,15 @@ inline void Command::clear_command_type() {
   command_type_ = 0;
   clear_has_command_type();
 }
-inline ::ros_protobuf::Command_CommandType Command::command_type() const {
-  // @@protoc_insertion_point(field_get:ros_protobuf.Command.command_type)
-  return static_cast< ::ros_protobuf::Command_CommandType >(command_type_);
+inline ::urs_protobuf::Command_CommandType Command::command_type() const {
+  // @@protoc_insertion_point(field_get:urs_protobuf.Command.command_type)
+  return static_cast< ::urs_protobuf::Command_CommandType >(command_type_);
 }
-inline void Command::set_command_type(::ros_protobuf::Command_CommandType value) {
-  assert(::ros_protobuf::Command_CommandType_IsValid(value));
+inline void Command::set_command_type(::urs_protobuf::Command_CommandType value) {
+  assert(::urs_protobuf::Command_CommandType_IsValid(value));
   set_has_command_type();
   command_type_ = value;
-  // @@protoc_insertion_point(field_set:ros_protobuf.Command.command_type)
+  // @@protoc_insertion_point(field_set:urs_protobuf.Command.command_type)
 }
 
 // optional int32 uav_id = 2;
@@ -215,28 +215,28 @@ inline void Command::clear_uav_id() {
   clear_has_uav_id();
 }
 inline ::google::protobuf::int32 Command::uav_id() const {
-  // @@protoc_insertion_point(field_get:ros_protobuf.Command.uav_id)
+  // @@protoc_insertion_point(field_get:urs_protobuf.Command.uav_id)
   return uav_id_;
 }
 inline void Command::set_uav_id(::google::protobuf::int32 value) {
   set_has_uav_id();
   uav_id_ = value;
-  // @@protoc_insertion_point(field_set:ros_protobuf.Command.uav_id)
+  // @@protoc_insertion_point(field_set:urs_protobuf.Command.uav_id)
 }
 
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace ros_protobuf
+}  // namespace urs_protobuf
 
 #ifndef SWIG
 namespace google {
 namespace protobuf {
 
-template <> struct is_proto_enum< ::ros_protobuf::Command_CommandType> : ::google::protobuf::internal::true_type {};
+template <> struct is_proto_enum< ::urs_protobuf::Command_CommandType> : ::google::protobuf::internal::true_type {};
 template <>
-inline const EnumDescriptor* GetEnumDescriptor< ::ros_protobuf::Command_CommandType>() {
-  return ::ros_protobuf::Command_CommandType_descriptor();
+inline const EnumDescriptor* GetEnumDescriptor< ::urs_protobuf::Command_CommandType>() {
+  return ::urs_protobuf::Command_CommandType_descriptor();
 }
 
 }  // namespace google

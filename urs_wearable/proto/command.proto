@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-package ros_protobuf;
+package urs_protobuf;
 
 message Command {
   enum CommandType {
