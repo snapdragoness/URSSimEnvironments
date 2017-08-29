@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
+find_package(Protobuf REQUIRED)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -120,6 +121,9 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
 )
+include_directories(${PROTOBUF_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS proto/command.proto)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -127,7 +131,6 @@ include_directories(
 # )
 add_library(controller src/controller.cpp)
 add_library(navigator src/navigator.cpp)
-add_library(proto include/urs_wearable/command.pb.cc)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -139,7 +142,7 @@ add_library(proto include/urs_wearable/command.pb.cc)
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/urs_wearable_node.cpp)
 add_executable(keyboard_teleop src/keyboard_teleop.cpp)
-add_executable(exec_monitor src/exec_monitor.cpp)
+add_executable(exec_monitor src/exec_monitor.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -153,7 +156,7 @@ add_executable(exec_monitor src/exec_monitor.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(keyboard_teleop controller navigator ${catkin_LIBRARIES})
-target_link_libraries(exec_monitor controller navigator proto ${catkin_LIBRARIES})
+target_link_libraries(exec_monitor controller navigator ${PROTOBUF_LIBRARIES} ${catkin_LIBRARIES})
 
 #############
 ## Install ##
