@@ -44,6 +44,7 @@
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
   <depend>hector_quadrotor_interface</depend>
+  <depend>Protobuf</depend>
   
 
   <!-- The export tag contains other, unspecified, tags -->
