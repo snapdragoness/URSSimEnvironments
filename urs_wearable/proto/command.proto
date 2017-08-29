@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package ros_protobuf;
+
+message Command {
+  enum CommandType {
+    GOTO = 0;
+    MOVE = 1;
+  }
+  
+  required CommandType command_type = 1;
+  optional int32 uav_id = 2;
+}

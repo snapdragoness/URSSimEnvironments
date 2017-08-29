@@ -105,7 +105,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES urs_wearable
-  CATKIN_DEPENDS roscpp std_msgs hector_uav_msgs
+  CATKIN_DEPENDS roscpp std_msgs
 #  DEPENDS system_lib
 )
 
@@ -127,6 +127,7 @@ include_directories(
 # )
 add_library(controller src/controller.cpp)
 add_library(navigator src/navigator.cpp)
+add_library(proto include/urs_wearable/command.pb.cc)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -152,7 +153,7 @@ add_executable(exec_monitor src/exec_monitor.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(keyboard_teleop controller navigator ${catkin_LIBRARIES})
-target_link_libraries(exec_monitor controller navigator ${catkin_LIBRARIES})
+target_link_libraries(exec_monitor controller navigator proto ${catkin_LIBRARIES})
 
 #############
 ## Install ##
