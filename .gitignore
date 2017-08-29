@@ -5,6 +5,7 @@ mastering_ros/
 quadrotor_moveit_nav/
 
 urs_wearable/cpa/cpa/action.o
+urs_wearable/cpa/cpa/action.pb.o
 urs_wearable/cpa/cpa/bison.c
 urs_wearable/cpa/cpa/bison.o
 urs_wearable/cpa/cpa/built_date
@@ -14,7 +15,6 @@ urs_wearable/cpa/cpa/lcp.tab.c
 urs_wearable/cpa/cpa/lcp.tab.h
 urs_wearable/cpa/cpa/lex.c
 urs_wearable/cpa/cpa/lex.o
-urs_wearable/cpa/cpa/lex.yy.c
 urs_wearable/cpa/cpa/main.o
 urs_wearable/cpa/cpa/planner.o
 urs_wearable/cpa/cpa/reader.o
