@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package urs_protobuf;
+
+message Action {
+  enum ActionType {
+    GOTO = 0;
+    MOVE = 1;
+  }
+  
+  required ActionType action_type = 1;
+  optional int32 uav_id = 2;
+  optional int32 x = 3;
+  optional int32 y = 4;
+  optional int32 z = 5;
+  optional int32 yaw = 6;
+}
