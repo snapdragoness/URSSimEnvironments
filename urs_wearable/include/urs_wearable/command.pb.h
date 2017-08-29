@@ -148,12 +148,48 @@ class Command : public ::google::protobuf::Message {
   inline ::google::protobuf::int32 uav_id() const;
   inline void set_uav_id(::google::protobuf::int32 value);
 
+  // optional int32 x = 3;
+  inline bool has_x() const;
+  inline void clear_x();
+  static const int kXFieldNumber = 3;
+  inline ::google::protobuf::int32 x() const;
+  inline void set_x(::google::protobuf::int32 value);
+
+  // optional int32 y = 4;
+  inline bool has_y() const;
+  inline void clear_y();
+  static const int kYFieldNumber = 4;
+  inline ::google::protobuf::int32 y() const;
+  inline void set_y(::google::protobuf::int32 value);
+
+  // optional int32 z = 5;
+  inline bool has_z() const;
+  inline void clear_z();
+  static const int kZFieldNumber = 5;
+  inline ::google::protobuf::int32 z() const;
+  inline void set_z(::google::protobuf::int32 value);
+
+  // optional int32 yaw = 6;
+  inline bool has_yaw() const;
+  inline void clear_yaw();
+  static const int kYawFieldNumber = 6;
+  inline ::google::protobuf::int32 yaw() const;
+  inline void set_yaw(::google::protobuf::int32 value);
+
   // @@protoc_insertion_point(class_scope:urs_protobuf.Command)
  private:
   inline void set_has_command_type();
   inline void clear_has_command_type();
   inline void set_has_uav_id();
   inline void clear_has_uav_id();
+  inline void set_has_x();
+  inline void clear_has_x();
+  inline void set_has_y();
+  inline void clear_has_y();
+  inline void set_has_z();
+  inline void clear_has_z();
+  inline void set_has_yaw();
+  inline void clear_has_yaw();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -161,6 +197,10 @@ class Command : public ::google::protobuf::Message {
   mutable int _cached_size_;
   int command_type_;
   ::google::protobuf::int32 uav_id_;
+  ::google::protobuf::int32 x_;
+  ::google::protobuf::int32 y_;
+  ::google::protobuf::int32 z_;
+  ::google::protobuf::int32 yaw_;
   friend void  protobuf_AddDesc_command_2eproto();
   friend void protobuf_AssignDesc_command_2eproto();
   friend void protobuf_ShutdownFile_command_2eproto();
@@ -222,6 +262,102 @@ inline void Command::set_uav_id(::google::protobuf::int32 value) {
   set_has_uav_id();
   uav_id_ = value;
   // @@protoc_insertion_point(field_set:urs_protobuf.Command.uav_id)
+}
+
+// optional int32 x = 3;
+inline bool Command::has_x() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void Command::set_has_x() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void Command::clear_has_x() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void Command::clear_x() {
+  x_ = 0;
+  clear_has_x();
+}
+inline ::google::protobuf::int32 Command::x() const {
+  // @@protoc_insertion_point(field_get:urs_protobuf.Command.x)
+  return x_;
+}
+inline void Command::set_x(::google::protobuf::int32 value) {
+  set_has_x();
+  x_ = value;
+  // @@protoc_insertion_point(field_set:urs_protobuf.Command.x)
+}
+
+// optional int32 y = 4;
+inline bool Command::has_y() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void Command::set_has_y() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void Command::clear_has_y() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void Command::clear_y() {
+  y_ = 0;
+  clear_has_y();
+}
+inline ::google::protobuf::int32 Command::y() const {
+  // @@protoc_insertion_point(field_get:urs_protobuf.Command.y)
+  return y_;
+}
+inline void Command::set_y(::google::protobuf::int32 value) {
+  set_has_y();
+  y_ = value;
+  // @@protoc_insertion_point(field_set:urs_protobuf.Command.y)
+}
+
+// optional int32 z = 5;
+inline bool Command::has_z() const {
+  return (_has_bits_[0] & 0x00000010u) != 0;
+}
+inline void Command::set_has_z() {
+  _has_bits_[0] |= 0x00000010u;
+}
+inline void Command::clear_has_z() {
+  _has_bits_[0] &= ~0x00000010u;
+}
+inline void Command::clear_z() {
+  z_ = 0;
+  clear_has_z();
+}
+inline ::google::protobuf::int32 Command::z() const {
+  // @@protoc_insertion_point(field_get:urs_protobuf.Command.z)
+  return z_;
+}
+inline void Command::set_z(::google::protobuf::int32 value) {
+  set_has_z();
+  z_ = value;
+  // @@protoc_insertion_point(field_set:urs_protobuf.Command.z)
+}
+
+// optional int32 yaw = 6;
+inline bool Command::has_yaw() const {
+  return (_has_bits_[0] & 0x00000020u) != 0;
+}
+inline void Command::set_has_yaw() {
+  _has_bits_[0] |= 0x00000020u;
+}
+inline void Command::clear_has_yaw() {
+  _has_bits_[0] &= ~0x00000020u;
+}
+inline void Command::clear_yaw() {
+  yaw_ = 0;
+  clear_has_yaw();
+}
+inline ::google::protobuf::int32 Command::yaw() const {
+  // @@protoc_insertion_point(field_get:urs_protobuf.Command.yaw)
+  return yaw_;
+}
+inline void Command::set_yaw(::google::protobuf::int32 value) {
+  set_has_yaw();
+  yaw_ = value;
+  // @@protoc_insertion_point(field_set:urs_protobuf.Command.yaw)
 }
 
 

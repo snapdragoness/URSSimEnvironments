@@ -35,9 +35,13 @@ void protobuf_AssignDesc_command_2eproto() {
       "command.proto");
   GOOGLE_CHECK(file != NULL);
   Command_descriptor_ = file->message_type(0);
-  static const int Command_offsets_[2] = {
+  static const int Command_offsets_[6] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Command, command_type_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Command, uav_id_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Command, x_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Command, y_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Command, z_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Command, yaw_),
   };
   Command_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -81,10 +85,11 @@ void protobuf_AddDesc_command_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\rcommand.proto\022\014urs_protobuf\"u\n\007Command"
-    "\0227\n\014command_type\030\001 \002(\0162!.urs_protobuf.Co"
-    "mmand.CommandType\022\016\n\006uav_id\030\002 \001(\005\"!\n\013Com"
-    "mandType\022\010\n\004GOTO\020\000\022\010\n\004MOVE\020\001", 148);
+    "\n\rcommand.proto\022\014urs_protobuf\"\243\001\n\007Comman"
+    "d\0227\n\014command_type\030\001 \002(\0162!.urs_protobuf.C"
+    "ommand.CommandType\022\016\n\006uav_id\030\002 \001(\005\022\t\n\001x\030"
+    "\003 \001(\005\022\t\n\001y\030\004 \001(\005\022\t\n\001z\030\005 \001(\005\022\013\n\003yaw\030\006 \001(\005"
+    "\"!\n\013CommandType\022\010\n\004GOTO\020\000\022\010\n\004MOVE\020\001", 195);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "command.proto", &protobuf_RegisterTypes);
   Command::default_instance_ = new Command();
@@ -125,6 +130,10 @@ const int Command::CommandType_ARRAYSIZE;
 #ifndef _MSC_VER
 const int Command::kCommandTypeFieldNumber;
 const int Command::kUavIdFieldNumber;
+const int Command::kXFieldNumber;
+const int Command::kYFieldNumber;
+const int Command::kZFieldNumber;
+const int Command::kYawFieldNumber;
 #endif  // !_MSC_VER
 
 Command::Command()
@@ -147,6 +156,10 @@ void Command::SharedCtor() {
   _cached_size_ = 0;
   command_type_ = 0;
   uav_id_ = 0;
+  x_ = 0;
+  y_ = 0;
+  z_ = 0;
+  yaw_ = 0;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -192,7 +205,9 @@ void Command::Clear() {
     ::memset(&first, 0, n);                                \
   } while (0)
 
-  ZR_(command_type_, uav_id_);
+  if (_has_bits_[0 / 32] & 63) {
+    ZR_(command_type_, yaw_);
+  }
 
 #undef OFFSET_OF_FIELD_
 #undef ZR_
@@ -241,6 +256,66 @@ bool Command::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
+        if (input->ExpectTag(24)) goto parse_x;
+        break;
+      }
+
+      // optional int32 x = 3;
+      case 3: {
+        if (tag == 24) {
+         parse_x:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &x_)));
+          set_has_x();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(32)) goto parse_y;
+        break;
+      }
+
+      // optional int32 y = 4;
+      case 4: {
+        if (tag == 32) {
+         parse_y:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &y_)));
+          set_has_y();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(40)) goto parse_z;
+        break;
+      }
+
+      // optional int32 z = 5;
+      case 5: {
+        if (tag == 40) {
+         parse_z:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &z_)));
+          set_has_z();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(48)) goto parse_yaw;
+        break;
+      }
+
+      // optional int32 yaw = 6;
+      case 6: {
+        if (tag == 48) {
+         parse_yaw:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &yaw_)));
+          set_has_yaw();
+        } else {
+          goto handle_unusual;
+        }
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -281,6 +356,26 @@ void Command::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteInt32(2, this->uav_id(), output);
   }
 
+  // optional int32 x = 3;
+  if (has_x()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(3, this->x(), output);
+  }
+
+  // optional int32 y = 4;
+  if (has_y()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(4, this->y(), output);
+  }
+
+  // optional int32 z = 5;
+  if (has_z()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(5, this->z(), output);
+  }
+
+  // optional int32 yaw = 6;
+  if (has_yaw()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(6, this->yaw(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -300,6 +395,26 @@ void Command::SerializeWithCachedSizes(
   // optional int32 uav_id = 2;
   if (has_uav_id()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(2, this->uav_id(), target);
+  }
+
+  // optional int32 x = 3;
+  if (has_x()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(3, this->x(), target);
+  }
+
+  // optional int32 y = 4;
+  if (has_y()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(4, this->y(), target);
+  }
+
+  // optional int32 z = 5;
+  if (has_z()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(5, this->z(), target);
+  }
+
+  // optional int32 yaw = 6;
+  if (has_yaw()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(6, this->yaw(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -325,6 +440,34 @@ int Command::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int32Size(
           this->uav_id());
+    }
+
+    // optional int32 x = 3;
+    if (has_x()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int32Size(
+          this->x());
+    }
+
+    // optional int32 y = 4;
+    if (has_y()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int32Size(
+          this->y());
+    }
+
+    // optional int32 z = 5;
+    if (has_z()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int32Size(
+          this->z());
+    }
+
+    // optional int32 yaw = 6;
+    if (has_yaw()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int32Size(
+          this->yaw());
     }
 
   }
@@ -360,6 +503,18 @@ void Command::MergeFrom(const Command& from) {
     if (from.has_uav_id()) {
       set_uav_id(from.uav_id());
     }
+    if (from.has_x()) {
+      set_x(from.x());
+    }
+    if (from.has_y()) {
+      set_y(from.y());
+    }
+    if (from.has_z()) {
+      set_z(from.z());
+    }
+    if (from.has_yaw()) {
+      set_yaw(from.yaw());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -386,6 +541,10 @@ void Command::Swap(Command* other) {
   if (other != this) {
     std::swap(command_type_, other->command_type_);
     std::swap(uav_id_, other->uav_id_);
+    std::swap(x_, other->x_);
+    std::swap(y_, other->y_);
+    std::swap(z_, other->z_);
+    std::swap(yaw_, other->yaw_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
