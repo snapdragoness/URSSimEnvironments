@@ -13,17 +13,13 @@
   <arg name="x" default="0.0"/>
   <arg name="y" default="0.0"/>
   <arg name="z" default="0.3"/>
-  
-  <arg name="R" default="0.0"/>
-  <arg name="P" default="0.0"/>
-  <arg name="Y" default="0.0"/>
 
   <arg name="use_ground_truth_for_tf" default="true" />
   <arg name="use_ground_truth_for_control" default="true" />
   <arg name="use_pose_estimation" if="$(arg use_ground_truth_for_control)" default="false"/>
   <arg name="use_pose_estimation" unless="$(arg use_ground_truth_for_control)" default="true"/>
 
-  <arg name="world_frame" default="/world"/> <!-- This should actually be "/world". See https://github.com/ros-simulation/gazebo_ros_pkgs/pull/324 -->
+  <arg name="world_frame" default="world"/> <!-- This should actually be "/world". See https://github.com/ros-simulation/gazebo_ros_pkgs/pull/324 -->
   <arg name="base_link_frame" default="$(arg tf_prefix)/base_link"/>
 
   <!-- send the robot XML to param server -->
@@ -38,8 +34,6 @@
   <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen" >
     <param name="publish_frequency" type="double" value="50.0" />
   </node>
-
-  <node pkg="joint_state_publisher" type="joint_state_publisher" name="joint_state_publisher" />
 
   <!-- publish state and tf -->
   <node name="ground_truth_to_tf" pkg="message_to_tf" type="message_to_tf" output="screen">
@@ -88,9 +82,6 @@
            -x $(arg x)
            -y $(arg y)
            -z $(arg z)
-           -R $(arg R)
-           -P $(arg P)
-           -Y $(arg Y)
            -model $(arg name)"
         respawn="false" output="screen"/>
 

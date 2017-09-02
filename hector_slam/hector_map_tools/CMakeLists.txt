@@ -52,6 +52,7 @@ catkin_package(
   INCLUDE_DIRS include
 #  LIBRARIES hector_map_tools
   CATKIN_DEPENDS nav_msgs
+  DEPENDS Eigen
 )
 
 ###########
