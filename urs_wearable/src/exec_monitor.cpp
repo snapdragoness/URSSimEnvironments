@@ -2,8 +2,8 @@
 #include "urs_wearable/controller.h"
 #include "urs_wearable/navigator.h"
 
-#include "urs_wearable/command.pb.h"
-#include "urs_wearable/action.pb.h"
+#include <proto_generated/action.pb.h>
+#include <proto_generated/command.pb.h>
 #include "protobuf_helper.h"
 
 #include <ros/ros.h>

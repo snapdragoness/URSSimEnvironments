@@ -2,7 +2,7 @@
 // source: action.proto
 
 #define INTERNAL_SUPPRESS_PROTOBUF_FIELD_DEPRECATION
-#include "../generated_proto/action.pb.h"
+#include <action.pb.h>
 
 #include <algorithm>
 

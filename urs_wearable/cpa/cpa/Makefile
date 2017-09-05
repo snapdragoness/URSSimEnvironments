@@ -5,7 +5,7 @@ OBJS = bison.o lex.o main.o reader.o action.o planner.o state.o protobuf_helper.
 CC := g++
 CFLAGS := -c -std=c++11 `pkg-config --cflags protobuf` -Wall -O3
 LFLAGS := -lfl `pkg-config --libs protobuf`
-PBDIR := generated_proto
+PBDIR := ../../include/proto_generated
 
 cpa+: $(OBJS)
 	$(CC) $(OBJS) $(LFLAGS) -o cpa+
@@ -47,7 +47,7 @@ protobuf_helper.o: ../../src/protobuf_helper.cpp ../../include/protobuf_helper.h
 	$(CC) $(CFLAGS) -I../../include -o protobuf_helper.o ../../src/protobuf_helper.cpp
 
 action.pb.o: $(PBDIR)/action.pb.cc $(PBDIR)/action.pb.h
-	$(CC) $(CFLAGS) -o action.pb.o $(PBDIR)/action.pb.cc
+	$(CC) $(CFLAGS) -I$(PBDIR) -o action.pb.o $(PBDIR)/action.pb.cc
 
 clean:
 	rm -f *.o *~ lex.c bison.c tok.h lcp.tab.c lcp.tab.h lcp.output cpa+

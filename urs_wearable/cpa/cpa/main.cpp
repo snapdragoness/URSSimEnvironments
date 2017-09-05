@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "generated_proto/action.pb.h"
+#include "../../include/proto_generated/action.pb.h"
 #include "../../include/protobuf_helper.h"
 
 #define VERSION "1.2"
