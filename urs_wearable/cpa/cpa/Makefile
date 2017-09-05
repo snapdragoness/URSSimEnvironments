@@ -1,6 +1,6 @@
 # Makefile
 
-OBJS = bison.o lex.o main.o reader.o action.o planner.o state.o action.pb.o
+OBJS = bison.o lex.o main.o reader.o action.o planner.o state.o protobuf_helper.o action.pb.o
 
 CC := g++
 CFLAGS := -c -std=c++11 `pkg-config --cflags protobuf` -Wall -O3
@@ -42,7 +42,10 @@ state.o: state.cpp state.h define.h planner.h
 
 planner.o: planner.cpp planner.h state.h define.h reader.h
 	$(CC) $(CFLAGS) -o planner.o planner.cpp
-	
+
+protobuf_helper.o: ../../src/protobuf_helper.cpp ../../include/protobuf_helper.h
+	$(CC) $(CFLAGS) -I../../include -o protobuf_helper.o ../../src/protobuf_helper.cpp
+
 action.pb.o: $(PBDIR)/action.pb.cc $(PBDIR)/action.pb.h
 	$(CC) $(CFLAGS) -o action.pb.o $(PBDIR)/action.pb.cc
 

@@ -12,10 +12,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include <google/protobuf/io/coded_stream.h>
-#include <google/protobuf/io/zero_copy_stream_impl.h>
-
 #include "generated_proto/action.pb.h"
+#include "../../include/protobuf_helper.h"
 
 #define VERSION "1.2"
 #define DEBUG
@@ -28,80 +26,6 @@ const char* CPA_PLUS_PATH_NAME = "/tmp/cpa_plus_socket";
 
 Reader reader;
 Timer timer;
-
-google::protobuf::uint32 readHdr(char *buf)
-{
-  google::protobuf::uint32 size;
-  google::protobuf::io::ArrayInputStream ais(buf, 4);
-  google::protobuf::io::CodedInputStream coded_input(&ais);
-  coded_input.ReadVarint32(&size);  // decode the HDR and get the size
-  std::cout << "size of action: " << size << std::endl;
-  return size;
-}
-
-void readBody(int csock, google::protobuf::uint32 size)
-{
-  int bytecount;
-  urs_protobuf::Action action;
-  char buffer[size + 4];  //size of the payload and hdr
-  // read the entire buffer including the hdr
-  if ((bytecount = recv(csock, (void *)buffer, size + 4, MSG_WAITALL)) == -1)
-  {
-    std::cerr << "Error receiving data %d" << errno << std::endl;
-    return;
-  }
-  std::cout << "Second read byte count: " << bytecount << std::endl;
-
-  // assign ArrayInputStream with enough memory
-  google::protobuf::io::ArrayInputStream ais(buffer, size + 4);
-  google::protobuf::io::CodedInputStream coded_input(&ais);
-
-  // read an unsigned integer with Varint encoding, truncating to 32 bits.
-  coded_input.ReadVarint32(&size);
-
-  // after the message's length is read, PushLimit() is used to prevent the CodedInputStream
-  // from reading beyond that length.Limits are used when parsing length-delimited embedded messages
-  google::protobuf::io::CodedInputStream::Limit msgLimit = coded_input.PushLimit(size);
-
-  // de-serialize
-  action.ParseFromCodedStream(&coded_input);
-
-  // once the embedded message has been parsed, PopLimit() is called to undo the limit
-  coded_input.PopLimit(msgLimit);
-
-  // print the message
-  std::cout << "Message: " << action.DebugString();
-
-}
-
-void* SocketHandler(void* lp)
-{
-  int *csock = (int*)lp;
-
-  char buffer[4];
-  int bytecount = 0;
-
-  memset(buffer, '\0', 4);
-
-  while(true)
-  {
-    //Peek into the socket and get the packet size
-    if ((bytecount = recv(*csock, buffer, 4, MSG_PEEK)) == -1)
-    {
-      usleep(10);
-      continue;
-    }
-    else if (bytecount == 0)
-    {
-      break;
-    }
-    cout << "First read byte count is " << bytecount << endl;
-    readBody(*csock, readHdr(buffer));
-  }
-
-  delete csock;
-  return 0;
-}
 
 int main(int argc, char **argv)
 {
@@ -142,33 +66,33 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-//  std::cout << "Waiting for connections..." << std::endl;
+  std::cout << "Waiting for a connection from Execution Monitor..." << std::endl;
 
   // accept a connection
   int execMonitorSockFD;
   struct sockaddr_un execMonitorAddress;
   socklen_t execMonitorAddressLen = sizeof(sockaddr_un);
-//  if ((execMonitorSockFD = accept(plannerSockFD, (struct sockaddr*)&execMonitorAddress, &execMonitorAddressLen)) == -1)
-//  {
-//    std::cerr << "Failed to accept a connection request" << std::endl;
-//    exit(EXIT_FAILURE);
-//  }
+  if ((execMonitorSockFD = accept(plannerSockFD, (struct sockaddr*)&execMonitorAddress, &execMonitorAddressLen)) == -1)
+  {
+    std::cerr << "Failed to accept a connection request" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  std::cout << "Received the connection" << std::endl;
 
-  pthread_t thread_id=0;
   while (true)
   {
-    std::cout << "Waiting for connections..." << std::endl;
-    int* csock = (int*)malloc(sizeof(int));
-    if((*csock = accept(plannerSockFD, (sockaddr*)&execMonitorAddress, &execMonitorAddressLen)) != -1)
+    urs_protobuf::Action* action = new urs_protobuf::Action;
+    google::protobuf::io::ZeroCopyInputStream* raw_input = new google::protobuf::io::FileInputStream(execMonitorSockFD);
+    if (!readDelimitedFrom(raw_input, action))
     {
-      std::cout << "Received connection" << std::endl;
-      pthread_create(&thread_id, 0, &SocketHandler, (void*)csock);
-      pthread_detach(thread_id);
+      std::cerr << "Execution Monitor has disconnected" << std::endl;
+      delete raw_input;
+      delete action;
+      break;
     }
-    else
-    {
-      std::cerr << "Error accepting %d" << errno << std::endl;
-    }
+    std::cout << "Message: " << action->DebugString();
+    delete raw_input;
+    delete action;
   }
 
 //  system("./swi_script.sh");

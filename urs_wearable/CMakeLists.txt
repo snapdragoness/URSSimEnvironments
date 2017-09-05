@@ -120,9 +120,9 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${PROTOBUF_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_BINARY_DIR}
 )
-include_directories(${PROTOBUF_INCLUDE_DIRS})
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS proto/command.proto proto/action.proto)
 
 ## Declare a C++ library
@@ -131,6 +131,7 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS proto/command.proto proto/action.pro
 # )
 add_library(controller src/controller.cpp)
 add_library(navigator src/navigator.cpp)
+add_library(protobuf_helper src/protobuf_helper.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -156,7 +157,7 @@ add_executable(exec_monitor src/exec_monitor.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(keyboard_teleop controller navigator ${catkin_LIBRARIES})
-target_link_libraries(exec_monitor controller navigator ${PROTOBUF_LIBRARIES} ${catkin_LIBRARIES})
+target_link_libraries(exec_monitor controller navigator protobuf_helper ${PROTOBUF_LIBRARIES} ${catkin_LIBRARIES})
 
 #############
 ## Install ##

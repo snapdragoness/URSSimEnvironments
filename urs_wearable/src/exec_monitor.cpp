@@ -4,6 +4,7 @@
 
 #include "urs_wearable/command.pb.h"
 #include "urs_wearable/action.pb.h"
+#include "protobuf_helper.h"
 
 #include <ros/ros.h>
 
@@ -15,9 +16,6 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
-
-#include <google/protobuf/io/coded_stream.h>
-#include <google/protobuf/io/zero_copy_stream_impl.h>
 
 const unsigned int N_UAV = 4;
 
@@ -200,28 +198,14 @@ int main(int argc, char **argv)
           /* Query the planner */
           /*********************/
           urs_protobuf::Action action;
-          action.set_action_type(urs_protobuf::Action_ActionType_GOTO);
+          action.set_action_type(urs_protobuf::Action_ActionType_MOVE);
           action.set_x(1);
           action.set_y(2);
           action.set_z(3);
 
-          std::cout << "Size after serializing: " << action.ByteSize() << std::endl;
-          int size = action.ByteSize() + 4;
-          char *pkt = new char[size];
-          google::protobuf::io::ArrayOutputStream aos(pkt, size);
-          google::protobuf::io::CodedOutputStream *coded_output = new google::protobuf::io::CodedOutputStream(&aos);
-          coded_output->WriteVarint32(action.ByteSize());
-          action.SerializeToCodedStream(coded_output);
-
-          int bytecount;
-          if((bytecount = write(plannerSockFD, (void *)pkt, size)) == -1)
-          {
-            std::cerr << "Error sending data " << errno << std::endl;
-            delete pkt;
-            goto FINISH;
-          }
-          printf("Sent bytes %d\n", bytecount);
-          delete pkt;
+          google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(plannerSockFD);
+          writeDelimitedTo(raw_output, action);
+          delete raw_output;
 
           /********************/
           /* Execute the plan */
@@ -232,7 +216,6 @@ int main(int argc, char **argv)
     }
   }
 
-FINISH:
   // clean up
   close(execMonitorSockFD);
   close(plannerSockFD);
