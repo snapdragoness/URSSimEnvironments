@@ -17,6 +17,7 @@ urs_wearable/cpa/cpa/pddl2pl.pl
 urs_wearable/cpa/cpa/plan-result
 urs_wearable/cpa/cpa/temp
 urs_wearable/cpa/cpa/trash
+urs_wearable/cpa/cpa/urs.pddl
 urs_wearable/cpa/cpa/*.o
 urs_wearable/cpa/cpa/theory_*
 urs_wearable/cpa/experiments/new.pl
