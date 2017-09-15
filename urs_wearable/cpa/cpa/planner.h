@@ -39,9 +39,9 @@ class Planner
   RawPlan m_plan;
   bool m_detect_essential;
   bool m_output_decisive;
+  map<string,int> my_action_map;
 
 protected:
-  map<string,int> my_action_map;
   list<int> my_plan;
   const Reader* m_reader;       // reader
   Timer* m_timer;               // timer

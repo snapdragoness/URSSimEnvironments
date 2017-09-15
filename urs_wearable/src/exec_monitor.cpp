@@ -2,9 +2,11 @@
 #include "urs_wearable/controller.h"
 #include "urs_wearable/navigator.h"
 
-#include <proto_generated/action.pb.h>
-#include <proto_generated/command.pb.h>
 #include "protobuf_helper.h"
+#include "proto_generated/planning.pb.h"
+#include "proto_generated/state.pb.h"
+#include "proto_generated/predicate.pb.h"
+#include "proto_generated/action.pb.h"
 
 #include <ros/ros.h>
 
@@ -16,6 +18,9 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
+
+#include <boost/tokenizer.hpp>
+#include <boost/algorithm/string.hpp>
 
 const unsigned int N_UAV = 4;
 
@@ -171,6 +176,9 @@ int main(int argc, char **argv)
         int wearableSockfd = *it;
         if (FD_ISSET(wearableSockfd, &readFDSet))
         {
+          /*********************************************/
+          /* Wait for a command from a wearable device */
+          /*********************************************/
           int bytesRead;
           char buffer[BUFFER_SIZE + 1];
 
@@ -194,23 +202,114 @@ int main(int argc, char **argv)
           buffer[bytesRead] = '\0';
           write(wearableSockfd, buffer, strlen(buffer));
 
-          /*********************/
-          /* Query the planner */
-          /*********************/
-          urs_protobuf::Action action;
-          action.set_action_type(urs_protobuf::Action_ActionType_MOVE);
-          action.set_x(1);
-          action.set_y(2);
-          action.set_z(3);
+          /**********************************************/
+          /* Evaluate the command and query the planner */
+          /**********************************************/
+          // break the input into tokens
+          std::string bufferString = std::string(buffer);
+          boost::algorithm::trim(bufferString);
+          std::vector<std::string> tokens;
+          boost::char_separator<char> sep {" "};
+          boost::tokenizer<boost::char_separator<char>> tok {bufferString, sep};
+          for (const auto &token : tok)
+          {
+            tokens.push_back((std::string)token);
+          }
+          if (tokens[0].compare("goto") == 0 && tokens.size() == 5)
+          {
+            ROS_INFO("Received Command: GOTO");
 
-          google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(plannerSockFD);
-          writeDelimitedTo(raw_output, action);
-          delete raw_output;
+            urs_wearable_pb::PlanningRequest planningRequest;
+            urs_wearable_pb::State* initialState = planningRequest.mutable_initial();
 
-          /********************/
-          /* Execute the plan */
-          /********************/
-          // TODO
+            for (unsigned int i = 0; i < N_UAV; i++)
+            {
+              urs_wearable_pb::At* at = initialState->add_at();
+              Pose pose = controller[i].getPose();
+              at->set_uav_id(i);
+              at->set_x(pose.x);
+              at->set_y(pose.y);
+              at->set_z(pose.z);
+            }
+
+            urs_wearable_pb::State* goalState = planningRequest.mutable_goal();
+            urs_wearable_pb::At* at = goalState->add_at();
+            at->set_uav_id(std::stoi(tokens[1]));
+            at->set_x(std::stod(tokens[2]));
+            at->set_y(std::stod(tokens[3]));
+            at->set_z(std::stod(tokens[4]));
+
+            google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(plannerSockFD);
+            writeDelimitedTo(raw_output, planningRequest);
+            delete raw_output;
+          }
+          else if (tokens[0].compare("move") == 0 && tokens.size() == 5)
+          {
+            ROS_INFO("Received Command: MOVE");
+
+            urs_wearable_pb::PlanningRequest planningRequest;
+            urs_wearable_pb::State* initialState = planningRequest.mutable_initial();
+
+            for (unsigned int i = 0; i < N_UAV; i++)
+            {
+              urs_wearable_pb::At* at = initialState->add_at();
+              Pose pose = controller[i].getPose();
+              at->set_uav_id(i);
+              at->set_x(pose.x);
+              at->set_y(pose.y);
+              at->set_z(pose.z);
+            }
+
+            urs_wearable_pb::State* goalState = planningRequest.mutable_goal();
+            urs_wearable_pb::At* at = goalState->add_at();
+            Pose pose = controller[std::stoi(tokens[1])].getPose();
+            at->set_uav_id(std::stoi(tokens[1]));
+            at->set_x(pose.x + std::stod(tokens[2]));
+            at->set_y(pose.y + std::stod(tokens[3]));
+            at->set_z(pose.z + std::stod(tokens[4]));
+
+            google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(plannerSockFD);
+            writeDelimitedTo(raw_output, planningRequest);
+            delete raw_output;
+          }
+          else
+          {
+            ROS_ERROR("Invalid Command");
+          }
+
+          /*******************************/
+          /* Retrieve a plan and execute */
+          /*******************************/
+          google::protobuf::io::ZeroCopyInputStream* raw_input = new google::protobuf::io::FileInputStream(plannerSockFD);
+          urs_wearable_pb::PlanningResponse planningResponse;
+          if (!readDelimitedFrom(raw_input, &planningResponse))
+          {
+            std::cerr << "Planner has disconnected" << std::endl;
+            delete raw_input;
+            break;
+          }
+          delete raw_input;
+
+          ROS_INFO("Received a plan");
+          std::cout << planningResponse.DebugString();
+
+          for (int i = 0; i < planningResponse.actions_size(); i++)
+          {
+            const urs_wearable_pb::Action& action = planningResponse.actions(i);
+            switch (action.type())
+            {
+              case urs_wearable_pb::Action_ActionType_GOTO:
+              {
+                const urs_wearable_pb::Goto& action_goto = action.goto_();
+                Pose pose;
+                pose.x = action_goto.x();
+                pose.y = action_goto.y();
+                pose.z = action_goto.z();
+                controller[action_goto.uav_id()].setDest(pose);
+                break;
+              }
+            }
+          }
         }
       }
     }
