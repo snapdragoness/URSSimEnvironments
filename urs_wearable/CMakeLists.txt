@@ -123,7 +123,12 @@ include_directories(
   ${PROTOBUF_INCLUDE_DIRS}
   ${CMAKE_CURRENT_BINARY_DIR}
 )
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS proto/command.proto proto/action.proto)
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
+  proto/planning.proto
+  proto/state.proto
+  proto/predicate.proto
+  proto/action.proto
+)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}

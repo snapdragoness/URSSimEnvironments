@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package urs_wearable_pb;
+
+import "state.proto";
+import "action.proto";
+
+message PlanningRequest {
+  optional State initial = 1;
+  optional State goal = 2;
+}
+
+message PlanningResponse {
+  repeated Action actions = 1;
+}

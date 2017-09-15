@@ -1,0 +1,14 @@
+syntax = "proto2";
+
+package urs_wearable_pb;
+
+import "predicate.proto";
+
+message State {
+  repeated At at = 1;
+  repeated Oneof oneof = 2;
+  
+  message Oneof {
+    repeated At at = 1;
+  }
+}

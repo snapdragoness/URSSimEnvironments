@@ -27,7 +27,7 @@
 #include <google/protobuf/unknown_field_set.h>
 // @@protoc_insertion_point(includes)
 
-namespace urs_protobuf {
+namespace urs_wearable_pb {
 
 // Internal implementation detail -- do not call these.
 void  protobuf_AddDesc_action_2eproto();
@@ -35,14 +35,14 @@ void protobuf_AssignDesc_action_2eproto();
 void protobuf_ShutdownFile_action_2eproto();
 
 class Action;
+class Goto;
 
 enum Action_ActionType {
-  Action_ActionType_GOTO = 0,
-  Action_ActionType_MOVE = 1
+  Action_ActionType_GOTO = 0
 };
 bool Action_ActionType_IsValid(int value);
 const Action_ActionType Action_ActionType_ActionType_MIN = Action_ActionType_GOTO;
-const Action_ActionType Action_ActionType_ActionType_MAX = Action_ActionType_MOVE;
+const Action_ActionType Action_ActionType_ActionType_MAX = Action_ActionType_GOTO;
 const int Action_ActionType_ActionType_ARRAYSIZE = Action_ActionType_ActionType_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* Action_ActionType_descriptor();
@@ -80,6 +80,11 @@ class Action : public ::google::protobuf::Message {
   static const ::google::protobuf::Descriptor* descriptor();
   static const Action& default_instance();
 
+  enum OneofActionCase {
+    kGoto = 2,
+    ONEOF_ACTION_NOT_SET = 0,
+  };
+
   void Swap(Action* other);
 
   // implements Message ----------------------------------------------
@@ -110,7 +115,6 @@ class Action : public ::google::protobuf::Message {
 
   typedef Action_ActionType ActionType;
   static const ActionType GOTO = Action_ActionType_GOTO;
-  static const ActionType MOVE = Action_ActionType_MOVE;
   static inline bool ActionType_IsValid(int value) {
     return Action_ActionType_IsValid(value);
   }
@@ -134,52 +138,142 @@ class Action : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // required .urs_protobuf.Action.ActionType action_type = 1;
-  inline bool has_action_type() const;
-  inline void clear_action_type();
-  static const int kActionTypeFieldNumber = 1;
-  inline ::urs_protobuf::Action_ActionType action_type() const;
-  inline void set_action_type(::urs_protobuf::Action_ActionType value);
+  // required .urs_wearable_pb.Action.ActionType type = 1;
+  inline bool has_type() const;
+  inline void clear_type();
+  static const int kTypeFieldNumber = 1;
+  inline ::urs_wearable_pb::Action_ActionType type() const;
+  inline void set_type(::urs_wearable_pb::Action_ActionType value);
 
-  // optional int32 uav_id = 2;
+  // optional .urs_wearable_pb.Goto goto = 2;
+  inline bool has_goto_() const;
+  inline void clear_goto_();
+  static const int kGotoFieldNumber = 2;
+  inline const ::urs_wearable_pb::Goto& goto_() const;
+  inline ::urs_wearable_pb::Goto* mutable_goto_();
+  inline ::urs_wearable_pb::Goto* release_goto_();
+  inline void set_allocated_goto_(::urs_wearable_pb::Goto* goto_);
+
+  inline OneofActionCase oneof_action_case() const;
+  // @@protoc_insertion_point(class_scope:urs_wearable_pb.Action)
+ private:
+  inline void set_has_type();
+  inline void clear_has_type();
+  inline void set_has_goto_();
+
+  inline bool has_oneof_action();
+  void clear_oneof_action();
+  inline void clear_has_oneof_action();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 _has_bits_[1];
+  mutable int _cached_size_;
+  int type_;
+  union OneofActionUnion {
+    ::urs_wearable_pb::Goto* goto__;
+  } oneof_action_;
+  ::google::protobuf::uint32 _oneof_case_[1];
+
+  friend void  protobuf_AddDesc_action_2eproto();
+  friend void protobuf_AssignDesc_action_2eproto();
+  friend void protobuf_ShutdownFile_action_2eproto();
+
+  void InitAsDefaultInstance();
+  static Action* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class Goto : public ::google::protobuf::Message {
+ public:
+  Goto();
+  virtual ~Goto();
+
+  Goto(const Goto& from);
+
+  inline Goto& operator=(const Goto& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const Goto& default_instance();
+
+  void Swap(Goto* other);
+
+  // implements Message ----------------------------------------------
+
+  Goto* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const Goto& from);
+  void MergeFrom(const Goto& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // optional int32 uav_id = 1;
   inline bool has_uav_id() const;
   inline void clear_uav_id();
-  static const int kUavIdFieldNumber = 2;
+  static const int kUavIdFieldNumber = 1;
   inline ::google::protobuf::int32 uav_id() const;
   inline void set_uav_id(::google::protobuf::int32 value);
 
-  // optional int32 x = 3;
+  // optional double x = 2;
   inline bool has_x() const;
   inline void clear_x();
-  static const int kXFieldNumber = 3;
-  inline ::google::protobuf::int32 x() const;
-  inline void set_x(::google::protobuf::int32 value);
+  static const int kXFieldNumber = 2;
+  inline double x() const;
+  inline void set_x(double value);
 
-  // optional int32 y = 4;
+  // optional double y = 3;
   inline bool has_y() const;
   inline void clear_y();
-  static const int kYFieldNumber = 4;
-  inline ::google::protobuf::int32 y() const;
-  inline void set_y(::google::protobuf::int32 value);
+  static const int kYFieldNumber = 3;
+  inline double y() const;
+  inline void set_y(double value);
 
-  // optional int32 z = 5;
+  // optional double z = 4;
   inline bool has_z() const;
   inline void clear_z();
-  static const int kZFieldNumber = 5;
-  inline ::google::protobuf::int32 z() const;
-  inline void set_z(::google::protobuf::int32 value);
+  static const int kZFieldNumber = 4;
+  inline double z() const;
+  inline void set_z(double value);
 
-  // optional int32 yaw = 6;
+  // optional double yaw = 5;
   inline bool has_yaw() const;
   inline void clear_yaw();
-  static const int kYawFieldNumber = 6;
-  inline ::google::protobuf::int32 yaw() const;
-  inline void set_yaw(::google::protobuf::int32 value);
+  static const int kYawFieldNumber = 5;
+  inline double yaw() const;
+  inline void set_yaw(double value);
 
-  // @@protoc_insertion_point(class_scope:urs_protobuf.Action)
+  // @@protoc_insertion_point(class_scope:urs_wearable_pb.Goto)
  private:
-  inline void set_has_action_type();
-  inline void clear_has_action_type();
   inline void set_has_uav_id();
   inline void clear_has_uav_id();
   inline void set_has_x();
@@ -195,18 +289,17 @@ class Action : public ::google::protobuf::Message {
 
   ::google::protobuf::uint32 _has_bits_[1];
   mutable int _cached_size_;
-  int action_type_;
+  double x_;
+  double y_;
+  double z_;
+  double yaw_;
   ::google::protobuf::int32 uav_id_;
-  ::google::protobuf::int32 x_;
-  ::google::protobuf::int32 y_;
-  ::google::protobuf::int32 z_;
-  ::google::protobuf::int32 yaw_;
   friend void  protobuf_AddDesc_action_2eproto();
   friend void protobuf_AssignDesc_action_2eproto();
   friend void protobuf_ShutdownFile_action_2eproto();
 
   void InitAsDefaultInstance();
-  static Action* default_instance_;
+  static Goto* default_instance_;
 };
 // ===================================================================
 
@@ -215,164 +308,220 @@ class Action : public ::google::protobuf::Message {
 
 // Action
 
-// required .urs_protobuf.Action.ActionType action_type = 1;
-inline bool Action::has_action_type() const {
+// required .urs_wearable_pb.Action.ActionType type = 1;
+inline bool Action::has_type() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void Action::set_has_action_type() {
+inline void Action::set_has_type() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void Action::clear_has_action_type() {
+inline void Action::clear_has_type() {
   _has_bits_[0] &= ~0x00000001u;
 }
-inline void Action::clear_action_type() {
-  action_type_ = 0;
-  clear_has_action_type();
+inline void Action::clear_type() {
+  type_ = 0;
+  clear_has_type();
 }
-inline ::urs_protobuf::Action_ActionType Action::action_type() const {
-  // @@protoc_insertion_point(field_get:urs_protobuf.Action.action_type)
-  return static_cast< ::urs_protobuf::Action_ActionType >(action_type_);
+inline ::urs_wearable_pb::Action_ActionType Action::type() const {
+  // @@protoc_insertion_point(field_get:urs_wearable_pb.Action.type)
+  return static_cast< ::urs_wearable_pb::Action_ActionType >(type_);
 }
-inline void Action::set_action_type(::urs_protobuf::Action_ActionType value) {
-  assert(::urs_protobuf::Action_ActionType_IsValid(value));
-  set_has_action_type();
-  action_type_ = value;
-  // @@protoc_insertion_point(field_set:urs_protobuf.Action.action_type)
+inline void Action::set_type(::urs_wearable_pb::Action_ActionType value) {
+  assert(::urs_wearable_pb::Action_ActionType_IsValid(value));
+  set_has_type();
+  type_ = value;
+  // @@protoc_insertion_point(field_set:urs_wearable_pb.Action.type)
 }
 
-// optional int32 uav_id = 2;
-inline bool Action::has_uav_id() const {
-  return (_has_bits_[0] & 0x00000002u) != 0;
+// optional .urs_wearable_pb.Goto goto = 2;
+inline bool Action::has_goto_() const {
+  return oneof_action_case() == kGoto;
 }
-inline void Action::set_has_uav_id() {
-  _has_bits_[0] |= 0x00000002u;
+inline void Action::set_has_goto_() {
+  _oneof_case_[0] = kGoto;
 }
-inline void Action::clear_has_uav_id() {
-  _has_bits_[0] &= ~0x00000002u;
+inline void Action::clear_goto_() {
+  if (has_goto_()) {
+    delete oneof_action_.goto__;
+    clear_has_oneof_action();
+  }
 }
-inline void Action::clear_uav_id() {
+inline const ::urs_wearable_pb::Goto& Action::goto_() const {
+  return has_goto_() ? *oneof_action_.goto__
+                      : ::urs_wearable_pb::Goto::default_instance();
+}
+inline ::urs_wearable_pb::Goto* Action::mutable_goto_() {
+  if (!has_goto_()) {
+    clear_oneof_action();
+    set_has_goto_();
+    oneof_action_.goto__ = new ::urs_wearable_pb::Goto;
+  }
+  return oneof_action_.goto__;
+}
+inline ::urs_wearable_pb::Goto* Action::release_goto_() {
+  if (has_goto_()) {
+    clear_has_oneof_action();
+    ::urs_wearable_pb::Goto* temp = oneof_action_.goto__;
+    oneof_action_.goto__ = NULL;
+    return temp;
+  } else {
+    return NULL;
+  }
+}
+inline void Action::set_allocated_goto_(::urs_wearable_pb::Goto* goto_) {
+  clear_oneof_action();
+  if (goto_) {
+    set_has_goto_();
+    oneof_action_.goto__ = goto_;
+  }
+}
+
+inline bool Action::has_oneof_action() {
+  return oneof_action_case() != ONEOF_ACTION_NOT_SET;
+}
+inline void Action::clear_has_oneof_action() {
+  _oneof_case_[0] = ONEOF_ACTION_NOT_SET;
+}
+inline Action::OneofActionCase Action::oneof_action_case() const {
+  return Action::OneofActionCase(_oneof_case_[0]);
+}
+// -------------------------------------------------------------------
+
+// Goto
+
+// optional int32 uav_id = 1;
+inline bool Goto::has_uav_id() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void Goto::set_has_uav_id() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void Goto::clear_has_uav_id() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void Goto::clear_uav_id() {
   uav_id_ = 0;
   clear_has_uav_id();
 }
-inline ::google::protobuf::int32 Action::uav_id() const {
-  // @@protoc_insertion_point(field_get:urs_protobuf.Action.uav_id)
+inline ::google::protobuf::int32 Goto::uav_id() const {
+  // @@protoc_insertion_point(field_get:urs_wearable_pb.Goto.uav_id)
   return uav_id_;
 }
-inline void Action::set_uav_id(::google::protobuf::int32 value) {
+inline void Goto::set_uav_id(::google::protobuf::int32 value) {
   set_has_uav_id();
   uav_id_ = value;
-  // @@protoc_insertion_point(field_set:urs_protobuf.Action.uav_id)
+  // @@protoc_insertion_point(field_set:urs_wearable_pb.Goto.uav_id)
 }
 
-// optional int32 x = 3;
-inline bool Action::has_x() const {
-  return (_has_bits_[0] & 0x00000004u) != 0;
+// optional double x = 2;
+inline bool Goto::has_x() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
 }
-inline void Action::set_has_x() {
-  _has_bits_[0] |= 0x00000004u;
+inline void Goto::set_has_x() {
+  _has_bits_[0] |= 0x00000002u;
 }
-inline void Action::clear_has_x() {
-  _has_bits_[0] &= ~0x00000004u;
+inline void Goto::clear_has_x() {
+  _has_bits_[0] &= ~0x00000002u;
 }
-inline void Action::clear_x() {
+inline void Goto::clear_x() {
   x_ = 0;
   clear_has_x();
 }
-inline ::google::protobuf::int32 Action::x() const {
-  // @@protoc_insertion_point(field_get:urs_protobuf.Action.x)
+inline double Goto::x() const {
+  // @@protoc_insertion_point(field_get:urs_wearable_pb.Goto.x)
   return x_;
 }
-inline void Action::set_x(::google::protobuf::int32 value) {
+inline void Goto::set_x(double value) {
   set_has_x();
   x_ = value;
-  // @@protoc_insertion_point(field_set:urs_protobuf.Action.x)
+  // @@protoc_insertion_point(field_set:urs_wearable_pb.Goto.x)
 }
 
-// optional int32 y = 4;
-inline bool Action::has_y() const {
-  return (_has_bits_[0] & 0x00000008u) != 0;
+// optional double y = 3;
+inline bool Goto::has_y() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
 }
-inline void Action::set_has_y() {
-  _has_bits_[0] |= 0x00000008u;
+inline void Goto::set_has_y() {
+  _has_bits_[0] |= 0x00000004u;
 }
-inline void Action::clear_has_y() {
-  _has_bits_[0] &= ~0x00000008u;
+inline void Goto::clear_has_y() {
+  _has_bits_[0] &= ~0x00000004u;
 }
-inline void Action::clear_y() {
+inline void Goto::clear_y() {
   y_ = 0;
   clear_has_y();
 }
-inline ::google::protobuf::int32 Action::y() const {
-  // @@protoc_insertion_point(field_get:urs_protobuf.Action.y)
+inline double Goto::y() const {
+  // @@protoc_insertion_point(field_get:urs_wearable_pb.Goto.y)
   return y_;
 }
-inline void Action::set_y(::google::protobuf::int32 value) {
+inline void Goto::set_y(double value) {
   set_has_y();
   y_ = value;
-  // @@protoc_insertion_point(field_set:urs_protobuf.Action.y)
+  // @@protoc_insertion_point(field_set:urs_wearable_pb.Goto.y)
 }
 
-// optional int32 z = 5;
-inline bool Action::has_z() const {
-  return (_has_bits_[0] & 0x00000010u) != 0;
+// optional double z = 4;
+inline bool Goto::has_z() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
 }
-inline void Action::set_has_z() {
-  _has_bits_[0] |= 0x00000010u;
+inline void Goto::set_has_z() {
+  _has_bits_[0] |= 0x00000008u;
 }
-inline void Action::clear_has_z() {
-  _has_bits_[0] &= ~0x00000010u;
+inline void Goto::clear_has_z() {
+  _has_bits_[0] &= ~0x00000008u;
 }
-inline void Action::clear_z() {
+inline void Goto::clear_z() {
   z_ = 0;
   clear_has_z();
 }
-inline ::google::protobuf::int32 Action::z() const {
-  // @@protoc_insertion_point(field_get:urs_protobuf.Action.z)
+inline double Goto::z() const {
+  // @@protoc_insertion_point(field_get:urs_wearable_pb.Goto.z)
   return z_;
 }
-inline void Action::set_z(::google::protobuf::int32 value) {
+inline void Goto::set_z(double value) {
   set_has_z();
   z_ = value;
-  // @@protoc_insertion_point(field_set:urs_protobuf.Action.z)
+  // @@protoc_insertion_point(field_set:urs_wearable_pb.Goto.z)
 }
 
-// optional int32 yaw = 6;
-inline bool Action::has_yaw() const {
-  return (_has_bits_[0] & 0x00000020u) != 0;
+// optional double yaw = 5;
+inline bool Goto::has_yaw() const {
+  return (_has_bits_[0] & 0x00000010u) != 0;
 }
-inline void Action::set_has_yaw() {
-  _has_bits_[0] |= 0x00000020u;
+inline void Goto::set_has_yaw() {
+  _has_bits_[0] |= 0x00000010u;
 }
-inline void Action::clear_has_yaw() {
-  _has_bits_[0] &= ~0x00000020u;
+inline void Goto::clear_has_yaw() {
+  _has_bits_[0] &= ~0x00000010u;
 }
-inline void Action::clear_yaw() {
+inline void Goto::clear_yaw() {
   yaw_ = 0;
   clear_has_yaw();
 }
-inline ::google::protobuf::int32 Action::yaw() const {
-  // @@protoc_insertion_point(field_get:urs_protobuf.Action.yaw)
+inline double Goto::yaw() const {
+  // @@protoc_insertion_point(field_get:urs_wearable_pb.Goto.yaw)
   return yaw_;
 }
-inline void Action::set_yaw(::google::protobuf::int32 value) {
+inline void Goto::set_yaw(double value) {
   set_has_yaw();
   yaw_ = value;
-  // @@protoc_insertion_point(field_set:urs_protobuf.Action.yaw)
+  // @@protoc_insertion_point(field_set:urs_wearable_pb.Goto.yaw)
 }
 
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace urs_protobuf
+}  // namespace urs_wearable_pb
 
 #ifndef SWIG
 namespace google {
 namespace protobuf {
 
-template <> struct is_proto_enum< ::urs_protobuf::Action_ActionType> : ::google::protobuf::internal::true_type {};
+template <> struct is_proto_enum< ::urs_wearable_pb::Action_ActionType> : ::google::protobuf::internal::true_type {};
 template <>
-inline const EnumDescriptor* GetEnumDescriptor< ::urs_protobuf::Action_ActionType>() {
-  return ::urs_protobuf::Action_ActionType_descriptor();
+inline const EnumDescriptor* GetEnumDescriptor< ::urs_wearable_pb::Action_ActionType>() {
+  return ::urs_wearable_pb::Action_ActionType_descriptor();
 }
 
 }  // namespace google

@@ -2,19 +2,7 @@ syntax = "proto2";
 
 package urs_wearable_pb;
 
-message Action {
-  required ActionType type = 1;
-  
-  oneof oneof_action {
-    Goto goto = 2;
-  }
-  
-  enum ActionType {
-    GOTO = 0;
-  }
-}
-
-message Goto {
+message At {
   optional int32 uav_id = 1;
   optional double x = 2;
   optional double y = 3;

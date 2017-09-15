@@ -2,7 +2,7 @@
 // source: action.proto
 
 #define INTERNAL_SUPPRESS_PROTOBUF_FIELD_DEPRECATION
-#include <action.pb.h>
+#include "action.pb.h"
 
 #include <algorithm>
 
@@ -16,14 +16,20 @@
 #include <google/protobuf/wire_format.h>
 // @@protoc_insertion_point(includes)
 
-namespace urs_protobuf {
+namespace urs_wearable_pb {
 
 namespace {
 
 const ::google::protobuf::Descriptor* Action_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   Action_reflection_ = NULL;
+struct ActionOneofInstance {
+  const ::urs_wearable_pb::Goto* goto__;
+}* Action_default_oneof_instance_ = NULL;
 const ::google::protobuf::EnumDescriptor* Action_ActionType_descriptor_ = NULL;
+const ::google::protobuf::Descriptor* Goto_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  Goto_reflection_ = NULL;
 
 }  // namespace
 
@@ -35,13 +41,10 @@ void protobuf_AssignDesc_action_2eproto() {
       "action.proto");
   GOOGLE_CHECK(file != NULL);
   Action_descriptor_ = file->message_type(0);
-  static const int Action_offsets_[6] = {
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Action, action_type_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Action, uav_id_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Action, x_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Action, y_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Action, z_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Action, yaw_),
+  static const int Action_offsets_[3] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Action, type_),
+    PROTO2_GENERATED_DEFAULT_ONEOF_FIELD_OFFSET(Action_default_oneof_instance_, goto__),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Action, oneof_action_),
   };
   Action_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -51,10 +54,31 @@ void protobuf_AssignDesc_action_2eproto() {
       GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Action, _has_bits_[0]),
       GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Action, _unknown_fields_),
       -1,
+      Action_default_oneof_instance_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Action, _oneof_case_[0]),
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(Action));
   Action_ActionType_descriptor_ = Action_descriptor_->enum_type(0);
+  Goto_descriptor_ = file->message_type(1);
+  static const int Goto_offsets_[5] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Goto, uav_id_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Goto, x_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Goto, y_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Goto, z_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Goto, yaw_),
+  };
+  Goto_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      Goto_descriptor_,
+      Goto::default_instance_,
+      Goto_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Goto, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Goto, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(Goto));
 }
 
 namespace {
@@ -69,13 +93,18 @@ void protobuf_RegisterTypes(const ::std::string&) {
   protobuf_AssignDescriptorsOnce();
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     Action_descriptor_, &Action::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    Goto_descriptor_, &Goto::default_instance());
 }
 
 }  // namespace
 
 void protobuf_ShutdownFile_action_2eproto() {
   delete Action::default_instance_;
+  delete Action_default_oneof_instance_;
   delete Action_reflection_;
+  delete Goto::default_instance_;
+  delete Goto_reflection_;
 }
 
 void protobuf_AddDesc_action_2eproto() {
@@ -85,15 +114,20 @@ void protobuf_AddDesc_action_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\014action.proto\022\014urs_protobuf\"\236\001\n\006Action\022"
-    "4\n\013action_type\030\001 \002(\0162\037.urs_protobuf.Acti"
-    "on.ActionType\022\016\n\006uav_id\030\002 \001(\005\022\t\n\001x\030\003 \001(\005"
-    "\022\t\n\001y\030\004 \001(\005\022\t\n\001z\030\005 \001(\005\022\013\n\003yaw\030\006 \001(\005\" \n\nA"
-    "ctionType\022\010\n\004GOTO\020\000\022\010\n\004MOVE\020\001", 189);
+    "\n\014action.proto\022\017urs_wearable_pb\"\211\001\n\006Acti"
+    "on\0220\n\004type\030\001 \002(\0162\".urs_wearable_pb.Actio"
+    "n.ActionType\022%\n\004goto\030\002 \001(\0132\025.urs_wearabl"
+    "e_pb.GotoH\000\"\026\n\nActionType\022\010\n\004GOTO\020\000B\016\n\014o"
+    "neof_action\"D\n\004Goto\022\016\n\006uav_id\030\001 \001(\005\022\t\n\001x"
+    "\030\002 \001(\001\022\t\n\001y\030\003 \001(\001\022\t\n\001z\030\004 \001(\001\022\013\n\003yaw\030\005 \001("
+    "\001", 241);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "action.proto", &protobuf_RegisterTypes);
   Action::default_instance_ = new Action();
+  Action_default_oneof_instance_ = new ActionOneofInstance;
+  Goto::default_instance_ = new Goto();
   Action::default_instance_->InitAsDefaultInstance();
+  Goto::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_action_2eproto);
 }
 
@@ -113,7 +147,6 @@ const ::google::protobuf::EnumDescriptor* Action_ActionType_descriptor() {
 bool Action_ActionType_IsValid(int value) {
   switch(value) {
     case 0:
-    case 1:
       return true;
     default:
       return false;
@@ -122,53 +155,48 @@ bool Action_ActionType_IsValid(int value) {
 
 #ifndef _MSC_VER
 const Action_ActionType Action::GOTO;
-const Action_ActionType Action::MOVE;
 const Action_ActionType Action::ActionType_MIN;
 const Action_ActionType Action::ActionType_MAX;
 const int Action::ActionType_ARRAYSIZE;
 #endif  // _MSC_VER
 #ifndef _MSC_VER
-const int Action::kActionTypeFieldNumber;
-const int Action::kUavIdFieldNumber;
-const int Action::kXFieldNumber;
-const int Action::kYFieldNumber;
-const int Action::kZFieldNumber;
-const int Action::kYawFieldNumber;
+const int Action::kTypeFieldNumber;
+const int Action::kGotoFieldNumber;
 #endif  // !_MSC_VER
 
 Action::Action()
   : ::google::protobuf::Message() {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:urs_protobuf.Action)
+  // @@protoc_insertion_point(constructor:urs_wearable_pb.Action)
 }
 
 void Action::InitAsDefaultInstance() {
+  Action_default_oneof_instance_->goto__ = const_cast< ::urs_wearable_pb::Goto*>(&::urs_wearable_pb::Goto::default_instance());
 }
 
 Action::Action(const Action& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
-  // @@protoc_insertion_point(copy_constructor:urs_protobuf.Action)
+  // @@protoc_insertion_point(copy_constructor:urs_wearable_pb.Action)
 }
 
 void Action::SharedCtor() {
   _cached_size_ = 0;
-  action_type_ = 0;
-  uav_id_ = 0;
-  x_ = 0;
-  y_ = 0;
-  z_ = 0;
-  yaw_ = 0;
+  type_ = 0;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  clear_has_oneof_action();
 }
 
 Action::~Action() {
-  // @@protoc_insertion_point(destructor:urs_protobuf.Action)
+  // @@protoc_insertion_point(destructor:urs_wearable_pb.Action)
   SharedDtor();
 }
 
 void Action::SharedDtor() {
+  if (has_oneof_action()) {
+    clear_oneof_action();
+  }
   if (this != default_instance_) {
   }
 }
@@ -194,24 +222,23 @@ Action* Action::New() const {
   return new Action;
 }
 
-void Action::Clear() {
-#define OFFSET_OF_FIELD_(f) (reinterpret_cast<char*>(      \
-  &reinterpret_cast<Action*>(16)->f) - \
-   reinterpret_cast<char*>(16))
-
-#define ZR_(first, last) do {                              \
-    size_t f = OFFSET_OF_FIELD_(first);                    \
-    size_t n = OFFSET_OF_FIELD_(last) - f + sizeof(last);  \
-    ::memset(&first, 0, n);                                \
-  } while (0)
-
-  if (_has_bits_[0 / 32] & 63) {
-    ZR_(action_type_, yaw_);
+void Action::clear_oneof_action() {
+  switch(oneof_action_case()) {
+    case kGoto: {
+      delete oneof_action_.goto__;
+      break;
+    }
+    case ONEOF_ACTION_NOT_SET: {
+      break;
+    }
   }
+  _oneof_case_[0] = ONEOF_ACTION_NOT_SET;
+}
 
-#undef OFFSET_OF_FIELD_
-#undef ZR_
 
+void Action::Clear() {
+  type_ = 0;
+  clear_oneof_action();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
@@ -220,99 +247,37 @@ bool Action::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:urs_protobuf.Action)
+  // @@protoc_insertion_point(parse_start:urs_wearable_pb.Action)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required .urs_protobuf.Action.ActionType action_type = 1;
+      // required .urs_wearable_pb.Action.ActionType type = 1;
       case 1: {
         if (tag == 8) {
           int value;
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    int, ::google::protobuf::internal::WireFormatLite::TYPE_ENUM>(
                  input, &value)));
-          if (::urs_protobuf::Action_ActionType_IsValid(value)) {
-            set_action_type(static_cast< ::urs_protobuf::Action_ActionType >(value));
+          if (::urs_wearable_pb::Action_ActionType_IsValid(value)) {
+            set_type(static_cast< ::urs_wearable_pb::Action_ActionType >(value));
           } else {
             mutable_unknown_fields()->AddVarint(1, value);
           }
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(16)) goto parse_uav_id;
+        if (input->ExpectTag(18)) goto parse_goto;
         break;
       }
 
-      // optional int32 uav_id = 2;
+      // optional .urs_wearable_pb.Goto goto = 2;
       case 2: {
-        if (tag == 16) {
-         parse_uav_id:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
-                 input, &uav_id_)));
-          set_has_uav_id();
-        } else {
-          goto handle_unusual;
-        }
-        if (input->ExpectTag(24)) goto parse_x;
-        break;
-      }
-
-      // optional int32 x = 3;
-      case 3: {
-        if (tag == 24) {
-         parse_x:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
-                 input, &x_)));
-          set_has_x();
-        } else {
-          goto handle_unusual;
-        }
-        if (input->ExpectTag(32)) goto parse_y;
-        break;
-      }
-
-      // optional int32 y = 4;
-      case 4: {
-        if (tag == 32) {
-         parse_y:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
-                 input, &y_)));
-          set_has_y();
-        } else {
-          goto handle_unusual;
-        }
-        if (input->ExpectTag(40)) goto parse_z;
-        break;
-      }
-
-      // optional int32 z = 5;
-      case 5: {
-        if (tag == 40) {
-         parse_z:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
-                 input, &z_)));
-          set_has_z();
-        } else {
-          goto handle_unusual;
-        }
-        if (input->ExpectTag(48)) goto parse_yaw;
-        break;
-      }
-
-      // optional int32 yaw = 6;
-      case 6: {
-        if (tag == 48) {
-         parse_yaw:
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
-                 input, &yaw_)));
-          set_has_yaw();
+        if (tag == 18) {
+         parse_goto:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+               input, mutable_goto_()));
         } else {
           goto handle_unusual;
         }
@@ -334,94 +299,57 @@ bool Action::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:urs_protobuf.Action)
+  // @@protoc_insertion_point(parse_success:urs_wearable_pb.Action)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:urs_protobuf.Action)
+  // @@protoc_insertion_point(parse_failure:urs_wearable_pb.Action)
   return false;
 #undef DO_
 }
 
 void Action::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:urs_protobuf.Action)
-  // required .urs_protobuf.Action.ActionType action_type = 1;
-  if (has_action_type()) {
+  // @@protoc_insertion_point(serialize_start:urs_wearable_pb.Action)
+  // required .urs_wearable_pb.Action.ActionType type = 1;
+  if (has_type()) {
     ::google::protobuf::internal::WireFormatLite::WriteEnum(
-      1, this->action_type(), output);
+      1, this->type(), output);
   }
 
-  // optional int32 uav_id = 2;
-  if (has_uav_id()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt32(2, this->uav_id(), output);
-  }
-
-  // optional int32 x = 3;
-  if (has_x()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt32(3, this->x(), output);
-  }
-
-  // optional int32 y = 4;
-  if (has_y()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt32(4, this->y(), output);
-  }
-
-  // optional int32 z = 5;
-  if (has_z()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt32(5, this->z(), output);
-  }
-
-  // optional int32 yaw = 6;
-  if (has_yaw()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt32(6, this->yaw(), output);
+  // optional .urs_wearable_pb.Goto goto = 2;
+  if (has_goto_()) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
+      2, this->goto_(), output);
   }
 
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:urs_protobuf.Action)
+  // @@protoc_insertion_point(serialize_end:urs_wearable_pb.Action)
 }
 
 ::google::protobuf::uint8* Action::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:urs_protobuf.Action)
-  // required .urs_protobuf.Action.ActionType action_type = 1;
-  if (has_action_type()) {
+  // @@protoc_insertion_point(serialize_to_array_start:urs_wearable_pb.Action)
+  // required .urs_wearable_pb.Action.ActionType type = 1;
+  if (has_type()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteEnumToArray(
-      1, this->action_type(), target);
+      1, this->type(), target);
   }
 
-  // optional int32 uav_id = 2;
-  if (has_uav_id()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(2, this->uav_id(), target);
-  }
-
-  // optional int32 x = 3;
-  if (has_x()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(3, this->x(), target);
-  }
-
-  // optional int32 y = 4;
-  if (has_y()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(4, this->y(), target);
-  }
-
-  // optional int32 z = 5;
-  if (has_z()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(5, this->z(), target);
-  }
-
-  // optional int32 yaw = 6;
-  if (has_yaw()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(6, this->yaw(), target);
+  // optional .urs_wearable_pb.Goto goto = 2;
+  if (has_goto_()) {
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteMessageNoVirtualToArray(
+        2, this->goto_(), target);
   }
 
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:urs_protobuf.Action)
+  // @@protoc_insertion_point(serialize_to_array_end:urs_wearable_pb.Action)
   return target;
 }
 
@@ -429,47 +357,24 @@ int Action::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required .urs_protobuf.Action.ActionType action_type = 1;
-    if (has_action_type()) {
+    // required .urs_wearable_pb.Action.ActionType type = 1;
+    if (has_type()) {
       total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::EnumSize(this->action_type());
+        ::google::protobuf::internal::WireFormatLite::EnumSize(this->type());
     }
 
-    // optional int32 uav_id = 2;
-    if (has_uav_id()) {
+  }
+  switch (oneof_action_case()) {
+    // optional .urs_wearable_pb.Goto goto = 2;
+    case kGoto: {
       total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::Int32Size(
-          this->uav_id());
+        ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+          this->goto_());
+      break;
     }
-
-    // optional int32 x = 3;
-    if (has_x()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::Int32Size(
-          this->x());
+    case ONEOF_ACTION_NOT_SET: {
+      break;
     }
-
-    // optional int32 y = 4;
-    if (has_y()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::Int32Size(
-          this->y());
-    }
-
-    // optional int32 z = 5;
-    if (has_z()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::Int32Size(
-          this->z());
-    }
-
-    // optional int32 yaw = 6;
-    if (has_yaw()) {
-      total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::Int32Size(
-          this->yaw());
-    }
-
   }
   if (!unknown_fields().empty()) {
     total_size +=
@@ -496,24 +401,18 @@ void Action::MergeFrom(const ::google::protobuf::Message& from) {
 
 void Action::MergeFrom(const Action& from) {
   GOOGLE_CHECK_NE(&from, this);
+  switch (from.oneof_action_case()) {
+    case kGoto: {
+      mutable_goto_()->::urs_wearable_pb::Goto::MergeFrom(from.goto_());
+      break;
+    }
+    case ONEOF_ACTION_NOT_SET: {
+      break;
+    }
+  }
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    if (from.has_action_type()) {
-      set_action_type(from.action_type());
-    }
-    if (from.has_uav_id()) {
-      set_uav_id(from.uav_id());
-    }
-    if (from.has_x()) {
-      set_x(from.x());
-    }
-    if (from.has_y()) {
-      set_y(from.y());
-    }
-    if (from.has_z()) {
-      set_z(from.z());
-    }
-    if (from.has_yaw()) {
-      set_yaw(from.yaw());
+    if (from.has_type()) {
+      set_type(from.type());
     }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
@@ -539,12 +438,9 @@ bool Action::IsInitialized() const {
 
 void Action::Swap(Action* other) {
   if (other != this) {
-    std::swap(action_type_, other->action_type_);
-    std::swap(uav_id_, other->uav_id_);
-    std::swap(x_, other->x_);
-    std::swap(y_, other->y_);
-    std::swap(z_, other->z_);
-    std::swap(yaw_, other->yaw_);
+    std::swap(type_, other->type_);
+    std::swap(oneof_action_, other->oneof_action_);
+    std::swap(_oneof_case_[0], other->_oneof_case_[0]);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
@@ -560,8 +456,390 @@ void Action::Swap(Action* other) {
 }
 
 
+// ===================================================================
+
+#ifndef _MSC_VER
+const int Goto::kUavIdFieldNumber;
+const int Goto::kXFieldNumber;
+const int Goto::kYFieldNumber;
+const int Goto::kZFieldNumber;
+const int Goto::kYawFieldNumber;
+#endif  // !_MSC_VER
+
+Goto::Goto()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  // @@protoc_insertion_point(constructor:urs_wearable_pb.Goto)
+}
+
+void Goto::InitAsDefaultInstance() {
+}
+
+Goto::Goto(const Goto& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+  // @@protoc_insertion_point(copy_constructor:urs_wearable_pb.Goto)
+}
+
+void Goto::SharedCtor() {
+  _cached_size_ = 0;
+  uav_id_ = 0;
+  x_ = 0;
+  y_ = 0;
+  z_ = 0;
+  yaw_ = 0;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+Goto::~Goto() {
+  // @@protoc_insertion_point(destructor:urs_wearable_pb.Goto)
+  SharedDtor();
+}
+
+void Goto::SharedDtor() {
+  if (this != default_instance_) {
+  }
+}
+
+void Goto::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* Goto::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return Goto_descriptor_;
+}
+
+const Goto& Goto::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_action_2eproto();
+  return *default_instance_;
+}
+
+Goto* Goto::default_instance_ = NULL;
+
+Goto* Goto::New() const {
+  return new Goto;
+}
+
+void Goto::Clear() {
+#define OFFSET_OF_FIELD_(f) (reinterpret_cast<char*>(      \
+  &reinterpret_cast<Goto*>(16)->f) - \
+   reinterpret_cast<char*>(16))
+
+#define ZR_(first, last) do {                              \
+    size_t f = OFFSET_OF_FIELD_(first);                    \
+    size_t n = OFFSET_OF_FIELD_(last) - f + sizeof(last);  \
+    ::memset(&first, 0, n);                                \
+  } while (0)
+
+  if (_has_bits_[0 / 32] & 31) {
+    ZR_(x_, uav_id_);
+  }
+
+#undef OFFSET_OF_FIELD_
+#undef ZR_
+
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool Goto::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
+  ::google::protobuf::uint32 tag;
+  // @@protoc_insertion_point(parse_start:urs_wearable_pb.Goto)
+  for (;;) {
+    ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
+    tag = p.first;
+    if (!p.second) goto handle_unusual;
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // optional int32 uav_id = 1;
+      case 1: {
+        if (tag == 8) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &uav_id_)));
+          set_has_uav_id();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(17)) goto parse_x;
+        break;
+      }
+
+      // optional double x = 2;
+      case 2: {
+        if (tag == 17) {
+         parse_x:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   double, ::google::protobuf::internal::WireFormatLite::TYPE_DOUBLE>(
+                 input, &x_)));
+          set_has_x();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(25)) goto parse_y;
+        break;
+      }
+
+      // optional double y = 3;
+      case 3: {
+        if (tag == 25) {
+         parse_y:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   double, ::google::protobuf::internal::WireFormatLite::TYPE_DOUBLE>(
+                 input, &y_)));
+          set_has_y();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(33)) goto parse_z;
+        break;
+      }
+
+      // optional double z = 4;
+      case 4: {
+        if (tag == 33) {
+         parse_z:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   double, ::google::protobuf::internal::WireFormatLite::TYPE_DOUBLE>(
+                 input, &z_)));
+          set_has_z();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(41)) goto parse_yaw;
+        break;
+      }
+
+      // optional double yaw = 5;
+      case 5: {
+        if (tag == 41) {
+         parse_yaw:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   double, ::google::protobuf::internal::WireFormatLite::TYPE_DOUBLE>(
+                 input, &yaw_)));
+          set_has_yaw();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectAtEnd()) goto success;
+        break;
+      }
+
+      default: {
+      handle_unusual:
+        if (tag == 0 ||
+            ::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          goto success;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+success:
+  // @@protoc_insertion_point(parse_success:urs_wearable_pb.Goto)
+  return true;
+failure:
+  // @@protoc_insertion_point(parse_failure:urs_wearable_pb.Goto)
+  return false;
+#undef DO_
+}
+
+void Goto::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // @@protoc_insertion_point(serialize_start:urs_wearable_pb.Goto)
+  // optional int32 uav_id = 1;
+  if (has_uav_id()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(1, this->uav_id(), output);
+  }
+
+  // optional double x = 2;
+  if (has_x()) {
+    ::google::protobuf::internal::WireFormatLite::WriteDouble(2, this->x(), output);
+  }
+
+  // optional double y = 3;
+  if (has_y()) {
+    ::google::protobuf::internal::WireFormatLite::WriteDouble(3, this->y(), output);
+  }
+
+  // optional double z = 4;
+  if (has_z()) {
+    ::google::protobuf::internal::WireFormatLite::WriteDouble(4, this->z(), output);
+  }
+
+  // optional double yaw = 5;
+  if (has_yaw()) {
+    ::google::protobuf::internal::WireFormatLite::WriteDouble(5, this->yaw(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+  // @@protoc_insertion_point(serialize_end:urs_wearable_pb.Goto)
+}
+
+::google::protobuf::uint8* Goto::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // @@protoc_insertion_point(serialize_to_array_start:urs_wearable_pb.Goto)
+  // optional int32 uav_id = 1;
+  if (has_uav_id()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(1, this->uav_id(), target);
+  }
+
+  // optional double x = 2;
+  if (has_x()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(2, this->x(), target);
+  }
+
+  // optional double y = 3;
+  if (has_y()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(3, this->y(), target);
+  }
+
+  // optional double z = 4;
+  if (has_z()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(4, this->z(), target);
+  }
+
+  // optional double yaw = 5;
+  if (has_yaw()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteDoubleToArray(5, this->yaw(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:urs_wearable_pb.Goto)
+  return target;
+}
+
+int Goto::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // optional int32 uav_id = 1;
+    if (has_uav_id()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int32Size(
+          this->uav_id());
+    }
+
+    // optional double x = 2;
+    if (has_x()) {
+      total_size += 1 + 8;
+    }
+
+    // optional double y = 3;
+    if (has_y()) {
+      total_size += 1 + 8;
+    }
+
+    // optional double z = 4;
+    if (has_z()) {
+      total_size += 1 + 8;
+    }
+
+    // optional double yaw = 5;
+    if (has_yaw()) {
+      total_size += 1 + 8;
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void Goto::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const Goto* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const Goto*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void Goto::MergeFrom(const Goto& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_uav_id()) {
+      set_uav_id(from.uav_id());
+    }
+    if (from.has_x()) {
+      set_x(from.x());
+    }
+    if (from.has_y()) {
+      set_y(from.y());
+    }
+    if (from.has_z()) {
+      set_z(from.z());
+    }
+    if (from.has_yaw()) {
+      set_yaw(from.yaw());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void Goto::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void Goto::CopyFrom(const Goto& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool Goto::IsInitialized() const {
+
+  return true;
+}
+
+void Goto::Swap(Goto* other) {
+  if (other != this) {
+    std::swap(uav_id_, other->uav_id_);
+    std::swap(x_, other->x_);
+    std::swap(y_, other->y_);
+    std::swap(z_, other->z_);
+    std::swap(yaw_, other->yaw_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata Goto::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = Goto_descriptor_;
+  metadata.reflection = Goto_reflection_;
+  return metadata;
+}
+
+
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace urs_protobuf
+}  // namespace urs_wearable_pb
 
 // @@protoc_insertion_point(global_scope)

@@ -1,6 +1,7 @@
 # Makefile
 
-OBJS = bison.o lex.o main.o reader.o action.o planner.o state.o protobuf_helper.o action.pb.o
+OBJS = bison.o lex.o main.o reader.o action.o planner.o state.o \
+       protobuf_helper.o planning.pb.o state.pb.o predicate.pb.o action.pb.o
 
 CC := g++
 CFLAGS := -c -std=c++11 `pkg-config --cflags protobuf` -Wall -O3
@@ -45,6 +46,15 @@ planner.o: planner.cpp planner.h state.h define.h reader.h
 
 protobuf_helper.o: ../../src/protobuf_helper.cpp ../../include/protobuf_helper.h
 	$(CC) $(CFLAGS) -I../../include -o protobuf_helper.o ../../src/protobuf_helper.cpp
+
+planning.pb.o: $(PBDIR)/planning.pb.cc $(PBDIR)/planning.pb.h
+	$(CC) $(CFLAGS) -I$(PBDIR) -o planning.pb.o $(PBDIR)/planning.pb.cc
+
+state.pb.o: $(PBDIR)/state.pb.cc $(PBDIR)/state.pb.h
+	$(CC) $(CFLAGS) -I$(PBDIR) -o state.pb.o $(PBDIR)/state.pb.cc
+
+predicate.pb.o: $(PBDIR)/predicate.pb.cc $(PBDIR)/predicate.pb.h
+	$(CC) $(CFLAGS) -I$(PBDIR) -o predicate.pb.o $(PBDIR)/predicate.pb.cc
 
 action.pb.o: $(PBDIR)/action.pb.cc $(PBDIR)/action.pb.h
 	$(CC) $(CFLAGS) -I$(PBDIR) -o action.pb.o $(PBDIR)/action.pb.cc
