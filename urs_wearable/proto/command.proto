@@ -1,0 +1,38 @@
+syntax = "proto2";
+
+package pb_wearable;
+
+message CommandRequest {
+  required CommandRequestType type = 1;
+  
+  oneof commandrequest_oneof {
+    Goto goto;
+  }
+  
+  enum CommandRequestType {
+    GOTO = 0;
+    GET_STATUS = 1;
+    // etc
+  }
+}
+
+message Goto {
+
+}
+
+message CommandResponse {
+  required CommandResponseType type = 1;
+  
+  oneof commandresponse_oneof {
+    Status status = 2;
+  }
+  
+  enum CommandResponseType {
+    STATUS = 1;
+    // etc
+  }
+}
+
+message Status {
+
+}
