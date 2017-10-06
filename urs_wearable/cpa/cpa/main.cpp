@@ -110,7 +110,7 @@ int main(int argc, char **argv)
 
     google::protobuf::io::ZeroCopyInputStream* raw_input = new google::protobuf::io::FileInputStream(execMonitorSockFD);
 
-    urs_wearable_pb::PlanningRequest planningRequest;
+    pb_urs::PlanningRequest planningRequest;
     if (!readDelimitedFrom(raw_input, &planningRequest))
     {
       std::cerr << "Execution Monitor has disconnected" << std::endl;
@@ -121,9 +121,9 @@ int main(int argc, char **argv)
 
     std::cout << "planningRequest: " << std::endl << planningRequest.DebugString();
 
-    urs_wearable_pb::State* initialState = planningRequest.mutable_initial();
+    pb_urs::State* initialState = planningRequest.mutable_initial();
     for (int i = 0; i < initialState->at_size(); i++) {
-      const urs_wearable_pb::At& at = initialState->at(i);
+      const pb_urs::At& at = initialState->at(i);
 
       objs_id.insert(at.uav_id());
       objs_x.insert(at.x());
@@ -135,9 +135,9 @@ int main(int argc, char **argv)
           " " + Objects::doubleToObj("z", at.z()) + ")";
     }
 
-    urs_wearable_pb::State* goalState = planningRequest.mutable_goal();
+    pb_urs::State* goalState = planningRequest.mutable_goal();
     for (int i = 0; i < goalState->at_size(); i++) {
-      const urs_wearable_pb::At& at = goalState->at(i);
+      const pb_urs::At& at = goalState->at(i);
 
       objs_id.insert(at.uav_id());
       objs_x.insert(at.x());
@@ -211,7 +211,7 @@ int main(int argc, char **argv)
     /**************************************/
     /* Return a plan to Execution Monitor */
     /**************************************/
-    urs_wearable_pb::PlanningResponse planningResponse;
+    pb_urs::PlanningResponse planningResponse;
     for(map<string,int>::iterator it = planner.my_action_map.begin(); it != planner.my_action_map.end(); it++)
     {
       std::vector<std::string> tokens;
@@ -223,11 +223,11 @@ int main(int argc, char **argv)
         tokens.back().erase(0, 4);  // remove the leading "cpa_"
       }
 
-      urs_wearable_pb::Action* action = planningResponse.add_actions();
+      pb_urs::Action* action = planningResponse.add_actions();
       if (tokens[0].compare("goto") == 0)
       {
-        action->set_type(urs_wearable_pb::Action_ActionType_GOTO);
-        urs_wearable_pb::Goto* action_goto = action->mutable_goto_();
+        action->set_type(pb_urs::Action_ActionType_GOTO);
+        pb_urs::Goto* action_goto = action->mutable_goto_();
 
         action_goto->set_uav_id(Objects::objToInt("id", tokens[1]));
         action_goto->set_x(Objects::objToDouble("x", tokens[5]));

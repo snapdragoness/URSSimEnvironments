@@ -16,7 +16,7 @@
 #include <google/protobuf/wire_format.h>
 // @@protoc_insertion_point(includes)
 
-namespace urs_wearable_pb {
+namespace pb_urs {
 
 namespace {
 
@@ -82,9 +82,9 @@ void protobuf_AddDesc_predicate_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\017predicate.proto\022\017urs_wearable_pb\"B\n\002At"
-    "\022\016\n\006uav_id\030\001 \001(\005\022\t\n\001x\030\002 \001(\001\022\t\n\001y\030\003 \001(\001\022\t"
-    "\n\001z\030\004 \001(\001\022\013\n\003yaw\030\005 \001(\001", 102);
+    "\n\017predicate.proto\022\006pb_urs\"B\n\002At\022\016\n\006uav_i"
+    "d\030\001 \001(\005\022\t\n\001x\030\002 \001(\001\022\t\n\001y\030\003 \001(\001\022\t\n\001z\030\004 \001(\001"
+    "\022\013\n\003yaw\030\005 \001(\001", 93);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "predicate.proto", &protobuf_RegisterTypes);
   At::default_instance_ = new At();
@@ -112,7 +112,7 @@ const int At::kYawFieldNumber;
 At::At()
   : ::google::protobuf::Message() {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:urs_wearable_pb.At)
+  // @@protoc_insertion_point(constructor:pb_urs.At)
 }
 
 void At::InitAsDefaultInstance() {
@@ -122,7 +122,7 @@ At::At(const At& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
-  // @@protoc_insertion_point(copy_constructor:urs_wearable_pb.At)
+  // @@protoc_insertion_point(copy_constructor:pb_urs.At)
 }
 
 void At::SharedCtor() {
@@ -136,7 +136,7 @@ void At::SharedCtor() {
 }
 
 At::~At() {
-  // @@protoc_insertion_point(destructor:urs_wearable_pb.At)
+  // @@protoc_insertion_point(destructor:pb_urs.At)
   SharedDtor();
 }
 
@@ -192,7 +192,7 @@ bool At::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:urs_wearable_pb.At)
+  // @@protoc_insertion_point(parse_start:pb_urs.At)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
     tag = p.first;
@@ -286,17 +286,17 @@ bool At::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:urs_wearable_pb.At)
+  // @@protoc_insertion_point(parse_success:pb_urs.At)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:urs_wearable_pb.At)
+  // @@protoc_insertion_point(parse_failure:pb_urs.At)
   return false;
 #undef DO_
 }
 
 void At::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:urs_wearable_pb.At)
+  // @@protoc_insertion_point(serialize_start:pb_urs.At)
   // optional int32 uav_id = 1;
   if (has_uav_id()) {
     ::google::protobuf::internal::WireFormatLite::WriteInt32(1, this->uav_id(), output);
@@ -326,12 +326,12 @@ void At::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:urs_wearable_pb.At)
+  // @@protoc_insertion_point(serialize_end:pb_urs.At)
 }
 
 ::google::protobuf::uint8* At::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:urs_wearable_pb.At)
+  // @@protoc_insertion_point(serialize_to_array_start:pb_urs.At)
   // optional int32 uav_id = 1;
   if (has_uav_id()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(1, this->uav_id(), target);
@@ -361,7 +361,7 @@ void At::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:urs_wearable_pb.At)
+  // @@protoc_insertion_point(serialize_to_array_end:pb_urs.At)
   return target;
 }
 
@@ -483,6 +483,6 @@ void At::Swap(At* other) {
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace urs_wearable_pb
+}  // namespace pb_urs
 
 // @@protoc_insertion_point(global_scope)

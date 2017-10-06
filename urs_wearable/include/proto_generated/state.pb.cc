@@ -16,7 +16,7 @@
 #include <google/protobuf/wire_format.h>
 // @@protoc_insertion_point(includes)
 
-namespace urs_wearable_pb {
+namespace pb_urs {
 
 namespace {
 
@@ -100,13 +100,12 @@ void protobuf_AddDesc_state_2eproto() {
   already_here = true;
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-  ::urs_wearable_pb::protobuf_AddDesc_predicate_2eproto();
+  ::pb_urs::protobuf_AddDesc_predicate_2eproto();
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\013state.proto\022\017urs_wearable_pb\032\017predicat"
-    "e.proto\"\177\n\005State\022\037\n\002at\030\001 \003(\0132\023.urs_weara"
-    "ble_pb.At\022+\n\005oneof\030\002 \003(\0132\034.urs_wearable_"
-    "pb.State.Oneof\032(\n\005Oneof\022\037\n\002at\030\001 \003(\0132\023.ur"
-    "s_wearable_pb.At", 176);
+    "\n\013state.proto\022\006pb_urs\032\017predicate.proto\"d"
+    "\n\005State\022\026\n\002at\030\001 \003(\0132\n.pb_urs.At\022\"\n\005oneof"
+    "\030\002 \003(\0132\023.pb_urs.State.Oneof\032\037\n\005Oneof\022\026\n\002"
+    "at\030\001 \003(\0132\n.pb_urs.At", 140);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "state.proto", &protobuf_RegisterTypes);
   State::default_instance_ = new State();
@@ -132,7 +131,7 @@ const int State_Oneof::kAtFieldNumber;
 State_Oneof::State_Oneof()
   : ::google::protobuf::Message() {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:urs_wearable_pb.State.Oneof)
+  // @@protoc_insertion_point(constructor:pb_urs.State.Oneof)
 }
 
 void State_Oneof::InitAsDefaultInstance() {
@@ -142,7 +141,7 @@ State_Oneof::State_Oneof(const State_Oneof& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
-  // @@protoc_insertion_point(copy_constructor:urs_wearable_pb.State.Oneof)
+  // @@protoc_insertion_point(copy_constructor:pb_urs.State.Oneof)
 }
 
 void State_Oneof::SharedCtor() {
@@ -151,7 +150,7 @@ void State_Oneof::SharedCtor() {
 }
 
 State_Oneof::~State_Oneof() {
-  // @@protoc_insertion_point(destructor:urs_wearable_pb.State.Oneof)
+  // @@protoc_insertion_point(destructor:pb_urs.State.Oneof)
   SharedDtor();
 }
 
@@ -191,13 +190,13 @@ bool State_Oneof::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:urs_wearable_pb.State.Oneof)
+  // @@protoc_insertion_point(parse_start:pb_urs.State.Oneof)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // repeated .urs_wearable_pb.At at = 1;
+      // repeated .pb_urs.At at = 1;
       case 1: {
         if (tag == 10) {
          parse_at:
@@ -225,18 +224,18 @@ bool State_Oneof::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:urs_wearable_pb.State.Oneof)
+  // @@protoc_insertion_point(parse_success:pb_urs.State.Oneof)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:urs_wearable_pb.State.Oneof)
+  // @@protoc_insertion_point(parse_failure:pb_urs.State.Oneof)
   return false;
 #undef DO_
 }
 
 void State_Oneof::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:urs_wearable_pb.State.Oneof)
-  // repeated .urs_wearable_pb.At at = 1;
+  // @@protoc_insertion_point(serialize_start:pb_urs.State.Oneof)
+  // repeated .pb_urs.At at = 1;
   for (int i = 0; i < this->at_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       1, this->at(i), output);
@@ -246,13 +245,13 @@ void State_Oneof::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:urs_wearable_pb.State.Oneof)
+  // @@protoc_insertion_point(serialize_end:pb_urs.State.Oneof)
 }
 
 ::google::protobuf::uint8* State_Oneof::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:urs_wearable_pb.State.Oneof)
-  // repeated .urs_wearable_pb.At at = 1;
+  // @@protoc_insertion_point(serialize_to_array_start:pb_urs.State.Oneof)
+  // repeated .pb_urs.At at = 1;
   for (int i = 0; i < this->at_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
@@ -263,14 +262,14 @@ void State_Oneof::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:urs_wearable_pb.State.Oneof)
+  // @@protoc_insertion_point(serialize_to_array_end:pb_urs.State.Oneof)
   return target;
 }
 
 int State_Oneof::ByteSize() const {
   int total_size = 0;
 
-  // repeated .urs_wearable_pb.At at = 1;
+  // repeated .pb_urs.At at = 1;
   total_size += 1 * this->at_size();
   for (int i = 0; i < this->at_size(); i++) {
     total_size +=
@@ -352,7 +351,7 @@ const int State::kOneofFieldNumber;
 State::State()
   : ::google::protobuf::Message() {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:urs_wearable_pb.State)
+  // @@protoc_insertion_point(constructor:pb_urs.State)
 }
 
 void State::InitAsDefaultInstance() {
@@ -362,7 +361,7 @@ State::State(const State& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
-  // @@protoc_insertion_point(copy_constructor:urs_wearable_pb.State)
+  // @@protoc_insertion_point(copy_constructor:pb_urs.State)
 }
 
 void State::SharedCtor() {
@@ -371,7 +370,7 @@ void State::SharedCtor() {
 }
 
 State::~State() {
-  // @@protoc_insertion_point(destructor:urs_wearable_pb.State)
+  // @@protoc_insertion_point(destructor:pb_urs.State)
   SharedDtor();
 }
 
@@ -412,13 +411,13 @@ bool State::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:urs_wearable_pb.State)
+  // @@protoc_insertion_point(parse_start:pb_urs.State)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // repeated .urs_wearable_pb.At at = 1;
+      // repeated .pb_urs.At at = 1;
       case 1: {
         if (tag == 10) {
          parse_at:
@@ -432,7 +431,7 @@ bool State::MergePartialFromCodedStream(
         break;
       }
 
-      // repeated .urs_wearable_pb.State.Oneof oneof = 2;
+      // repeated .pb_urs.State.Oneof oneof = 2;
       case 2: {
         if (tag == 18) {
          parse_oneof:
@@ -460,24 +459,24 @@ bool State::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:urs_wearable_pb.State)
+  // @@protoc_insertion_point(parse_success:pb_urs.State)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:urs_wearable_pb.State)
+  // @@protoc_insertion_point(parse_failure:pb_urs.State)
   return false;
 #undef DO_
 }
 
 void State::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:urs_wearable_pb.State)
-  // repeated .urs_wearable_pb.At at = 1;
+  // @@protoc_insertion_point(serialize_start:pb_urs.State)
+  // repeated .pb_urs.At at = 1;
   for (int i = 0; i < this->at_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       1, this->at(i), output);
   }
 
-  // repeated .urs_wearable_pb.State.Oneof oneof = 2;
+  // repeated .pb_urs.State.Oneof oneof = 2;
   for (int i = 0; i < this->oneof_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       2, this->oneof(i), output);
@@ -487,20 +486,20 @@ void State::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:urs_wearable_pb.State)
+  // @@protoc_insertion_point(serialize_end:pb_urs.State)
 }
 
 ::google::protobuf::uint8* State::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:urs_wearable_pb.State)
-  // repeated .urs_wearable_pb.At at = 1;
+  // @@protoc_insertion_point(serialize_to_array_start:pb_urs.State)
+  // repeated .pb_urs.At at = 1;
   for (int i = 0; i < this->at_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
         1, this->at(i), target);
   }
 
-  // repeated .urs_wearable_pb.State.Oneof oneof = 2;
+  // repeated .pb_urs.State.Oneof oneof = 2;
   for (int i = 0; i < this->oneof_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
@@ -511,14 +510,14 @@ void State::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:urs_wearable_pb.State)
+  // @@protoc_insertion_point(serialize_to_array_end:pb_urs.State)
   return target;
 }
 
 int State::ByteSize() const {
   int total_size = 0;
 
-  // repeated .urs_wearable_pb.At at = 1;
+  // repeated .pb_urs.At at = 1;
   total_size += 1 * this->at_size();
   for (int i = 0; i < this->at_size(); i++) {
     total_size +=
@@ -526,7 +525,7 @@ int State::ByteSize() const {
         this->at(i));
   }
 
-  // repeated .urs_wearable_pb.State.Oneof oneof = 2;
+  // repeated .pb_urs.State.Oneof oneof = 2;
   total_size += 1 * this->oneof_size();
   for (int i = 0; i < this->oneof_size(); i++) {
     total_size +=
@@ -602,6 +601,6 @@ void State::Swap(State* other) {
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace urs_wearable_pb
+}  // namespace pb_urs
 
 // @@protoc_insertion_point(global_scope)

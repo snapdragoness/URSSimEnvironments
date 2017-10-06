@@ -1,0 +1,42 @@
+syntax = "proto2";
+
+package pb_wearable;
+
+// A request message from a wearable device
+message WearableRequest {
+  required WearableRequestType type = 1;
+  
+  oneof wearablerequest_oneof {
+    GetStatus getStatus = 2;
+  }
+  
+  enum WearableRequestType {
+    GET_STATUS = 0;
+    // etc
+  }
+}
+
+message GetStatus {
+  required int32 uav_id = 1;
+}
+
+// A response message to a wearable device
+message WearableResponse {
+  required WearableResponseType type = 1;
+  
+  oneof wearableresponse_oneof {
+    Status status = 2;
+  }
+  
+  enum WearableResponseType {
+    STATUS = 0;
+    // etc
+  }
+}
+
+message Status {
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
+  optional double yaw = 4;
+}

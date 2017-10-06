@@ -16,7 +16,7 @@
 #include <google/protobuf/wire_format.h>
 // @@protoc_insertion_point(includes)
 
-namespace urs_wearable_pb {
+namespace pb_urs {
 
 namespace {
 
@@ -24,7 +24,7 @@ const ::google::protobuf::Descriptor* Action_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   Action_reflection_ = NULL;
 struct ActionOneofInstance {
-  const ::urs_wearable_pb::Goto* goto__;
+  const ::pb_urs::Goto* goto__;
 }* Action_default_oneof_instance_ = NULL;
 const ::google::protobuf::EnumDescriptor* Action_ActionType_descriptor_ = NULL;
 const ::google::protobuf::Descriptor* Goto_descriptor_ = NULL;
@@ -114,13 +114,12 @@ void protobuf_AddDesc_action_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\014action.proto\022\017urs_wearable_pb\"\211\001\n\006Acti"
-    "on\0220\n\004type\030\001 \002(\0162\".urs_wearable_pb.Actio"
-    "n.ActionType\022%\n\004goto\030\002 \001(\0132\025.urs_wearabl"
-    "e_pb.GotoH\000\"\026\n\nActionType\022\010\n\004GOTO\020\000B\016\n\014o"
-    "neof_action\"D\n\004Goto\022\016\n\006uav_id\030\001 \001(\005\022\t\n\001x"
-    "\030\002 \001(\001\022\t\n\001y\030\003 \001(\001\022\t\n\001z\030\004 \001(\001\022\013\n\003yaw\030\005 \001("
-    "\001", 241);
+    "\n\014action.proto\022\006pb_urs\"w\n\006Action\022\'\n\004type"
+    "\030\001 \002(\0162\031.pb_urs.Action.ActionType\022\034\n\004got"
+    "o\030\002 \001(\0132\014.pb_urs.GotoH\000\"\026\n\nActionType\022\010\n"
+    "\004GOTO\020\000B\016\n\014oneof_action\"D\n\004Goto\022\016\n\006uav_i"
+    "d\030\001 \001(\005\022\t\n\001x\030\002 \001(\001\022\t\n\001y\030\003 \001(\001\022\t\n\001z\030\004 \001(\001"
+    "\022\013\n\003yaw\030\005 \001(\001", 213);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "action.proto", &protobuf_RegisterTypes);
   Action::default_instance_ = new Action();
@@ -167,18 +166,18 @@ const int Action::kGotoFieldNumber;
 Action::Action()
   : ::google::protobuf::Message() {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:urs_wearable_pb.Action)
+  // @@protoc_insertion_point(constructor:pb_urs.Action)
 }
 
 void Action::InitAsDefaultInstance() {
-  Action_default_oneof_instance_->goto__ = const_cast< ::urs_wearable_pb::Goto*>(&::urs_wearable_pb::Goto::default_instance());
+  Action_default_oneof_instance_->goto__ = const_cast< ::pb_urs::Goto*>(&::pb_urs::Goto::default_instance());
 }
 
 Action::Action(const Action& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
-  // @@protoc_insertion_point(copy_constructor:urs_wearable_pb.Action)
+  // @@protoc_insertion_point(copy_constructor:pb_urs.Action)
 }
 
 void Action::SharedCtor() {
@@ -189,7 +188,7 @@ void Action::SharedCtor() {
 }
 
 Action::~Action() {
-  // @@protoc_insertion_point(destructor:urs_wearable_pb.Action)
+  // @@protoc_insertion_point(destructor:pb_urs.Action)
   SharedDtor();
 }
 
@@ -247,21 +246,21 @@ bool Action::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:urs_wearable_pb.Action)
+  // @@protoc_insertion_point(parse_start:pb_urs.Action)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required .urs_wearable_pb.Action.ActionType type = 1;
+      // required .pb_urs.Action.ActionType type = 1;
       case 1: {
         if (tag == 8) {
           int value;
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    int, ::google::protobuf::internal::WireFormatLite::TYPE_ENUM>(
                  input, &value)));
-          if (::urs_wearable_pb::Action_ActionType_IsValid(value)) {
-            set_type(static_cast< ::urs_wearable_pb::Action_ActionType >(value));
+          if (::pb_urs::Action_ActionType_IsValid(value)) {
+            set_type(static_cast< ::pb_urs::Action_ActionType >(value));
           } else {
             mutable_unknown_fields()->AddVarint(1, value);
           }
@@ -272,7 +271,7 @@ bool Action::MergePartialFromCodedStream(
         break;
       }
 
-      // optional .urs_wearable_pb.Goto goto = 2;
+      // optional .pb_urs.Goto goto = 2;
       case 2: {
         if (tag == 18) {
          parse_goto:
@@ -299,24 +298,24 @@ bool Action::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:urs_wearable_pb.Action)
+  // @@protoc_insertion_point(parse_success:pb_urs.Action)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:urs_wearable_pb.Action)
+  // @@protoc_insertion_point(parse_failure:pb_urs.Action)
   return false;
 #undef DO_
 }
 
 void Action::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:urs_wearable_pb.Action)
-  // required .urs_wearable_pb.Action.ActionType type = 1;
+  // @@protoc_insertion_point(serialize_start:pb_urs.Action)
+  // required .pb_urs.Action.ActionType type = 1;
   if (has_type()) {
     ::google::protobuf::internal::WireFormatLite::WriteEnum(
       1, this->type(), output);
   }
 
-  // optional .urs_wearable_pb.Goto goto = 2;
+  // optional .pb_urs.Goto goto = 2;
   if (has_goto_()) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       2, this->goto_(), output);
@@ -326,19 +325,19 @@ void Action::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:urs_wearable_pb.Action)
+  // @@protoc_insertion_point(serialize_end:pb_urs.Action)
 }
 
 ::google::protobuf::uint8* Action::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:urs_wearable_pb.Action)
-  // required .urs_wearable_pb.Action.ActionType type = 1;
+  // @@protoc_insertion_point(serialize_to_array_start:pb_urs.Action)
+  // required .pb_urs.Action.ActionType type = 1;
   if (has_type()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteEnumToArray(
       1, this->type(), target);
   }
 
-  // optional .urs_wearable_pb.Goto goto = 2;
+  // optional .pb_urs.Goto goto = 2;
   if (has_goto_()) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
@@ -349,7 +348,7 @@ void Action::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:urs_wearable_pb.Action)
+  // @@protoc_insertion_point(serialize_to_array_end:pb_urs.Action)
   return target;
 }
 
@@ -357,7 +356,7 @@ int Action::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required .urs_wearable_pb.Action.ActionType type = 1;
+    // required .pb_urs.Action.ActionType type = 1;
     if (has_type()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::EnumSize(this->type());
@@ -365,7 +364,7 @@ int Action::ByteSize() const {
 
   }
   switch (oneof_action_case()) {
-    // optional .urs_wearable_pb.Goto goto = 2;
+    // optional .pb_urs.Goto goto = 2;
     case kGoto: {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
@@ -403,7 +402,7 @@ void Action::MergeFrom(const Action& from) {
   GOOGLE_CHECK_NE(&from, this);
   switch (from.oneof_action_case()) {
     case kGoto: {
-      mutable_goto_()->::urs_wearable_pb::Goto::MergeFrom(from.goto_());
+      mutable_goto_()->::pb_urs::Goto::MergeFrom(from.goto_());
       break;
     }
     case ONEOF_ACTION_NOT_SET: {
@@ -469,7 +468,7 @@ const int Goto::kYawFieldNumber;
 Goto::Goto()
   : ::google::protobuf::Message() {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:urs_wearable_pb.Goto)
+  // @@protoc_insertion_point(constructor:pb_urs.Goto)
 }
 
 void Goto::InitAsDefaultInstance() {
@@ -479,7 +478,7 @@ Goto::Goto(const Goto& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
-  // @@protoc_insertion_point(copy_constructor:urs_wearable_pb.Goto)
+  // @@protoc_insertion_point(copy_constructor:pb_urs.Goto)
 }
 
 void Goto::SharedCtor() {
@@ -493,7 +492,7 @@ void Goto::SharedCtor() {
 }
 
 Goto::~Goto() {
-  // @@protoc_insertion_point(destructor:urs_wearable_pb.Goto)
+  // @@protoc_insertion_point(destructor:pb_urs.Goto)
   SharedDtor();
 }
 
@@ -549,7 +548,7 @@ bool Goto::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:urs_wearable_pb.Goto)
+  // @@protoc_insertion_point(parse_start:pb_urs.Goto)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
     tag = p.first;
@@ -643,17 +642,17 @@ bool Goto::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:urs_wearable_pb.Goto)
+  // @@protoc_insertion_point(parse_success:pb_urs.Goto)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:urs_wearable_pb.Goto)
+  // @@protoc_insertion_point(parse_failure:pb_urs.Goto)
   return false;
 #undef DO_
 }
 
 void Goto::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:urs_wearable_pb.Goto)
+  // @@protoc_insertion_point(serialize_start:pb_urs.Goto)
   // optional int32 uav_id = 1;
   if (has_uav_id()) {
     ::google::protobuf::internal::WireFormatLite::WriteInt32(1, this->uav_id(), output);
@@ -683,12 +682,12 @@ void Goto::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:urs_wearable_pb.Goto)
+  // @@protoc_insertion_point(serialize_end:pb_urs.Goto)
 }
 
 ::google::protobuf::uint8* Goto::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:urs_wearable_pb.Goto)
+  // @@protoc_insertion_point(serialize_to_array_start:pb_urs.Goto)
   // optional int32 uav_id = 1;
   if (has_uav_id()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(1, this->uav_id(), target);
@@ -718,7 +717,7 @@ void Goto::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:urs_wearable_pb.Goto)
+  // @@protoc_insertion_point(serialize_to_array_end:pb_urs.Goto)
   return target;
 }
 
@@ -840,6 +839,6 @@ void Goto::Swap(Goto* other) {
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace urs_wearable_pb
+}  // namespace pb_urs
 
 // @@protoc_insertion_point(global_scope)

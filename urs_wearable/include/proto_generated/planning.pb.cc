@@ -16,7 +16,7 @@
 #include <google/protobuf/wire_format.h>
 // @@protoc_insertion_point(includes)
 
-namespace urs_wearable_pb {
+namespace pb_urs {
 
 namespace {
 
@@ -100,15 +100,14 @@ void protobuf_AddDesc_planning_2eproto() {
   already_here = true;
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-  ::urs_wearable_pb::protobuf_AddDesc_state_2eproto();
-  ::urs_wearable_pb::protobuf_AddDesc_action_2eproto();
+  ::pb_urs::protobuf_AddDesc_state_2eproto();
+  ::pb_urs::protobuf_AddDesc_action_2eproto();
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\016planning.proto\022\017urs_wearable_pb\032\013state"
-    ".proto\032\014action.proto\"`\n\017PlanningRequest\022"
-    "\'\n\007initial\030\001 \001(\0132\026.urs_wearable_pb.State"
-    "\022$\n\004goal\030\002 \001(\0132\026.urs_wearable_pb.State\"<"
-    "\n\020PlanningResponse\022(\n\007actions\030\001 \003(\0132\027.ur"
-    "s_wearable_pb.Action", 220);
+    "\n\016planning.proto\022\006pb_urs\032\013state.proto\032\014a"
+    "ction.proto\"N\n\017PlanningRequest\022\036\n\007initia"
+    "l\030\001 \001(\0132\r.pb_urs.State\022\033\n\004goal\030\002 \001(\0132\r.p"
+    "b_urs.State\"3\n\020PlanningResponse\022\037\n\007actio"
+    "ns\030\001 \003(\0132\016.pb_urs.Action", 184);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "planning.proto", &protobuf_RegisterTypes);
   PlanningRequest::default_instance_ = new PlanningRequest();
@@ -135,19 +134,19 @@ const int PlanningRequest::kGoalFieldNumber;
 PlanningRequest::PlanningRequest()
   : ::google::protobuf::Message() {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:urs_wearable_pb.PlanningRequest)
+  // @@protoc_insertion_point(constructor:pb_urs.PlanningRequest)
 }
 
 void PlanningRequest::InitAsDefaultInstance() {
-  initial_ = const_cast< ::urs_wearable_pb::State*>(&::urs_wearable_pb::State::default_instance());
-  goal_ = const_cast< ::urs_wearable_pb::State*>(&::urs_wearable_pb::State::default_instance());
+  initial_ = const_cast< ::pb_urs::State*>(&::pb_urs::State::default_instance());
+  goal_ = const_cast< ::pb_urs::State*>(&::pb_urs::State::default_instance());
 }
 
 PlanningRequest::PlanningRequest(const PlanningRequest& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
-  // @@protoc_insertion_point(copy_constructor:urs_wearable_pb.PlanningRequest)
+  // @@protoc_insertion_point(copy_constructor:pb_urs.PlanningRequest)
 }
 
 void PlanningRequest::SharedCtor() {
@@ -158,7 +157,7 @@ void PlanningRequest::SharedCtor() {
 }
 
 PlanningRequest::~PlanningRequest() {
-  // @@protoc_insertion_point(destructor:urs_wearable_pb.PlanningRequest)
+  // @@protoc_insertion_point(destructor:pb_urs.PlanningRequest)
   SharedDtor();
 }
 
@@ -193,10 +192,10 @@ PlanningRequest* PlanningRequest::New() const {
 void PlanningRequest::Clear() {
   if (_has_bits_[0 / 32] & 3) {
     if (has_initial()) {
-      if (initial_ != NULL) initial_->::urs_wearable_pb::State::Clear();
+      if (initial_ != NULL) initial_->::pb_urs::State::Clear();
     }
     if (has_goal()) {
-      if (goal_ != NULL) goal_->::urs_wearable_pb::State::Clear();
+      if (goal_ != NULL) goal_->::pb_urs::State::Clear();
     }
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
@@ -207,13 +206,13 @@ bool PlanningRequest::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:urs_wearable_pb.PlanningRequest)
+  // @@protoc_insertion_point(parse_start:pb_urs.PlanningRequest)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // optional .urs_wearable_pb.State initial = 1;
+      // optional .pb_urs.State initial = 1;
       case 1: {
         if (tag == 10) {
           DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
@@ -225,7 +224,7 @@ bool PlanningRequest::MergePartialFromCodedStream(
         break;
       }
 
-      // optional .urs_wearable_pb.State goal = 2;
+      // optional .pb_urs.State goal = 2;
       case 2: {
         if (tag == 18) {
          parse_goal:
@@ -252,24 +251,24 @@ bool PlanningRequest::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:urs_wearable_pb.PlanningRequest)
+  // @@protoc_insertion_point(parse_success:pb_urs.PlanningRequest)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:urs_wearable_pb.PlanningRequest)
+  // @@protoc_insertion_point(parse_failure:pb_urs.PlanningRequest)
   return false;
 #undef DO_
 }
 
 void PlanningRequest::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:urs_wearable_pb.PlanningRequest)
-  // optional .urs_wearable_pb.State initial = 1;
+  // @@protoc_insertion_point(serialize_start:pb_urs.PlanningRequest)
+  // optional .pb_urs.State initial = 1;
   if (has_initial()) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       1, this->initial(), output);
   }
 
-  // optional .urs_wearable_pb.State goal = 2;
+  // optional .pb_urs.State goal = 2;
   if (has_goal()) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       2, this->goal(), output);
@@ -279,20 +278,20 @@ void PlanningRequest::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:urs_wearable_pb.PlanningRequest)
+  // @@protoc_insertion_point(serialize_end:pb_urs.PlanningRequest)
 }
 
 ::google::protobuf::uint8* PlanningRequest::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:urs_wearable_pb.PlanningRequest)
-  // optional .urs_wearable_pb.State initial = 1;
+  // @@protoc_insertion_point(serialize_to_array_start:pb_urs.PlanningRequest)
+  // optional .pb_urs.State initial = 1;
   if (has_initial()) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
         1, this->initial(), target);
   }
 
-  // optional .urs_wearable_pb.State goal = 2;
+  // optional .pb_urs.State goal = 2;
   if (has_goal()) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
@@ -303,7 +302,7 @@ void PlanningRequest::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:urs_wearable_pb.PlanningRequest)
+  // @@protoc_insertion_point(serialize_to_array_end:pb_urs.PlanningRequest)
   return target;
 }
 
@@ -311,14 +310,14 @@ int PlanningRequest::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // optional .urs_wearable_pb.State initial = 1;
+    // optional .pb_urs.State initial = 1;
     if (has_initial()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
           this->initial());
     }
 
-    // optional .urs_wearable_pb.State goal = 2;
+    // optional .pb_urs.State goal = 2;
     if (has_goal()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
@@ -353,10 +352,10 @@ void PlanningRequest::MergeFrom(const PlanningRequest& from) {
   GOOGLE_CHECK_NE(&from, this);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (from.has_initial()) {
-      mutable_initial()->::urs_wearable_pb::State::MergeFrom(from.initial());
+      mutable_initial()->::pb_urs::State::MergeFrom(from.initial());
     }
     if (from.has_goal()) {
-      mutable_goal()->::urs_wearable_pb::State::MergeFrom(from.goal());
+      mutable_goal()->::pb_urs::State::MergeFrom(from.goal());
     }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
@@ -407,7 +406,7 @@ const int PlanningResponse::kActionsFieldNumber;
 PlanningResponse::PlanningResponse()
   : ::google::protobuf::Message() {
   SharedCtor();
-  // @@protoc_insertion_point(constructor:urs_wearable_pb.PlanningResponse)
+  // @@protoc_insertion_point(constructor:pb_urs.PlanningResponse)
 }
 
 void PlanningResponse::InitAsDefaultInstance() {
@@ -417,7 +416,7 @@ PlanningResponse::PlanningResponse(const PlanningResponse& from)
   : ::google::protobuf::Message() {
   SharedCtor();
   MergeFrom(from);
-  // @@protoc_insertion_point(copy_constructor:urs_wearable_pb.PlanningResponse)
+  // @@protoc_insertion_point(copy_constructor:pb_urs.PlanningResponse)
 }
 
 void PlanningResponse::SharedCtor() {
@@ -426,7 +425,7 @@ void PlanningResponse::SharedCtor() {
 }
 
 PlanningResponse::~PlanningResponse() {
-  // @@protoc_insertion_point(destructor:urs_wearable_pb.PlanningResponse)
+  // @@protoc_insertion_point(destructor:pb_urs.PlanningResponse)
   SharedDtor();
 }
 
@@ -466,13 +465,13 @@ bool PlanningResponse::MergePartialFromCodedStream(
     ::google::protobuf::io::CodedInputStream* input) {
 #define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
   ::google::protobuf::uint32 tag;
-  // @@protoc_insertion_point(parse_start:urs_wearable_pb.PlanningResponse)
+  // @@protoc_insertion_point(parse_start:pb_urs.PlanningResponse)
   for (;;) {
     ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // repeated .urs_wearable_pb.Action actions = 1;
+      // repeated .pb_urs.Action actions = 1;
       case 1: {
         if (tag == 10) {
          parse_actions:
@@ -500,18 +499,18 @@ bool PlanningResponse::MergePartialFromCodedStream(
     }
   }
 success:
-  // @@protoc_insertion_point(parse_success:urs_wearable_pb.PlanningResponse)
+  // @@protoc_insertion_point(parse_success:pb_urs.PlanningResponse)
   return true;
 failure:
-  // @@protoc_insertion_point(parse_failure:urs_wearable_pb.PlanningResponse)
+  // @@protoc_insertion_point(parse_failure:pb_urs.PlanningResponse)
   return false;
 #undef DO_
 }
 
 void PlanningResponse::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // @@protoc_insertion_point(serialize_start:urs_wearable_pb.PlanningResponse)
-  // repeated .urs_wearable_pb.Action actions = 1;
+  // @@protoc_insertion_point(serialize_start:pb_urs.PlanningResponse)
+  // repeated .pb_urs.Action actions = 1;
   for (int i = 0; i < this->actions_size(); i++) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       1, this->actions(i), output);
@@ -521,13 +520,13 @@ void PlanningResponse::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
   }
-  // @@protoc_insertion_point(serialize_end:urs_wearable_pb.PlanningResponse)
+  // @@protoc_insertion_point(serialize_end:pb_urs.PlanningResponse)
 }
 
 ::google::protobuf::uint8* PlanningResponse::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // @@protoc_insertion_point(serialize_to_array_start:urs_wearable_pb.PlanningResponse)
-  // repeated .urs_wearable_pb.Action actions = 1;
+  // @@protoc_insertion_point(serialize_to_array_start:pb_urs.PlanningResponse)
+  // repeated .pb_urs.Action actions = 1;
   for (int i = 0; i < this->actions_size(); i++) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
@@ -538,14 +537,14 @@ void PlanningResponse::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:urs_wearable_pb.PlanningResponse)
+  // @@protoc_insertion_point(serialize_to_array_end:pb_urs.PlanningResponse)
   return target;
 }
 
 int PlanningResponse::ByteSize() const {
   int total_size = 0;
 
-  // repeated .urs_wearable_pb.Action actions = 1;
+  // repeated .pb_urs.Action actions = 1;
   total_size += 1 * this->actions_size();
   for (int i = 0; i < this->actions_size(); i++) {
     total_size +=
@@ -620,6 +619,6 @@ void PlanningResponse::Swap(PlanningResponse* other) {
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace urs_wearable_pb
+}  // namespace pb_urs
 
 // @@protoc_insertion_point(global_scope)

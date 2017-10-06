@@ -27,7 +27,7 @@
 #include "predicate.pb.h"
 // @@protoc_insertion_point(includes)
 
-namespace urs_wearable_pb {
+namespace pb_urs {
 
 // Internal implementation detail -- do not call these.
 void  protobuf_AddDesc_state_2eproto();
@@ -92,26 +92,26 @@ class State_Oneof : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // repeated .urs_wearable_pb.At at = 1;
+  // repeated .pb_urs.At at = 1;
   inline int at_size() const;
   inline void clear_at();
   static const int kAtFieldNumber = 1;
-  inline const ::urs_wearable_pb::At& at(int index) const;
-  inline ::urs_wearable_pb::At* mutable_at(int index);
-  inline ::urs_wearable_pb::At* add_at();
-  inline const ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::At >&
+  inline const ::pb_urs::At& at(int index) const;
+  inline ::pb_urs::At* mutable_at(int index);
+  inline ::pb_urs::At* add_at();
+  inline const ::google::protobuf::RepeatedPtrField< ::pb_urs::At >&
       at() const;
-  inline ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::At >*
+  inline ::google::protobuf::RepeatedPtrField< ::pb_urs::At >*
       mutable_at();
 
-  // @@protoc_insertion_point(class_scope:urs_wearable_pb.State.Oneof)
+  // @@protoc_insertion_point(class_scope:pb_urs.State.Oneof)
  private:
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::uint32 _has_bits_[1];
   mutable int _cached_size_;
-  ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::At > at_;
+  ::google::protobuf::RepeatedPtrField< ::pb_urs::At > at_;
   friend void  protobuf_AddDesc_state_2eproto();
   friend void protobuf_AssignDesc_state_2eproto();
   friend void protobuf_ShutdownFile_state_2eproto();
@@ -176,39 +176,39 @@ class State : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // repeated .urs_wearable_pb.At at = 1;
+  // repeated .pb_urs.At at = 1;
   inline int at_size() const;
   inline void clear_at();
   static const int kAtFieldNumber = 1;
-  inline const ::urs_wearable_pb::At& at(int index) const;
-  inline ::urs_wearable_pb::At* mutable_at(int index);
-  inline ::urs_wearable_pb::At* add_at();
-  inline const ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::At >&
+  inline const ::pb_urs::At& at(int index) const;
+  inline ::pb_urs::At* mutable_at(int index);
+  inline ::pb_urs::At* add_at();
+  inline const ::google::protobuf::RepeatedPtrField< ::pb_urs::At >&
       at() const;
-  inline ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::At >*
+  inline ::google::protobuf::RepeatedPtrField< ::pb_urs::At >*
       mutable_at();
 
-  // repeated .urs_wearable_pb.State.Oneof oneof = 2;
+  // repeated .pb_urs.State.Oneof oneof = 2;
   inline int oneof_size() const;
   inline void clear_oneof();
   static const int kOneofFieldNumber = 2;
-  inline const ::urs_wearable_pb::State_Oneof& oneof(int index) const;
-  inline ::urs_wearable_pb::State_Oneof* mutable_oneof(int index);
-  inline ::urs_wearable_pb::State_Oneof* add_oneof();
-  inline const ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::State_Oneof >&
+  inline const ::pb_urs::State_Oneof& oneof(int index) const;
+  inline ::pb_urs::State_Oneof* mutable_oneof(int index);
+  inline ::pb_urs::State_Oneof* add_oneof();
+  inline const ::google::protobuf::RepeatedPtrField< ::pb_urs::State_Oneof >&
       oneof() const;
-  inline ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::State_Oneof >*
+  inline ::google::protobuf::RepeatedPtrField< ::pb_urs::State_Oneof >*
       mutable_oneof();
 
-  // @@protoc_insertion_point(class_scope:urs_wearable_pb.State)
+  // @@protoc_insertion_point(class_scope:pb_urs.State)
  private:
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::uint32 _has_bits_[1];
   mutable int _cached_size_;
-  ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::At > at_;
-  ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::State_Oneof > oneof_;
+  ::google::protobuf::RepeatedPtrField< ::pb_urs::At > at_;
+  ::google::protobuf::RepeatedPtrField< ::pb_urs::State_Oneof > oneof_;
   friend void  protobuf_AddDesc_state_2eproto();
   friend void protobuf_AssignDesc_state_2eproto();
   friend void protobuf_ShutdownFile_state_2eproto();
@@ -223,33 +223,33 @@ class State : public ::google::protobuf::Message {
 
 // State_Oneof
 
-// repeated .urs_wearable_pb.At at = 1;
+// repeated .pb_urs.At at = 1;
 inline int State_Oneof::at_size() const {
   return at_.size();
 }
 inline void State_Oneof::clear_at() {
   at_.Clear();
 }
-inline const ::urs_wearable_pb::At& State_Oneof::at(int index) const {
-  // @@protoc_insertion_point(field_get:urs_wearable_pb.State.Oneof.at)
+inline const ::pb_urs::At& State_Oneof::at(int index) const {
+  // @@protoc_insertion_point(field_get:pb_urs.State.Oneof.at)
   return at_.Get(index);
 }
-inline ::urs_wearable_pb::At* State_Oneof::mutable_at(int index) {
-  // @@protoc_insertion_point(field_mutable:urs_wearable_pb.State.Oneof.at)
+inline ::pb_urs::At* State_Oneof::mutable_at(int index) {
+  // @@protoc_insertion_point(field_mutable:pb_urs.State.Oneof.at)
   return at_.Mutable(index);
 }
-inline ::urs_wearable_pb::At* State_Oneof::add_at() {
-  // @@protoc_insertion_point(field_add:urs_wearable_pb.State.Oneof.at)
+inline ::pb_urs::At* State_Oneof::add_at() {
+  // @@protoc_insertion_point(field_add:pb_urs.State.Oneof.at)
   return at_.Add();
 }
-inline const ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::At >&
+inline const ::google::protobuf::RepeatedPtrField< ::pb_urs::At >&
 State_Oneof::at() const {
-  // @@protoc_insertion_point(field_list:urs_wearable_pb.State.Oneof.at)
+  // @@protoc_insertion_point(field_list:pb_urs.State.Oneof.at)
   return at_;
 }
-inline ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::At >*
+inline ::google::protobuf::RepeatedPtrField< ::pb_urs::At >*
 State_Oneof::mutable_at() {
-  // @@protoc_insertion_point(field_mutable_list:urs_wearable_pb.State.Oneof.at)
+  // @@protoc_insertion_point(field_mutable_list:pb_urs.State.Oneof.at)
   return &at_;
 }
 
@@ -257,70 +257,70 @@ State_Oneof::mutable_at() {
 
 // State
 
-// repeated .urs_wearable_pb.At at = 1;
+// repeated .pb_urs.At at = 1;
 inline int State::at_size() const {
   return at_.size();
 }
 inline void State::clear_at() {
   at_.Clear();
 }
-inline const ::urs_wearable_pb::At& State::at(int index) const {
-  // @@protoc_insertion_point(field_get:urs_wearable_pb.State.at)
+inline const ::pb_urs::At& State::at(int index) const {
+  // @@protoc_insertion_point(field_get:pb_urs.State.at)
   return at_.Get(index);
 }
-inline ::urs_wearable_pb::At* State::mutable_at(int index) {
-  // @@protoc_insertion_point(field_mutable:urs_wearable_pb.State.at)
+inline ::pb_urs::At* State::mutable_at(int index) {
+  // @@protoc_insertion_point(field_mutable:pb_urs.State.at)
   return at_.Mutable(index);
 }
-inline ::urs_wearable_pb::At* State::add_at() {
-  // @@protoc_insertion_point(field_add:urs_wearable_pb.State.at)
+inline ::pb_urs::At* State::add_at() {
+  // @@protoc_insertion_point(field_add:pb_urs.State.at)
   return at_.Add();
 }
-inline const ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::At >&
+inline const ::google::protobuf::RepeatedPtrField< ::pb_urs::At >&
 State::at() const {
-  // @@protoc_insertion_point(field_list:urs_wearable_pb.State.at)
+  // @@protoc_insertion_point(field_list:pb_urs.State.at)
   return at_;
 }
-inline ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::At >*
+inline ::google::protobuf::RepeatedPtrField< ::pb_urs::At >*
 State::mutable_at() {
-  // @@protoc_insertion_point(field_mutable_list:urs_wearable_pb.State.at)
+  // @@protoc_insertion_point(field_mutable_list:pb_urs.State.at)
   return &at_;
 }
 
-// repeated .urs_wearable_pb.State.Oneof oneof = 2;
+// repeated .pb_urs.State.Oneof oneof = 2;
 inline int State::oneof_size() const {
   return oneof_.size();
 }
 inline void State::clear_oneof() {
   oneof_.Clear();
 }
-inline const ::urs_wearable_pb::State_Oneof& State::oneof(int index) const {
-  // @@protoc_insertion_point(field_get:urs_wearable_pb.State.oneof)
+inline const ::pb_urs::State_Oneof& State::oneof(int index) const {
+  // @@protoc_insertion_point(field_get:pb_urs.State.oneof)
   return oneof_.Get(index);
 }
-inline ::urs_wearable_pb::State_Oneof* State::mutable_oneof(int index) {
-  // @@protoc_insertion_point(field_mutable:urs_wearable_pb.State.oneof)
+inline ::pb_urs::State_Oneof* State::mutable_oneof(int index) {
+  // @@protoc_insertion_point(field_mutable:pb_urs.State.oneof)
   return oneof_.Mutable(index);
 }
-inline ::urs_wearable_pb::State_Oneof* State::add_oneof() {
-  // @@protoc_insertion_point(field_add:urs_wearable_pb.State.oneof)
+inline ::pb_urs::State_Oneof* State::add_oneof() {
+  // @@protoc_insertion_point(field_add:pb_urs.State.oneof)
   return oneof_.Add();
 }
-inline const ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::State_Oneof >&
+inline const ::google::protobuf::RepeatedPtrField< ::pb_urs::State_Oneof >&
 State::oneof() const {
-  // @@protoc_insertion_point(field_list:urs_wearable_pb.State.oneof)
+  // @@protoc_insertion_point(field_list:pb_urs.State.oneof)
   return oneof_;
 }
-inline ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::State_Oneof >*
+inline ::google::protobuf::RepeatedPtrField< ::pb_urs::State_Oneof >*
 State::mutable_oneof() {
-  // @@protoc_insertion_point(field_mutable_list:urs_wearable_pb.State.oneof)
+  // @@protoc_insertion_point(field_mutable_list:pb_urs.State.oneof)
   return &oneof_;
 }
 
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace urs_wearable_pb
+}  // namespace pb_urs
 
 #ifndef SWIG
 namespace google {

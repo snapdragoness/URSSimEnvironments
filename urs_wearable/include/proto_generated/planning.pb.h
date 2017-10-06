@@ -28,7 +28,7 @@
 #include "action.pb.h"
 // @@protoc_insertion_point(includes)
 
-namespace urs_wearable_pb {
+namespace pb_urs {
 
 // Internal implementation detail -- do not call these.
 void  protobuf_AddDesc_planning_2eproto();
@@ -93,25 +93,25 @@ class PlanningRequest : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // optional .urs_wearable_pb.State initial = 1;
+  // optional .pb_urs.State initial = 1;
   inline bool has_initial() const;
   inline void clear_initial();
   static const int kInitialFieldNumber = 1;
-  inline const ::urs_wearable_pb::State& initial() const;
-  inline ::urs_wearable_pb::State* mutable_initial();
-  inline ::urs_wearable_pb::State* release_initial();
-  inline void set_allocated_initial(::urs_wearable_pb::State* initial);
+  inline const ::pb_urs::State& initial() const;
+  inline ::pb_urs::State* mutable_initial();
+  inline ::pb_urs::State* release_initial();
+  inline void set_allocated_initial(::pb_urs::State* initial);
 
-  // optional .urs_wearable_pb.State goal = 2;
+  // optional .pb_urs.State goal = 2;
   inline bool has_goal() const;
   inline void clear_goal();
   static const int kGoalFieldNumber = 2;
-  inline const ::urs_wearable_pb::State& goal() const;
-  inline ::urs_wearable_pb::State* mutable_goal();
-  inline ::urs_wearable_pb::State* release_goal();
-  inline void set_allocated_goal(::urs_wearable_pb::State* goal);
+  inline const ::pb_urs::State& goal() const;
+  inline ::pb_urs::State* mutable_goal();
+  inline ::pb_urs::State* release_goal();
+  inline void set_allocated_goal(::pb_urs::State* goal);
 
-  // @@protoc_insertion_point(class_scope:urs_wearable_pb.PlanningRequest)
+  // @@protoc_insertion_point(class_scope:pb_urs.PlanningRequest)
  private:
   inline void set_has_initial();
   inline void clear_has_initial();
@@ -122,8 +122,8 @@ class PlanningRequest : public ::google::protobuf::Message {
 
   ::google::protobuf::uint32 _has_bits_[1];
   mutable int _cached_size_;
-  ::urs_wearable_pb::State* initial_;
-  ::urs_wearable_pb::State* goal_;
+  ::pb_urs::State* initial_;
+  ::pb_urs::State* goal_;
   friend void  protobuf_AddDesc_planning_2eproto();
   friend void protobuf_AssignDesc_planning_2eproto();
   friend void protobuf_ShutdownFile_planning_2eproto();
@@ -186,26 +186,26 @@ class PlanningResponse : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // repeated .urs_wearable_pb.Action actions = 1;
+  // repeated .pb_urs.Action actions = 1;
   inline int actions_size() const;
   inline void clear_actions();
   static const int kActionsFieldNumber = 1;
-  inline const ::urs_wearable_pb::Action& actions(int index) const;
-  inline ::urs_wearable_pb::Action* mutable_actions(int index);
-  inline ::urs_wearable_pb::Action* add_actions();
-  inline const ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::Action >&
+  inline const ::pb_urs::Action& actions(int index) const;
+  inline ::pb_urs::Action* mutable_actions(int index);
+  inline ::pb_urs::Action* add_actions();
+  inline const ::google::protobuf::RepeatedPtrField< ::pb_urs::Action >&
       actions() const;
-  inline ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::Action >*
+  inline ::google::protobuf::RepeatedPtrField< ::pb_urs::Action >*
       mutable_actions();
 
-  // @@protoc_insertion_point(class_scope:urs_wearable_pb.PlanningResponse)
+  // @@protoc_insertion_point(class_scope:pb_urs.PlanningResponse)
  private:
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::uint32 _has_bits_[1];
   mutable int _cached_size_;
-  ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::Action > actions_;
+  ::google::protobuf::RepeatedPtrField< ::pb_urs::Action > actions_;
   friend void  protobuf_AddDesc_planning_2eproto();
   friend void protobuf_AssignDesc_planning_2eproto();
   friend void protobuf_ShutdownFile_planning_2eproto();
@@ -220,7 +220,7 @@ class PlanningResponse : public ::google::protobuf::Message {
 
 // PlanningRequest
 
-// optional .urs_wearable_pb.State initial = 1;
+// optional .pb_urs.State initial = 1;
 inline bool PlanningRequest::has_initial() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
@@ -231,26 +231,26 @@ inline void PlanningRequest::clear_has_initial() {
   _has_bits_[0] &= ~0x00000001u;
 }
 inline void PlanningRequest::clear_initial() {
-  if (initial_ != NULL) initial_->::urs_wearable_pb::State::Clear();
+  if (initial_ != NULL) initial_->::pb_urs::State::Clear();
   clear_has_initial();
 }
-inline const ::urs_wearable_pb::State& PlanningRequest::initial() const {
-  // @@protoc_insertion_point(field_get:urs_wearable_pb.PlanningRequest.initial)
+inline const ::pb_urs::State& PlanningRequest::initial() const {
+  // @@protoc_insertion_point(field_get:pb_urs.PlanningRequest.initial)
   return initial_ != NULL ? *initial_ : *default_instance_->initial_;
 }
-inline ::urs_wearable_pb::State* PlanningRequest::mutable_initial() {
+inline ::pb_urs::State* PlanningRequest::mutable_initial() {
   set_has_initial();
-  if (initial_ == NULL) initial_ = new ::urs_wearable_pb::State;
-  // @@protoc_insertion_point(field_mutable:urs_wearable_pb.PlanningRequest.initial)
+  if (initial_ == NULL) initial_ = new ::pb_urs::State;
+  // @@protoc_insertion_point(field_mutable:pb_urs.PlanningRequest.initial)
   return initial_;
 }
-inline ::urs_wearable_pb::State* PlanningRequest::release_initial() {
+inline ::pb_urs::State* PlanningRequest::release_initial() {
   clear_has_initial();
-  ::urs_wearable_pb::State* temp = initial_;
+  ::pb_urs::State* temp = initial_;
   initial_ = NULL;
   return temp;
 }
-inline void PlanningRequest::set_allocated_initial(::urs_wearable_pb::State* initial) {
+inline void PlanningRequest::set_allocated_initial(::pb_urs::State* initial) {
   delete initial_;
   initial_ = initial;
   if (initial) {
@@ -258,10 +258,10 @@ inline void PlanningRequest::set_allocated_initial(::urs_wearable_pb::State* ini
   } else {
     clear_has_initial();
   }
-  // @@protoc_insertion_point(field_set_allocated:urs_wearable_pb.PlanningRequest.initial)
+  // @@protoc_insertion_point(field_set_allocated:pb_urs.PlanningRequest.initial)
 }
 
-// optional .urs_wearable_pb.State goal = 2;
+// optional .pb_urs.State goal = 2;
 inline bool PlanningRequest::has_goal() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
@@ -272,26 +272,26 @@ inline void PlanningRequest::clear_has_goal() {
   _has_bits_[0] &= ~0x00000002u;
 }
 inline void PlanningRequest::clear_goal() {
-  if (goal_ != NULL) goal_->::urs_wearable_pb::State::Clear();
+  if (goal_ != NULL) goal_->::pb_urs::State::Clear();
   clear_has_goal();
 }
-inline const ::urs_wearable_pb::State& PlanningRequest::goal() const {
-  // @@protoc_insertion_point(field_get:urs_wearable_pb.PlanningRequest.goal)
+inline const ::pb_urs::State& PlanningRequest::goal() const {
+  // @@protoc_insertion_point(field_get:pb_urs.PlanningRequest.goal)
   return goal_ != NULL ? *goal_ : *default_instance_->goal_;
 }
-inline ::urs_wearable_pb::State* PlanningRequest::mutable_goal() {
+inline ::pb_urs::State* PlanningRequest::mutable_goal() {
   set_has_goal();
-  if (goal_ == NULL) goal_ = new ::urs_wearable_pb::State;
-  // @@protoc_insertion_point(field_mutable:urs_wearable_pb.PlanningRequest.goal)
+  if (goal_ == NULL) goal_ = new ::pb_urs::State;
+  // @@protoc_insertion_point(field_mutable:pb_urs.PlanningRequest.goal)
   return goal_;
 }
-inline ::urs_wearable_pb::State* PlanningRequest::release_goal() {
+inline ::pb_urs::State* PlanningRequest::release_goal() {
   clear_has_goal();
-  ::urs_wearable_pb::State* temp = goal_;
+  ::pb_urs::State* temp = goal_;
   goal_ = NULL;
   return temp;
 }
-inline void PlanningRequest::set_allocated_goal(::urs_wearable_pb::State* goal) {
+inline void PlanningRequest::set_allocated_goal(::pb_urs::State* goal) {
   delete goal_;
   goal_ = goal;
   if (goal) {
@@ -299,47 +299,47 @@ inline void PlanningRequest::set_allocated_goal(::urs_wearable_pb::State* goal) 
   } else {
     clear_has_goal();
   }
-  // @@protoc_insertion_point(field_set_allocated:urs_wearable_pb.PlanningRequest.goal)
+  // @@protoc_insertion_point(field_set_allocated:pb_urs.PlanningRequest.goal)
 }
 
 // -------------------------------------------------------------------
 
 // PlanningResponse
 
-// repeated .urs_wearable_pb.Action actions = 1;
+// repeated .pb_urs.Action actions = 1;
 inline int PlanningResponse::actions_size() const {
   return actions_.size();
 }
 inline void PlanningResponse::clear_actions() {
   actions_.Clear();
 }
-inline const ::urs_wearable_pb::Action& PlanningResponse::actions(int index) const {
-  // @@protoc_insertion_point(field_get:urs_wearable_pb.PlanningResponse.actions)
+inline const ::pb_urs::Action& PlanningResponse::actions(int index) const {
+  // @@protoc_insertion_point(field_get:pb_urs.PlanningResponse.actions)
   return actions_.Get(index);
 }
-inline ::urs_wearable_pb::Action* PlanningResponse::mutable_actions(int index) {
-  // @@protoc_insertion_point(field_mutable:urs_wearable_pb.PlanningResponse.actions)
+inline ::pb_urs::Action* PlanningResponse::mutable_actions(int index) {
+  // @@protoc_insertion_point(field_mutable:pb_urs.PlanningResponse.actions)
   return actions_.Mutable(index);
 }
-inline ::urs_wearable_pb::Action* PlanningResponse::add_actions() {
-  // @@protoc_insertion_point(field_add:urs_wearable_pb.PlanningResponse.actions)
+inline ::pb_urs::Action* PlanningResponse::add_actions() {
+  // @@protoc_insertion_point(field_add:pb_urs.PlanningResponse.actions)
   return actions_.Add();
 }
-inline const ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::Action >&
+inline const ::google::protobuf::RepeatedPtrField< ::pb_urs::Action >&
 PlanningResponse::actions() const {
-  // @@protoc_insertion_point(field_list:urs_wearable_pb.PlanningResponse.actions)
+  // @@protoc_insertion_point(field_list:pb_urs.PlanningResponse.actions)
   return actions_;
 }
-inline ::google::protobuf::RepeatedPtrField< ::urs_wearable_pb::Action >*
+inline ::google::protobuf::RepeatedPtrField< ::pb_urs::Action >*
 PlanningResponse::mutable_actions() {
-  // @@protoc_insertion_point(field_mutable_list:urs_wearable_pb.PlanningResponse.actions)
+  // @@protoc_insertion_point(field_mutable_list:pb_urs.PlanningResponse.actions)
   return &actions_;
 }
 
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace urs_wearable_pb
+}  // namespace pb_urs
 
 #ifndef SWIG
 namespace google {

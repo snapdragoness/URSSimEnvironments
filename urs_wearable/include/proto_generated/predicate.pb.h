@@ -26,7 +26,7 @@
 #include <google/protobuf/unknown_field_set.h>
 // @@protoc_insertion_point(includes)
 
-namespace urs_wearable_pb {
+namespace pb_urs {
 
 // Internal implementation detail -- do not call these.
 void  protobuf_AddDesc_predicate_2eproto();
@@ -125,7 +125,7 @@ class At : public ::google::protobuf::Message {
   inline double yaw() const;
   inline void set_yaw(double value);
 
-  // @@protoc_insertion_point(class_scope:urs_wearable_pb.At)
+  // @@protoc_insertion_point(class_scope:pb_urs.At)
  private:
   inline void set_has_uav_id();
   inline void clear_has_uav_id();
@@ -176,13 +176,13 @@ inline void At::clear_uav_id() {
   clear_has_uav_id();
 }
 inline ::google::protobuf::int32 At::uav_id() const {
-  // @@protoc_insertion_point(field_get:urs_wearable_pb.At.uav_id)
+  // @@protoc_insertion_point(field_get:pb_urs.At.uav_id)
   return uav_id_;
 }
 inline void At::set_uav_id(::google::protobuf::int32 value) {
   set_has_uav_id();
   uav_id_ = value;
-  // @@protoc_insertion_point(field_set:urs_wearable_pb.At.uav_id)
+  // @@protoc_insertion_point(field_set:pb_urs.At.uav_id)
 }
 
 // optional double x = 2;
@@ -200,13 +200,13 @@ inline void At::clear_x() {
   clear_has_x();
 }
 inline double At::x() const {
-  // @@protoc_insertion_point(field_get:urs_wearable_pb.At.x)
+  // @@protoc_insertion_point(field_get:pb_urs.At.x)
   return x_;
 }
 inline void At::set_x(double value) {
   set_has_x();
   x_ = value;
-  // @@protoc_insertion_point(field_set:urs_wearable_pb.At.x)
+  // @@protoc_insertion_point(field_set:pb_urs.At.x)
 }
 
 // optional double y = 3;
@@ -224,13 +224,13 @@ inline void At::clear_y() {
   clear_has_y();
 }
 inline double At::y() const {
-  // @@protoc_insertion_point(field_get:urs_wearable_pb.At.y)
+  // @@protoc_insertion_point(field_get:pb_urs.At.y)
   return y_;
 }
 inline void At::set_y(double value) {
   set_has_y();
   y_ = value;
-  // @@protoc_insertion_point(field_set:urs_wearable_pb.At.y)
+  // @@protoc_insertion_point(field_set:pb_urs.At.y)
 }
 
 // optional double z = 4;
@@ -248,13 +248,13 @@ inline void At::clear_z() {
   clear_has_z();
 }
 inline double At::z() const {
-  // @@protoc_insertion_point(field_get:urs_wearable_pb.At.z)
+  // @@protoc_insertion_point(field_get:pb_urs.At.z)
   return z_;
 }
 inline void At::set_z(double value) {
   set_has_z();
   z_ = value;
-  // @@protoc_insertion_point(field_set:urs_wearable_pb.At.z)
+  // @@protoc_insertion_point(field_set:pb_urs.At.z)
 }
 
 // optional double yaw = 5;
@@ -272,19 +272,19 @@ inline void At::clear_yaw() {
   clear_has_yaw();
 }
 inline double At::yaw() const {
-  // @@protoc_insertion_point(field_get:urs_wearable_pb.At.yaw)
+  // @@protoc_insertion_point(field_get:pb_urs.At.yaw)
   return yaw_;
 }
 inline void At::set_yaw(double value) {
   set_has_yaw();
   yaw_ = value;
-  // @@protoc_insertion_point(field_set:urs_wearable_pb.At.yaw)
+  // @@protoc_insertion_point(field_set:pb_urs.At.yaw)
 }
 
 
 // @@protoc_insertion_point(namespace_scope)
 
-}  // namespace urs_wearable_pb
+}  // namespace pb_urs
 
 #ifndef SWIG
 namespace google {

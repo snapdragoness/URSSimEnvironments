@@ -219,12 +219,12 @@ int main(int argc, char **argv)
           {
             ROS_INFO("Received Command: GOTO");
 
-            urs_wearable_pb::PlanningRequest planningRequest;
-            urs_wearable_pb::State* initialState = planningRequest.mutable_initial();
+            pb_urs::PlanningRequest planningRequest;
+            pb_urs::State* initialState = planningRequest.mutable_initial();
 
             for (unsigned int i = 0; i < N_UAV; i++)
             {
-              urs_wearable_pb::At* at = initialState->add_at();
+              pb_urs::At* at = initialState->add_at();
               Pose pose = controller[i].getPose();
               at->set_uav_id(i);
               at->set_x(pose.x);
@@ -232,8 +232,8 @@ int main(int argc, char **argv)
               at->set_z(pose.z);
             }
 
-            urs_wearable_pb::State* goalState = planningRequest.mutable_goal();
-            urs_wearable_pb::At* at = goalState->add_at();
+            pb_urs::State* goalState = planningRequest.mutable_goal();
+            pb_urs::At* at = goalState->add_at();
             at->set_uav_id(std::stoi(tokens[1]));
             at->set_x(std::stod(tokens[2]));
             at->set_y(std::stod(tokens[3]));
@@ -247,12 +247,12 @@ int main(int argc, char **argv)
           {
             ROS_INFO("Received Command: MOVE");
 
-            urs_wearable_pb::PlanningRequest planningRequest;
-            urs_wearable_pb::State* initialState = planningRequest.mutable_initial();
+            pb_urs::PlanningRequest planningRequest;
+            pb_urs::State* initialState = planningRequest.mutable_initial();
 
             for (unsigned int i = 0; i < N_UAV; i++)
             {
-              urs_wearable_pb::At* at = initialState->add_at();
+              pb_urs::At* at = initialState->add_at();
               Pose pose = controller[i].getPose();
               at->set_uav_id(i);
               at->set_x(pose.x);
@@ -260,8 +260,8 @@ int main(int argc, char **argv)
               at->set_z(pose.z);
             }
 
-            urs_wearable_pb::State* goalState = planningRequest.mutable_goal();
-            urs_wearable_pb::At* at = goalState->add_at();
+            pb_urs::State* goalState = planningRequest.mutable_goal();
+            pb_urs::At* at = goalState->add_at();
             Pose pose = controller[std::stoi(tokens[1])].getPose();
             at->set_uav_id(std::stoi(tokens[1]));
             at->set_x(pose.x + std::stod(tokens[2]));
@@ -281,7 +281,7 @@ int main(int argc, char **argv)
           /* Retrieve a plan and execute */
           /*******************************/
           google::protobuf::io::ZeroCopyInputStream* raw_input = new google::protobuf::io::FileInputStream(plannerSockFD);
-          urs_wearable_pb::PlanningResponse planningResponse;
+          pb_urs::PlanningResponse planningResponse;
           if (!readDelimitedFrom(raw_input, &planningResponse))
           {
             std::cerr << "Planner has disconnected" << std::endl;
@@ -295,12 +295,12 @@ int main(int argc, char **argv)
 
           for (int i = 0; i < planningResponse.actions_size(); i++)
           {
-            const urs_wearable_pb::Action& action = planningResponse.actions(i);
+            const pb_urs::Action& action = planningResponse.actions(i);
             switch (action.type())
             {
-              case urs_wearable_pb::Action_ActionType_GOTO:
+              case pb_urs::Action_ActionType_GOTO:
               {
-                const urs_wearable_pb::Goto& action_goto = action.goto_();
+                const pb_urs::Goto& action_goto = action.goto_();
                 Pose pose;
                 pose.x = action_goto.x();
                 pose.y = action_goto.y();
