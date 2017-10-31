@@ -25,6 +25,8 @@
 const unsigned int N_UAV = 4;
 
 const char* CPA_PLUS_PATH_NAME = "/tmp/cpa_plus_socket";
+const char* MADAGASCAR_PATH_NAME = "/tmp/madagascar_socket";
+const char* PLANNER_PATH_NAME = CPA_PLUS_PATH_NAME;
 
 const unsigned short PORT_EXEC_MONITOR = 8080;
 const unsigned int BUFFER_SIZE = 1024;
@@ -71,7 +73,7 @@ int main(int argc, char **argv)
 
   // name the socket, as agreed with the server
   plannerAddress.sun_family = AF_UNIX;
-  strcpy(plannerAddress.sun_path, CPA_PLUS_PATH_NAME);
+  strcpy(plannerAddress.sun_path, PLANNER_PATH_NAME);
 
   // now connect our socket to the server's socket
   if (connect(plannerSockFD, (struct sockaddr*)&plannerAddress, sizeof(struct sockaddr_un)) == -1)
@@ -136,15 +138,15 @@ int main(int argc, char **argv)
     int maxSockFD = execMonitorSockFD;
     for (std::vector<int>::iterator it = wearableSockFDList.begin(); it != wearableSockFDList.end(); it++)
     {
-      int wearableSockfd = *it;
+      int wearableSockFD = *it;
 
       // if valid socket descriptor, then add to read list
-      if (wearableSockfd > 0)
-        FD_SET(wearableSockfd, &readFDSet);
+      if (wearableSockFD > 0)
+        FD_SET(wearableSockFD, &readFDSet);
 
       // highest file descriptor number, need it for the select function
-      if (wearableSockfd > maxSockFD)
-        maxSockFD = wearableSockfd;
+      if (wearableSockFD > maxSockFD)
+        maxSockFD = wearableSockFD;
     }
 
     // wait for an activity on one of the sockets, timeout is NULL, so wait indefinitely
@@ -173,8 +175,8 @@ int main(int argc, char **argv)
     {
       for (std::vector<int>::iterator it = wearableSockFDList.begin(); it != wearableSockFDList.end(); it++)
       {
-        int wearableSockfd = *it;
-        if (FD_ISSET(wearableSockfd, &readFDSet))
+        int wearableSockFD = *it;
+        if (FD_ISSET(wearableSockFD, &readFDSet))
         {
           /*********************************************/
           /* Wait for a command from a wearable device */
@@ -183,14 +185,14 @@ int main(int argc, char **argv)
           char buffer[BUFFER_SIZE + 1];
 
           // check if it was for closing, and also read the incoming message
-          if ((bytesRead = read(wearableSockfd, buffer, BUFFER_SIZE)) == 0)
+          if ((bytesRead = read(wearableSockFD, buffer, BUFFER_SIZE)) == 0)
           {
             // some client has disconnected, get its details and print
-            getpeername(wearableSockfd, (struct sockaddr*)&execMonitorAddress, (socklen_t*)&execMonitorAddressLen);
+            getpeername(wearableSockFD, (struct sockaddr*)&execMonitorAddress, (socklen_t*)&execMonitorAddressLen);
             ROS_INFO("Client disconnected [IP: %s, Port: %d]", inet_ntoa(execMonitorAddress.sin_addr), ntohs(execMonitorAddress.sin_port));
 
             // close the socket
-            close(wearableSockfd);
+            close(wearableSockFD);
             wearableSockFDList.erase(it);  // 'it' now points to the next element after the erased one
 
             if (it == wearableSockFDList.end())
@@ -200,7 +202,7 @@ int main(int argc, char **argv)
 
           // echo back the message that came in
           buffer[bytesRead] = '\0';
-          write(wearableSockfd, buffer, strlen(buffer));
+          write(wearableSockFD, buffer, strlen(buffer));
 
           /**********************************************/
           /* Evaluate the command and query the planner */
