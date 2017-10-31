@@ -1,13 +1,16 @@
 # Makefile
 
 CC := g++
-CFLAGS := -c -std=c++11 `pkg-config --cflags protobuf` -Wall -O3
-LFLAGS := -lfl `pkg-config --libs protobuf`
 
 PROTO_DIR := ../../proto
 PROTO_HELPER_SRC_DIR := ../../src
 PROTO_HELPER_HDR_DIR := ../../include
 PROTO_OBJS := action.pb.o predicate.pb.o state.pb.o planning.pb.o# order is important!
+PROTO_CFLAGS := `pkg-config --cflags protobuf`
+PROTO_LFLAGS := `pkg-config --libs protobuf`
+
+CFLAGS := -c -std=c++11 $(PROTO_CFLAGS) -Wall -O3
+LFLAGS := -lfl $(PROTO_LFLAGS)
 
 OBJS := protobuf_helper.o $(PROTO_OBJS) bison.o lex.o main.o reader.o action.o planner.o state.o
 HDR := action.h define.h planner.h reader.h state.h
