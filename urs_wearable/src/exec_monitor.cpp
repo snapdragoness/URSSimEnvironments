@@ -3,10 +3,10 @@
 #include "urs_wearable/navigator.h"
 
 #include "protobuf_helper.h"
-#include "proto_generated/planning.pb.h"
-#include "proto_generated/state.pb.h"
-#include "proto_generated/predicate.pb.h"
-#include "proto_generated/action.pb.h"
+#include "planning.pb.h"
+#include "state.pb.h"
+#include "predicate.pb.h"
+#include "action.pb.h"
 
 #include <ros/ros.h>
 
