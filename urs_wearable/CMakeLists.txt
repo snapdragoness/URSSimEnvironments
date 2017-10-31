@@ -17,7 +17,6 @@ find_package(catkin REQUIRED COMPONENTS
 # find_package(Boost REQUIRED COMPONENTS system)
 find_package(Protobuf REQUIRED)
 
-
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
 ## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
@@ -128,6 +127,7 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
   proto/state.proto
   proto/predicate.proto
   proto/action.proto
+  proto/wearable.proto
 )
 
 ## Declare a C++ library
