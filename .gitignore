@@ -19,6 +19,7 @@ urs_wearable/cpa/cpa/temp
 urs_wearable/cpa/cpa/trash
 urs_wearable/cpa/cpa/urs.pddl
 urs_wearable/cpa/cpa/*.o
+urs_wearable/cpa/cpa/*.pb.*
 urs_wearable/cpa/cpa/theory_*
 urs_wearable/cpa/experiments/new.pl
 urs_wearable/cpa/experiments/pddl2pl.pl
@@ -37,6 +38,7 @@ urs_wearable/cpa/pddl2a/tok.h
 urs_wearable/cpa/pddl2a/*.o
 
 urs_wearable/madagascar/*.o
+urs_wearable/madagascar/*.pb.*
 urs_wearable/madagascar/M
 urs_wearable/madagascar/Mp
 urs_wearable/madagascar/MpC

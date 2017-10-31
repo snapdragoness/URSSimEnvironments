@@ -16,10 +16,10 @@
 #include <fcntl.h>
 
 #include "../../include/protobuf_helper.h"
-#include "../../include/proto_generated/planning.pb.h"
-#include "../../include/proto_generated/state.pb.h"
-#include "../../include/proto_generated/predicate.pb.h"
-#include "../../include/proto_generated/action.pb.h"
+#include "planning.pb.h"
+#include "state.pb.h"
+#include "predicate.pb.h"
+#include "action.pb.h"
 
 #define VERSION "1.2"
 #define DEBUG
