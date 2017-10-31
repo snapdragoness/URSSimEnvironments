@@ -4,6 +4,8 @@ multimaster_fkie/
 mastering_ros/
 quadrotor_moveit_nav/
 
+urs_wearable/include/*.pb.*
+
 urs_wearable/cpa/cpa/bison.c
 urs_wearable/cpa/cpa/built_date
 urs_wearable/cpa/cpa/cpa+
@@ -12,6 +14,7 @@ urs_wearable/cpa/cpa/lcp.tab.c
 urs_wearable/cpa/cpa/lcp.tab.h
 urs_wearable/cpa/cpa/lex.c
 urs_wearable/cpa/cpa/tok.h
+urs_wearable/cpa/cpa/main.temp.cpp
 urs_wearable/cpa/cpa/new.pl
 urs_wearable/cpa/cpa/pddl2pl.pl
 urs_wearable/cpa/cpa/plan-result
@@ -39,6 +42,7 @@ urs_wearable/cpa/pddl2a/*.o
 
 urs_wearable/madagascar/*.o
 urs_wearable/madagascar/*.pb.*
+urs_wearable/madagascar/*.pb-c.*
 urs_wearable/madagascar/M
 urs_wearable/madagascar/Mp
 urs_wearable/madagascar/MpC
