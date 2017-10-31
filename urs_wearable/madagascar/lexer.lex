@@ -13,21 +13,21 @@
 
 #include "tables.h"
 
-  int lexeropen(char *fn) {
-    yyin = fopen(fn,"r");
-    if(yyin == NULL) {
-      fprintf(stderr,"ERROR: opening file %s\n",fn);
-      exit(1);
-    }
-    return 0;
+int lexeropen(char *fn) {
+  yyin = fopen(fn,"r");
+  if(yyin == NULL) {
+    fprintf(stderr,"ERROR: opening file %s\n",fn);
+    exit(1);
   }
+  return 0;
+}
 
-  int lexeropenstdin() {
-    yyin = stdin;
-    nOfInputFiles = 0;
-    currentInputFile=-1;
-    return 0;
-  }
+int lexeropenstdin() {
+  yyin = stdin;
+  nOfInputFiles = 0;
+  currentInputFile=-1;
+  return 0;
+}
 
 int yywrap() { 
   linenumber = 1;
