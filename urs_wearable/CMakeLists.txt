@@ -149,6 +149,7 @@ add_library(protobuf_helper src/protobuf_helper.cpp)
 # add_executable(${PROJECT_NAME}_node src/urs_wearable_node.cpp)
 add_executable(keyboard_teleop src/keyboard_teleop.cpp)
 add_executable(exec_monitor src/exec_monitor.cpp ${PROTO_SRCS} ${PROTO_HDRS})
+add_executable(fake_wearable src/fake_wearable.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -163,6 +164,7 @@ add_executable(exec_monitor src/exec_monitor.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 ## Specify libraries to link a library or executable target against
 target_link_libraries(keyboard_teleop controller navigator ${catkin_LIBRARIES})
 target_link_libraries(exec_monitor controller navigator protobuf_helper ${PROTOBUF_LIBRARIES} ${catkin_LIBRARIES})
+target_link_libraries(fake_wearable controller navigator protobuf_helper ${PROTOBUF_LIBRARIES} ${catkin_LIBRARIES})
 
 #############
 ## Install ##
