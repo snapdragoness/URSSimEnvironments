@@ -276,7 +276,7 @@ int main(int argc, char **argv)
           gotoResponse.set_y(pose.y);
           gotoResponse.set_z(pose.z);
           raw_output = new google::protobuf::io::FileOutputStream(wearableSockFD);
-          writeDelimitedTo(raw_output, planningRequest);
+          writeDelimitedTo(raw_output, gotoResponse);
           delete raw_output;
         }
       }
