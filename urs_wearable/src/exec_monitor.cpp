@@ -123,7 +123,7 @@ int main(int argc, char **argv)
   }
 
   // accept incoming connections
-  ROS_INFO("Waiting for connections...");
+  ROS_INFO("Waiting for connections from wearable devices...");
 
   while (true)
   {
