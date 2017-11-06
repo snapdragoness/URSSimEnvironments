@@ -5,10 +5,12 @@ package pb_urs;
 import "predicate.proto";
 
 message State {
-  repeated At at = 1;
-  repeated Oneof oneof = 2;
-  
-  message Oneof {
+  repeated OneofPredicate oneof_predicate = 1;
+
+  // list all the predicates here
+  repeated At at = 2;
+
+  message OneofPredicate {   // needs to contain all messages from tag = 2 onwards
     repeated At at = 1;
   }
 }

@@ -15,9 +15,6 @@ message Action {
 }
 
 message Goto {
-  optional int32 uav_id = 1;
-  optional double x = 2;
-  optional double y = 3;
-  optional double z = 4;
-  optional double yaw = 5;
+  required int32 uav_id = 1;
+  required int32 wp_id = 2;
 }

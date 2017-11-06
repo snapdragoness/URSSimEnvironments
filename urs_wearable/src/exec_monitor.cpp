@@ -11,6 +11,7 @@
 
 #include <ros/ros.h>
 
+/*** Socket communication ***/
 #include <vector>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -26,7 +27,31 @@ const char* CPA_PLUS_PATH_NAME = "/tmp/cpa_plus_socket";
 const char* MADAGASCAR_PATH_NAME = "/tmp/madagascar_socket";
 const char* PLANNER_PATH_NAME = CPA_PLUS_PATH_NAME;
 
-const unsigned short PORT_EXEC_MONITOR = 8080;
+const uint16_t PORT_EXEC_MONITOR = 8080;
+/*** Socket communication [end] ***/
+
+/*** Waypoint ***/
+typedef struct Waypoint
+{
+  Pose pose;
+  bool rotate;
+} Waypoint;
+
+const int WP_TABLE_SIZE = 100;
+Waypoint wpTable[WP_TABLE_SIZE];
+std::vector<int> wpIndexList;
+
+void wpInit();
+int newWpId(std::vector<int>&);
+void retrieveWpId(std::vector<int>&);
+/*** Waypoint [end] ***/
+
+/*** Region ***/
+const double REGION_X0 = -50;
+const double REGION_Y0 = -50;
+const double REGION_X1 = 50;
+const double REGION_Y1 = 50;
+/*** Region [end] ***/
 
 int main(int argc, char **argv)
 {
@@ -54,6 +79,8 @@ int main(int argc, char **argv)
     controller[i].start();
     navigator[i].setNamespace("/uav" + std::to_string(i));
   }
+
+  wpInit();
 
   /************************************************/
   /* Establish a client to connect to the planner */
@@ -179,10 +206,10 @@ int main(int argc, char **argv)
           /* Wait for a command from a wearable device */
           /*********************************************/
           google::protobuf::io::ZeroCopyInputStream* raw_input = new google::protobuf::io::FileInputStream(wearableSockFD);
-          pb_wearable::GotoRequest gotoRequest;
+          pb_wearable::WearableRequest wearableRequest;
 
           // check if it was for closing, and also read the incoming message
-          if (!readDelimitedFrom(raw_input, &gotoRequest))
+          if (!readDelimitedFrom(raw_input, &wearableRequest))
           {
             // some client has disconnected, get its details and print
             getpeername(wearableSockFD, (struct sockaddr*)&execMonitorAddress, (socklen_t*)&execMonitorAddressLen);
@@ -200,36 +227,111 @@ int main(int argc, char **argv)
           }
           delete raw_input;
 
-          std::cout << "gotoRequest: " << std::endl << gotoRequest.DebugString();
+          std::cout << "Received WearableRequest: " << std::endl << wearableRequest.DebugString();
 
-          /**********************************************/
-          /* Evaluate the command and query the planner */
-          /**********************************************/
-          ROS_INFO("Received Command: GOTO");
+          /******************************/
+          /* Evaluate the input request */
+          /******************************/
+          // Depending on the request, it may
+          // - call the planner
+          // - respond to the wearable
+          // - just perform some actions
+          // - a mix of the above
 
-          pb_urs::PlanningRequest planningRequest;
-          pb_urs::State* initialState = planningRequest.mutable_initial();
-
-          for (unsigned int i = 0; i < N_UAV; i++)
+          std::vector<int> allocatedList;
+          switch (wearableRequest.type())
           {
-            pb_urs::At* at = initialState->add_at();
-            Pose pose = controller[i].getPose();
-            at->set_uav_id(i);
-            at->set_x(pose.x);
-            at->set_y(pose.y);
-            at->set_z(pose.z);
+            // 'break' is used when a call to the planner is required
+            // 'continue' is used when no calling to the planner is required
+
+            case wearableRequest.GET_POSE:
+            {
+              pb_wearable::WearableResponse wearableResponse;
+              wearableResponse.set_type(wearableResponse.POSE);
+
+              const pb_wearable::GetPoseRepeated& getPoseRepeated = wearableRequest.get_pose_repeated();
+              for (int i = 0; i < getPoseRepeated.get_pose_size(); i++)
+              {
+                int uav_id = getPoseRepeated.get_pose(i).uav_id();
+                Pose pose = controller[uav_id].getPose();
+
+                pb_wearable::PoseRepeated_Pose* poseRepeated_pose = wearableResponse.mutable_pose_repeated()->add_pose();
+                poseRepeated_pose->set_uav_id(uav_id);
+                poseRepeated_pose->set_x(pose.x);
+                poseRepeated_pose->set_y(pose.y);
+                poseRepeated_pose->set_z(pose.z);
+                poseRepeated_pose->set_yaw(pose.yaw);
+              }
+
+              google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(wearableSockFD);
+              writeDelimitedTo(raw_output, wearableResponse);
+              delete raw_output;
+
+              continue;
+            }
+            case wearableRequest.SET_DEST:
+            {
+              // Construct Planning Request
+              pb_urs::PlanningRequest planningRequest;
+              pb_urs::State* initialState = planningRequest.mutable_initial();
+              for (unsigned int i = 0; i < N_UAV; i++)
+              {
+                int wpId = newWpId(allocatedList);
+                wpTable[wpId].pose = controller[i].getPose();
+                wpTable[wpId].rotate = false;
+
+                pb_urs::At* at = initialState->add_at();
+                at->set_uav_id(i);
+                at->set_wp_id(wpId);
+              }
+
+              pb_urs::State* goalState = planningRequest.mutable_goal();
+              const pb_wearable::SetDestRepeated& setDestRepeated = wearableRequest.set_dest_repeated();
+              for (int i = 0; i < setDestRepeated.set_dest_size(); i++)
+              {
+                int wpId = newWpId(allocatedList);
+                wpTable[wpId].pose.x = setDestRepeated.set_dest(i).x();
+                wpTable[wpId].pose.y = setDestRepeated.set_dest(i).y();
+                wpTable[wpId].pose.z = setDestRepeated.set_dest(i).z();
+                if (setDestRepeated.set_dest(i).has_yaw())
+                {
+                  wpTable[wpId].pose.yaw = setDestRepeated.set_dest(i).yaw();
+                  wpTable[wpId].rotate = true;
+                }
+                else
+                {
+                  wpTable[wpId].rotate = false;
+                }
+
+                pb_urs::At* at = goalState->add_at();
+                at->set_uav_id(setDestRepeated.set_dest(i).uav_id());
+                at->set_wp_id(wpId);
+              }
+
+              google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(plannerSockFD);
+              writeDelimitedTo(raw_output, planningRequest);
+              delete raw_output;
+
+              break;
+            }
+            case wearableRequest.GET_REGION:
+            {
+              pb_wearable::WearableResponse wearableResponse;
+              wearableResponse.set_type(wearableResponse.REGION);
+
+              pb_wearable::Region* wearableResponse_region = wearableResponse.mutable_region();
+              wearableResponse_region->set_x0(REGION_X0);
+              wearableResponse_region->set_y0(REGION_Y0);
+              wearableResponse_region->set_x1(REGION_X1);
+              wearableResponse_region->set_y1(REGION_Y1);
+
+              google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(wearableSockFD);
+              writeDelimitedTo(raw_output, wearableResponse);
+              delete raw_output;
+
+              continue;
+            }
           }
-
-          pb_urs::State* goalState = planningRequest.mutable_goal();
-          pb_urs::At* at = goalState->add_at();
-          at->set_uav_id(gotoRequest.uav_id());
-          at->set_x(gotoRequest.x());
-          at->set_y(gotoRequest.y());
-          at->set_z(gotoRequest.z());
-
-          google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(plannerSockFD);
-          writeDelimitedTo(raw_output, planningRequest);
-          delete raw_output;
 
           /*******************************/
           /* Retrieve a plan and execute */
@@ -252,32 +354,24 @@ int main(int argc, char **argv)
             const pb_urs::Action& action = planningResponse.actions(i);
             switch (action.type())
             {
-              case pb_urs::Action_ActionType_GOTO:
+              case action.GOTO:
               {
                 const pb_urs::Goto& action_goto = action.goto_();
-                Pose pose;
-                pose.x = action_goto.x();
-                pose.y = action_goto.y();
-                pose.z = action_goto.z();
-                controller[action_goto.uav_id()].setDest(pose);
+                int wpId = action_goto.wp_id();
+                if (wpTable[wpId].rotate)
+                {
+                  controller[action_goto.uav_id()].setDest(wpTable[wpId].pose);
+                }
+                else
+                {
+                  controller[action_goto.uav_id()].setDest(wpTable[wpId].pose.x, wpTable[wpId].pose.y, wpTable[wpId].pose.z);
+                }
                 break;
               }
             }
           }
 
-          /**********************************/
-          /* Respond to the wearable device */
-          /**********************************/
-          pb_wearable::GotoResponse gotoResponse;
-          Pose pose = controller[gotoRequest.uav_id()].getPose();
-
-          gotoResponse.set_uav_id(gotoRequest.uav_id());
-          gotoResponse.set_x(pose.x);
-          gotoResponse.set_y(pose.y);
-          gotoResponse.set_z(pose.z);
-          raw_output = new google::protobuf::io::FileOutputStream(wearableSockFD);
-          writeDelimitedTo(raw_output, gotoResponse);
-          delete raw_output;
+          retrieveWpId(allocatedList);
         }
       }
     }
@@ -290,3 +384,30 @@ int main(int argc, char **argv)
   // (optional) delete all global objects allocated by libprotobuf
   google::protobuf::ShutdownProtobufLibrary();
 }
+
+void wpInit()
+{
+  wpIndexList.reserve(WP_TABLE_SIZE);
+  for (int i = WP_TABLE_SIZE - 1; i >= 0; i--)
+  {
+    wpIndexList.push_back(i);
+  }
+}
+
+int newWpId(std::vector<int>& allocatedList)
+{
+  int wp = wpIndexList.back();
+  wpIndexList.pop_back();
+  allocatedList.push_back(wp);
+  return wp;
+}
+
+void retrieveWpId(std::vector<int>& allocatedList)
+{
+  while (!allocatedList.empty())
+  {
+    wpIndexList.push_back(allocatedList.back());
+    allocatedList.pop_back();
+  }
+}
+

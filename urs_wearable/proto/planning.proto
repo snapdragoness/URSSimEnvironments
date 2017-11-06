@@ -6,8 +6,8 @@ import "state.proto";
 import "action.proto";
 
 message PlanningRequest {
-  optional State initial = 1;
-  optional State goal = 2;
+  required State initial = 1;
+  required State goal = 2;
 }
 
 message PlanningResponse {

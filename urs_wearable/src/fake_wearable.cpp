@@ -47,32 +47,48 @@ int main(int argc, char const *argv[])
 
   ROS_INFO("Successfully connected to Execution Monitor");
 
+  google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(execMonitorSockFD);
+  google::protobuf::io::ZeroCopyInputStream* raw_input = new google::protobuf::io::FileInputStream(execMonitorSockFD);
+  pb_wearable::WearableRequest wearableRequest;
+  pb_wearable::WearableResponse wearableResponse;
+
   /***************************/
   /* Put your test code here */
   /***************************/
 
-  pb_wearable::GotoRequest gotoRequest;
+  // 1
+  wearableRequest.set_type(wearableRequest.SET_DEST);
 
-  gotoRequest.set_uav_id(1);
-  gotoRequest.set_x(0);
-  gotoRequest.set_y(0);
-  gotoRequest.set_z(5);
+  pb_wearable::SetDestRepeated* setDestRepeated = wearableRequest.mutable_set_dest_repeated();
+  pb_wearable::SetDestRepeated_SetDest* setDest = setDestRepeated->add_set_dest();
+  setDest->set_uav_id(1);
+  setDest->set_x(0);
+  setDest->set_y(0);
+  setDest->set_z(5);
 
-  google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(execMonitorSockFD);
-  writeDelimitedTo(raw_output, gotoRequest);
-  delete raw_output;
+  setDest = setDestRepeated->add_set_dest();
+  setDest->set_uav_id(3);
+  setDest->set_x(0);
+  setDest->set_y(0);
+  setDest->set_z(10);
 
-  google::protobuf::io::ZeroCopyInputStream* raw_input = new google::protobuf::io::FileInputStream(execMonitorSockFD);
-  pb_wearable::GotoResponse gotoResponse;
-  if (!readDelimitedFrom(raw_input, &gotoResponse))
+  writeDelimitedTo(raw_output, wearableRequest);
+
+  // 2
+  wearableRequest.set_type(wearableRequest.GET_REGION);
+  writeDelimitedTo(raw_output, wearableRequest);
+
+  if (!readDelimitedFrom(raw_input, &wearableResponse))
   {
     std::cerr << "Something is wrong" << std::endl;
-    close(execMonitorSockFD);
-    return -1;
+    goto CLEANUP;
   }
-  delete raw_input;
 
-  std::cout << "gotoResponse: " << std::endl << gotoResponse.DebugString();
+  std::cout << "wearableResponse: " << std::endl << wearableResponse.DebugString();
+
+CLEANUP:
+  delete raw_input;
+  delete raw_output;
 
   close(execMonitorSockFD);
 

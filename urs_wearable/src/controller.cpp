@@ -184,6 +184,15 @@ void Controller::setDest(const Pose& dest)
   mut_dest.unlock();
 }
 
+void Controller::setDest(double x, double y, double z)
+{
+  mut_dest.lock();
+  this->dest.x = x;
+  this->dest.y = y;
+  this->dest.z = z;
+  mut_dest.unlock();
+}
+
 void Controller::setNamespace(const std::string& ns)
 {
   this->ns = ns;

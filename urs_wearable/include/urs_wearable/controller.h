@@ -58,6 +58,7 @@ public:
   Pose getPose();
   Pose getDest();
   void setDest(const Pose& dest);
+  void setDest(double x, double y, double z);
   void setNamespace(const std::string& ns);
 
   // static methods

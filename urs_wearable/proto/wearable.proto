@@ -2,57 +2,94 @@ syntax = "proto2";
 
 package pb_wearable;
 
-// A request message from a wearable device
+/* ******************************************/
+/* A request message from a wearable device */
+/* ******************************************/
 message WearableRequest {
   required WearableRequestType type = 1;
   
-  oneof wearablerequest_oneof {
-    GetStatus getStatus = 2;
+  oneof oneof_wearablerequest {
+    GetPoseRepeated get_pose_repeated = 2;
+    SetDestRepeated set_dest_repeated = 3;
+
+    // Infrequent requests should come last
+    GetRegion get_region = 4;
   }
   
   enum WearableRequestType {
-    GET_STATUS = 0;
-    // etc
+    GET_POSE = 0;
+    SET_DEST = 1;
+    GET_REGION = 2;
   }
 }
 
-message GetStatus {
-  required int32 uav_id = 1;
+message GetPoseRepeated {
+  repeated GetPose get_pose = 1;
+
+  message GetPose {
+    required int32 uav_id = 1;
+  }
 }
 
-message GotoRequest {
-  required int32 uav_id = 1;
-  required double x = 2;
-  required double y = 3;
-  required double z = 4;
-  optional double yaw = 5;
+message SetDestRepeated {
+  repeated SetDest set_dest = 1;
+
+  message SetDest {
+    required int32 uav_id = 1;
+    required double x = 2;
+    required double y = 3;
+    required double z = 4;
+    optional double yaw = 5;
+  }
 }
 
-// A response message to a wearable device
+message GetRegion { }
+
+/* *****************************************/
+/* A response message to a wearable device */
+/* *****************************************/
 message WearableResponse {
   required WearableResponseType type = 1;
   
-  oneof wearableresponse_oneof {
-    Status status = 2;
+  oneof oneof_wearableresponse {
+    PoseRepeated pose_repeated = 2;
+
+    // Infrequent responses should come last
+    Region region = 3;
   }
   
   enum WearableResponseType {
-    STATUS = 0;
-    // etc
+    POSE = 0;
+    REGION = 1;
   }
 }
 
-message Status {
-  optional double x = 1;
-  optional double y = 2;
-  optional double z = 3;
-  optional double yaw = 4;
+message PoseRepeated {
+  repeated Pose pose = 1;
+
+  message Pose {
+    required int32 uav_id = 1;
+    required double x = 2;
+    required double y = 3;
+    required double z = 4;
+    optional double yaw = 5;
+  }
 }
 
-message GotoResponse {
-  required int32 uav_id = 1;
-  required double x = 2;
-  required double y = 3;
-  required double z = 4;
-  optional double yaw = 5;
+message Region {
+//             y
+//             ^
+//      -------|---(x1,y1)
+//      |      |      |
+//      |      |      |
+// <-----------+-----------> x
+//      |      |      |
+//   (x0,y0)---|-------
+//             |
+//             v
+
+  required double x0 = 1;
+  required double y0 = 2;
+  required double x1 = 3;
+  required double y1 = 4;
 }
