@@ -39,7 +39,7 @@ typedef struct Waypoint
 
 const int WP_TABLE_SIZE = 100;
 Waypoint wpTable[WP_TABLE_SIZE];
-std::vector<int> wpIndexList;
+std::vector<int> wpUnusedIdList;
 
 void wpInit();
 int newWpId(std::vector<int>&);
@@ -238,7 +238,7 @@ int main(int argc, char **argv)
           // - just perform some actions
           // - a mix of the above
 
-          std::vector<int> allocatedList;
+          std::vector<int> allocatedWpList;
           switch (wearableRequest.type())
           {
             // 'break' is used when a call to the planner is required
@@ -276,7 +276,7 @@ int main(int argc, char **argv)
               pb_urs::State* initialState = planningRequest.mutable_initial();
               for (unsigned int i = 0; i < N_UAV; i++)
               {
-                int wpId = newWpId(allocatedList);
+                int wpId = newWpId(allocatedWpList);
                 wpTable[wpId].pose = controller[i].getPose();
                 wpTable[wpId].rotate = false;
 
@@ -289,7 +289,7 @@ int main(int argc, char **argv)
               const pb_wearable::SetDestRepeated& setDestRepeated = wearableRequest.set_dest_repeated();
               for (int i = 0; i < setDestRepeated.set_dest_size(); i++)
               {
-                int wpId = newWpId(allocatedList);
+                int wpId = newWpId(allocatedWpList);
                 wpTable[wpId].pose.x = setDestRepeated.set_dest(i).x();
                 wpTable[wpId].pose.y = setDestRepeated.set_dest(i).y();
                 wpTable[wpId].pose.z = setDestRepeated.set_dest(i).z();
@@ -371,7 +371,7 @@ int main(int argc, char **argv)
             }
           }
 
-          retrieveWpId(allocatedList);
+          retrieveWpId(allocatedWpList);
         }
       }
     }
@@ -387,27 +387,26 @@ int main(int argc, char **argv)
 
 void wpInit()
 {
-  wpIndexList.reserve(WP_TABLE_SIZE);
+  wpUnusedIdList.reserve(WP_TABLE_SIZE);
   for (int i = WP_TABLE_SIZE - 1; i >= 0; i--)
   {
-    wpIndexList.push_back(i);
+    wpUnusedIdList.push_back(i);
   }
 }
 
-int newWpId(std::vector<int>& allocatedList)
+int newWpId(std::vector<int>& allocatedWpList)
 {
-  int wp = wpIndexList.back();
-  wpIndexList.pop_back();
-  allocatedList.push_back(wp);
+  int wp = wpUnusedIdList.back();
+  wpUnusedIdList.pop_back();
+  allocatedWpList.push_back(wp);
   return wp;
 }
 
-void retrieveWpId(std::vector<int>& allocatedList)
+void retrieveWpId(std::vector<int>& allocatedWpList)
 {
-  while (!allocatedList.empty())
+  for (std::vector<int>::iterator it = allocatedWpList.begin(); it != allocatedWpList.end(); it++)
   {
-    wpIndexList.push_back(allocatedList.back());
-    allocatedList.pop_back();
+    wpUnusedIdList.push_back(*it);
   }
 }
 
