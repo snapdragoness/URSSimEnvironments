@@ -11,6 +11,10 @@
 
 #include <ros/ros.h>
 
+const unsigned int N_UAV = 4;
+Controller controller[N_UAV];
+Navigator navigator[N_UAV];
+
 /*** Socket communication ***/
 #include <vector>
 #include <sys/types.h>
@@ -20,8 +24,6 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
-
-const unsigned int N_UAV = 4;
 
 const char* CPA_PLUS_PATH_NAME = "/tmp/cpa_plus_socket";
 const char* MADAGASCAR_PATH_NAME = "/tmp/madagascar_socket";
@@ -53,6 +55,8 @@ const double REGION_X1 = 50;
 const double REGION_Y1 = 50;
 /*** Region [end] ***/
 
+void initPlanningRequest(std::vector<int>&, pb_urs::State*);
+
 int main(int argc, char **argv)
 {
   // Verify that the version of the library that we linked against is
@@ -69,9 +73,6 @@ int main(int argc, char **argv)
     ROS_ERROR("No UAV to control");
     exit(EXIT_FAILURE);
   }
-
-  Controller controller[N_UAV];
-  Navigator navigator[N_UAV];
 
   for (unsigned int i = 0; i < N_UAV; i++)
   {
@@ -273,17 +274,7 @@ int main(int argc, char **argv)
             {
               // Construct Planning Request
               pb_urs::PlanningRequest planningRequest;
-              pb_urs::State* initialState = planningRequest.mutable_initial();
-              for (unsigned int i = 0; i < N_UAV; i++)
-              {
-                int wpId = newWpId(allocatedWpList);
-                wpTable[wpId].pose = controller[i].getPose();
-                wpTable[wpId].rotate = false;
-
-                pb_urs::At* at = initialState->add_at();
-                at->set_uav_id(i);
-                at->set_wp_id(wpId);
-              }
+              initPlanningRequest(allocatedWpList, planningRequest.mutable_initial());
 
               pb_urs::State* goalState = planningRequest.mutable_goal();
               const pb_wearable::SetDestRepeated& setDestRepeated = wearableRequest.set_dest_repeated();
@@ -407,6 +398,20 @@ void retrieveWpId(std::vector<int>& allocatedWpList)
   for (std::vector<int>::iterator it = allocatedWpList.begin(); it != allocatedWpList.end(); it++)
   {
     wpUnusedIdList.push_back(*it);
+  }
+}
+
+void initPlanningRequest(std::vector<int>& allocatedWpList, pb_urs::State* initialState)
+{
+  for (unsigned int i = 0; i < N_UAV; i++)
+  {
+    int wpId = newWpId(allocatedWpList);
+    wpTable[wpId].pose = controller[i].getPose();
+    wpTable[wpId].rotate = false;
+
+    pb_urs::At* at = initialState->add_at();
+    at->set_uav_id(i);
+    at->set_wp_id(wpId);
   }
 }
 
