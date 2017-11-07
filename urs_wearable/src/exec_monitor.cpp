@@ -12,8 +12,6 @@
 #include <ros/ros.h>
 
 const unsigned int N_UAV = 4;
-Controller controller[N_UAV];
-Navigator navigator[N_UAV];
 
 /*** Socket communication ***/
 #include <vector>
@@ -55,7 +53,7 @@ const double REGION_X1 = 50;
 const double REGION_Y1 = 50;
 /*** Region [end] ***/
 
-void initPlanningRequest(std::vector<int>&, pb_urs::State*);
+void initPlanningRequest(std::vector<int>&, pb_urs::State*, Controller*);
 
 int main(int argc, char **argv)
 {
@@ -73,6 +71,9 @@ int main(int argc, char **argv)
     ROS_ERROR("No UAV to control");
     exit(EXIT_FAILURE);
   }
+
+  Controller controller[N_UAV];
+  Navigator navigator[N_UAV];
 
   for (unsigned int i = 0; i < N_UAV; i++)
   {
@@ -274,7 +275,7 @@ int main(int argc, char **argv)
             {
               // Construct Planning Request
               pb_urs::PlanningRequest planningRequest;
-              initPlanningRequest(allocatedWpList, planningRequest.mutable_initial());
+              initPlanningRequest(allocatedWpList, planningRequest.mutable_initial(), controller);
 
               pb_urs::State* goalState = planningRequest.mutable_goal();
               const pb_wearable::SetDestRepeated& setDestRepeated = wearableRequest.set_dest_repeated();
@@ -401,7 +402,7 @@ void retrieveWpId(std::vector<int>& allocatedWpList)
   }
 }
 
-void initPlanningRequest(std::vector<int>& allocatedWpList, pb_urs::State* initialState)
+void initPlanningRequest(std::vector<int>& allocatedWpList, pb_urs::State* initialState, Controller* controller)
 {
   for (unsigned int i = 0; i < N_UAV; i++)
   {
