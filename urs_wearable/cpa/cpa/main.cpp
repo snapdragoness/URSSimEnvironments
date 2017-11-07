@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <boost/tokenizer.hpp>
 
 #include <sys/types.h>
@@ -47,7 +48,7 @@ int main(int argc, char **argv)
   int plannerSockFD;
   struct sockaddr_un plannerAddress;
 
-  // remove any old socket and create an unnamed socket for the server
+  // Remove any old socket and create an unnamed socket for the server
   unlink(CPA_PLUS_PATH_NAME);
   if ((plannerSockFD = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
   {
@@ -55,7 +56,7 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-  // name the socket
+  // Name the socket
   plannerAddress.sun_family = AF_UNIX;
   strcpy(plannerAddress.sun_path, CPA_PLUS_PATH_NAME);
 
@@ -65,16 +66,15 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-  // create a connection queue and wait for clients
+  // Create a connection queue and wait for clients
   if (listen(plannerSockFD, 5) == -1)
   {
     std::cerr << "Failed to enable the socket to accept connections" << std::endl;
     exit(EXIT_FAILURE);
   }
-
   std::cout << "Waiting for a connection from Execution Monitor..." << std::endl;
 
-  // accept a connection
+  // Accept a connection
   int execMonitorSockFD;
   struct sockaddr_un execMonitorAddress;
   socklen_t execMonitorAddressLen = sizeof(sockaddr_un);
@@ -85,105 +85,90 @@ int main(int argc, char **argv)
   }
   std::cout << "Received the connection" << std::endl;
 
+  // Read our domain definition from PDDL file
+  std::ifstream ursDomainPDDL("urs_domain.pddl");
+  std::stringstream strStream;
+  strStream << ursDomainPDDL.rdbuf();
+  std::string domainDef = strStream.str();
+
   while (true)
   {
-    std::string domainDef
-      ("(define (domain urs)\n"
-      " (:requirements :conditional-effects :equality :typing)\n"
-      " (:types id x y z)\n"
-      " (:predicates (at ?id - id ?x - x ?y - y ?z - z)\n"
-      " )\n"
-      " (:action goto\n"
-      "  :parameters (?id - id ?x0 - x ?y0 - y ?z0 - z ?x1 - x ?y1 - y ?z1 - z)\n"
-      "  :precondition (at ?id ?x0 ?y0 ?z0)\n"
-      "  :effect (and (not (at ?id ?x0 ?y0 ?z0)) (at ?id ?x1 ?y1 ?z1))\n"
-      " )\n"
-      ")\n");
-    std::string initDef("");
-    std::string goalDef("");
-
-    // Define a set of objects for each type we have in domain definition
-    Objects objs_id("id");
-    Objects objs_x("x");
-    Objects objs_y("y");
-    Objects objs_z("z");
-
-    google::protobuf::io::ZeroCopyInputStream* raw_input = new google::protobuf::io::FileInputStream(execMonitorSockFD);
-
     pb_urs::PlanningRequest planningRequest;
-    if (!readDelimitedFrom(raw_input, &planningRequest))
+    if (!readDelimitedFromSockFD(execMonitorSockFD, planningRequest))
     {
       std::cerr << "Execution Monitor has disconnected" << std::endl;
-      delete raw_input;
       break;
     }
-    delete raw_input;
 
     std::cout << "planningRequest: " << std::endl << planningRequest.DebugString();
 
+    std::string initDef("");
+    int nInit = 0;
+    std::string goalDef("");
+    int nGoal = 0;
+
+    // Define a set of objects for each type we have in domain definition
+    Objects uav_id("uav_id");
+    Objects wp_id("wp_id");
+
     pb_urs::State* initialState = planningRequest.mutable_initial();
+    nInit += initialState->at_size();
     for (int i = 0; i < initialState->at_size(); i++) {
       const pb_urs::At& at = initialState->at(i);
 
-      objs_id.insert(at.uav_id());
-      objs_x.insert(at.x());
-      objs_y.insert(at.y());
-      objs_z.insert(at.z());
-      initDef += "(at " + Objects::intToObj("id", at.uav_id()) +
-          " " + Objects::doubleToObj("x", at.x()) +
-          " " + Objects::doubleToObj("y", at.y()) +
-          " " + Objects::doubleToObj("z", at.z()) + ")";
+      uav_id.insert(at.uav_id());
+      wp_id.insert(at.wp_id());
+      initDef += "(at " + uav_id.intToObj(at.uav_id()) + " " + wp_id.intToObj(at.wp_id()) + ")";
     }
 
     pb_urs::State* goalState = planningRequest.mutable_goal();
+    nGoal += goalState->at_size();
     for (int i = 0; i < goalState->at_size(); i++) {
       const pb_urs::At& at = goalState->at(i);
 
-      objs_id.insert(at.uav_id());
-      objs_x.insert(at.x());
-      objs_y.insert(at.y());
-      objs_z.insert(at.z());
-      goalDef += "(at " + Objects::intToObj("id", at.uav_id()) +
-          " " + Objects::doubleToObj("x", at.x()) +
-          " " + Objects::doubleToObj("y", at.y()) +
-          " " + Objects::doubleToObj("z", at.z()) + ")";
+      uav_id.insert(at.uav_id());
+      wp_id.insert(at.wp_id());
+      goalDef += "(at " + uav_id.intToObj(at.uav_id()) + " " + wp_id.intToObj(at.wp_id()) + ")";
     }
 
-    ofstream pddlfile;
+    std::string problemDef =
+      "(define (problem urs_prob)\n"
+      "  (:domain urs)\n"
+      "  (:objects";
+
+    for (auto obj : uav_id.objs)
+    {
+      problemDef += " " + obj;
+    }
+    problemDef += " - " + uav_id.type;
+
+    for (auto obj : wp_id.objs)
+    {
+      problemDef += " " + obj;
+    }
+    problemDef += " - " + wp_id.type;
+
+    problemDef += ")\n";
+    if (nInit > 1)
+    {
+      problemDef += "  (:init (and " + initDef + "))\n";
+    }
+    else if (nInit > 0)
+    {
+      problemDef += "  (:init " + initDef + ")\n";
+    }
+    if (nGoal > 1)
+    {
+      problemDef += "  (:goal (and " + goalDef + "))\n";
+    }
+    else if (nGoal > 0)
+    {
+      problemDef += "  (:goal " + goalDef + ")\n";
+    }
+
+    std::ofstream pddlfile;
     pddlfile.open ("urs.pddl");
-    pddlfile << domainDef
-        << "(define (problem urs_prob)\n"
-        << "  (:domain urs)\n"
-        << "  (:objects";
-
-    for (auto obj : objs_id.objs)
-    {
-      pddlfile << " " << obj;
-    }
-    pddlfile << " - " << objs_id.type;
-
-    for (auto obj : objs_x.objs)
-    {
-      pddlfile << " " << obj;
-    }
-    pddlfile << " - " << objs_x.type;
-
-    for (auto obj : objs_y.objs)
-    {
-      pddlfile << " " << obj;
-    }
-    pddlfile << " - " << objs_y.type;
-
-    for (auto obj : objs_z.objs)
-    {
-      pddlfile << " " << obj;
-    }
-    pddlfile << " - " << objs_z.type;
-
-    pddlfile << ")\n"
-        << "  (:init (and " << initDef << "))\n"
-        << "  (:goal (and " << goalDef << "))\n"
-        << ")";
+    pddlfile << domainDef << "\n" << problemDef;
     pddlfile.close();
 
     /*********************/
@@ -229,17 +214,13 @@ int main(int argc, char **argv)
         action->set_type(pb_urs::Action_ActionType_GOTO);
         pb_urs::Goto* action_goto = action->mutable_goto_();
 
-        action_goto->set_uav_id(Objects::objToInt("id", tokens[1]));
-        action_goto->set_x(Objects::objToDouble("x", tokens[5]));
-        action_goto->set_y(Objects::objToDouble("y", tokens[6]));
-        action_goto->set_z(Objects::objToDouble("z", tokens[7]));
+        action_goto->set_uav_id(uav_id.objToInt(tokens[1]));
+        action_goto->set_wp_id(wp_id.objToInt(tokens[3]));
       }
     }
 
     std::cout << "planningResponse: " << std::endl << planningResponse.DebugString();
-    google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(execMonitorSockFD);
-    writeDelimitedTo(raw_output, planningResponse);
-    delete raw_output;
+    writeDelimitedToSockFD(execMonitorSockFD, planningResponse);
   }
 
   // clean up

@@ -13,12 +13,11 @@ message WearableRequest {
     SetDestRepeated set_dest_repeated = 3;
 
     // Infrequent requests should come last
-    GetRegion get_region = 4;
   }
   
   enum WearableRequestType {
-    GET_POSE = 0;
-    SET_DEST = 1;
+    GET_POSE_REPEATED = 0;
+    SET_DEST_REPEATED = 1;
     GET_REGION = 2;
   }
 }
@@ -43,8 +42,6 @@ message SetDestRepeated {
   }
 }
 
-message GetRegion { }
-
 /* *****************************************/
 /* A response message to a wearable device */
 /* *****************************************/
@@ -59,7 +56,7 @@ message WearableResponse {
   }
   
   enum WearableResponseType {
-    POSE = 0;
+    POSE_REPEATED = 0;
     REGION = 1;
   }
 }

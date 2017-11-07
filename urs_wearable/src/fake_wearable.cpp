@@ -13,7 +13,10 @@
 #include "protobuf_helper.h"
 #include "wearable.pb.h"
 
-const unsigned short PORT_EXEC_MONITOR = 8080;
+#include <cstdlib>
+#include <ctime>
+
+const uint16_t PORT_EXEC_MONITOR = 8080;
 
 int main(int argc, char const *argv[])
 {
@@ -47,49 +50,48 @@ int main(int argc, char const *argv[])
 
   ROS_INFO("Successfully connected to Execution Monitor");
 
-  google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(execMonitorSockFD);
-  google::protobuf::io::ZeroCopyInputStream* raw_input = new google::protobuf::io::FileInputStream(execMonitorSockFD);
-  pb_wearable::WearableRequest wearableRequest;
-  pb_wearable::WearableResponse wearableResponse;
+  /* initialize random seed: */
+  srand(time(NULL));
 
   /***************************/
   /* Put your test code here */
   /***************************/
 
   // 1
-  wearableRequest.set_type(wearableRequest.SET_DEST);
+  pb_wearable::WearableRequest req1;
+  req1.set_type(req1.SET_DEST_REPEATED);
 
-  pb_wearable::SetDestRepeated* setDestRepeated = wearableRequest.mutable_set_dest_repeated();
+  pb_wearable::SetDestRepeated* setDestRepeated = req1.mutable_set_dest_repeated();
   pb_wearable::SetDestRepeated_SetDest* setDest = setDestRepeated->add_set_dest();
   setDest->set_uav_id(1);
-  setDest->set_x(0);
-  setDest->set_y(0);
-  setDest->set_z(5);
+  setDest->set_x(rand() % 10 - 4);
+  setDest->set_y(rand() % 10 - 4);
+  setDest->set_z(rand() % 10 + 1);
 
   setDest = setDestRepeated->add_set_dest();
   setDest->set_uav_id(3);
-  setDest->set_x(0);
-  setDest->set_y(0);
-  setDest->set_z(10);
+  setDest->set_x(rand() % 11 - 4);
+  setDest->set_y(rand() % 11 - 4);
+  setDest->set_z(rand() % 10 + 1);
 
-  writeDelimitedTo(raw_output, wearableRequest);
+  std::cout << "SET_DEST_REPEATED - " << writeDelimitedToSockFD(execMonitorSockFD, req1) << std::endl;
 
   // 2
-  wearableRequest.set_type(wearableRequest.GET_REGION);
-  writeDelimitedTo(raw_output, wearableRequest);
+  pb_wearable::WearableRequest req2;
+  req2.set_type(req2.GET_REGION);
 
-  if (!readDelimitedFrom(raw_input, &wearableResponse))
+  std::cout << "GET_REGION - " <<  writeDelimitedToSockFD(execMonitorSockFD, req2) << std::endl;
+
+  pb_wearable::WearableResponse res1;
+  if (!readDelimitedFromSockFD(execMonitorSockFD, res1))
   {
     std::cerr << "Something is wrong" << std::endl;
-    goto CLEANUP;
+    return -1;
   }
 
-  std::cout << "wearableResponse: " << std::endl << wearableResponse.DebugString();
+  std::cout << "wearableResponse: " << std::endl << res1.DebugString();
 
 CLEANUP:
-  delete raw_input;
-  delete raw_output;
-
   close(execMonitorSockFD);
 
   return 0;

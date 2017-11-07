@@ -1,6 +1,6 @@
 #include "protobuf_helper.h"
 
-bool readDelimitedFrom(google::protobuf::io::ZeroCopyInputStream* rawInput, google::protobuf::MessageLite* message)
+bool readDelimitedFrom(google::protobuf::io::ZeroCopyInputStream* rawInput, google::protobuf::MessageLite& message)
 {
   // We create a new coded stream for each message.
   // Don't worry, this is fast, and it makes sure the 64MB total size limit is imposed per-message rather
@@ -16,7 +16,7 @@ bool readDelimitedFrom(google::protobuf::io::ZeroCopyInputStream* rawInput, goog
   google::protobuf::io::CodedInputStream::Limit limit = input.PushLimit(size);
 
   // Parse the message.
-  if (!message->MergeFromCodedStream(&input))
+  if (!message.MergeFromCodedStream(&input))
     return false;
   if (!input.ConsumedEntireMessage())
     return false;
@@ -52,4 +52,22 @@ bool writeDelimitedTo(google::protobuf::io::ZeroCopyOutputStream* rawOutput,
   }
 
   return true;
+}
+
+bool readDelimitedFromSockFD(int sockFD, google::protobuf::MessageLite& message)
+{
+  google::protobuf::io::ZeroCopyInputStream* raw_input = new google::protobuf::io::FileInputStream(sockFD);
+  bool ret = readDelimitedFrom(raw_input, message);
+  delete raw_input;
+
+  return ret;
+}
+
+bool writeDelimitedToSockFD(int sockFD, const google::protobuf::MessageLite& message)
+{
+  google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(sockFD);
+  bool ret = writeDelimitedTo(raw_output, message);
+  delete raw_output;
+
+  return ret;
 }

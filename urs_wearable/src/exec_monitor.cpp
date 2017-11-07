@@ -207,11 +207,10 @@ int main(int argc, char **argv)
           /*********************************************/
           /* Wait for a command from a wearable device */
           /*********************************************/
-          google::protobuf::io::ZeroCopyInputStream* raw_input = new google::protobuf::io::FileInputStream(wearableSockFD);
           pb_wearable::WearableRequest wearableRequest;
 
           // check if it was for closing, and also read the incoming message
-          if (!readDelimitedFrom(raw_input, &wearableRequest))
+          if (!readDelimitedFromSockFD(wearableSockFD, wearableRequest))
           {
             // some client has disconnected, get its details and print
             getpeername(wearableSockFD, (struct sockaddr*)&execMonitorAddress, (socklen_t*)&execMonitorAddressLen);
@@ -221,15 +220,13 @@ int main(int argc, char **argv)
             close(wearableSockFD);
             wearableSockFDList.erase(it);  // 'it' now points to the next element after the erased one
 
-            delete raw_input;
-
             if (it == wearableSockFDList.end())
               break;
             continue;
           }
-          delete raw_input;
 
-          std::cout << "Received WearableRequest: " << std::endl << wearableRequest.DebugString();
+          ROS_INFO("Received Wearable Request");
+          std::cout << wearableRequest.DebugString();
 
           /******************************/
           /* Evaluate the input request */
@@ -246,10 +243,10 @@ int main(int argc, char **argv)
             // 'break' is used when a call to the planner is required
             // 'continue' is used when no calling to the planner is required
 
-            case wearableRequest.GET_POSE:
+            case wearableRequest.GET_POSE_REPEATED:
             {
               pb_wearable::WearableResponse wearableResponse;
-              wearableResponse.set_type(wearableResponse.POSE);
+              wearableResponse.set_type(wearableResponse.POSE_REPEATED);
 
               const pb_wearable::GetPoseRepeated& getPoseRepeated = wearableRequest.get_pose_repeated();
               for (int i = 0; i < getPoseRepeated.get_pose_size(); i++)
@@ -265,13 +262,10 @@ int main(int argc, char **argv)
                 poseRepeated_pose->set_yaw(pose.yaw);
               }
 
-              google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(wearableSockFD);
-              writeDelimitedTo(raw_output, wearableResponse);
-              delete raw_output;
-
+              writeDelimitedToSockFD(wearableSockFD, wearableResponse);
               continue;
             }
-            case wearableRequest.SET_DEST:
+            case wearableRequest.SET_DEST_REPEATED:
             {
               // Construct Planning Request
               pb_urs::PlanningRequest planningRequest;
@@ -300,10 +294,7 @@ int main(int argc, char **argv)
                 at->set_wp_id(wpId);
               }
 
-              google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(plannerSockFD);
-              writeDelimitedTo(raw_output, planningRequest);
-              delete raw_output;
-
+              writeDelimitedToSockFD(plannerSockFD, planningRequest);
               break;
             }
             case wearableRequest.GET_REGION:
@@ -317,10 +308,7 @@ int main(int argc, char **argv)
               wearableResponse_region->set_x1(REGION_X1);
               wearableResponse_region->set_y1(REGION_Y1);
 
-              google::protobuf::io::ZeroCopyOutputStream* raw_output = new google::protobuf::io::FileOutputStream(wearableSockFD);
-              writeDelimitedTo(raw_output, wearableResponse);
-              delete raw_output;
-
+              writeDelimitedToSockFD(wearableSockFD, wearableResponse);
               continue;
             }
           }
@@ -328,17 +316,14 @@ int main(int argc, char **argv)
           /*******************************/
           /* Retrieve a plan and execute */
           /*******************************/
-          raw_input = new google::protobuf::io::FileInputStream(plannerSockFD);
           pb_urs::PlanningResponse planningResponse;
-          if (!readDelimitedFrom(raw_input, &planningResponse))
+          if (!readDelimitedFromSockFD(plannerSockFD, planningResponse))
           {
             std::cerr << "Planner has disconnected" << std::endl;
-            delete raw_input;
             break;
           }
-          delete raw_input;
 
-          ROS_INFO("Received a plan");
+          ROS_INFO("Received Planning Response");
           std::cout << planningResponse.DebugString();
 
           for (int i = 0; i < planningResponse.actions_size(); i++)
@@ -396,9 +381,9 @@ int newWpId(std::vector<int>& allocatedWpList)
 
 void retrieveWpId(std::vector<int>& allocatedWpList)
 {
-  for (std::vector<int>::iterator it = allocatedWpList.begin(); it != allocatedWpList.end(); it++)
+  for (std::vector<int>::reverse_iterator rit = allocatedWpList.rbegin(); rit != allocatedWpList.rend(); rit++)
   {
-    wpUnusedIdList.push_back(*it);
+    wpUnusedIdList.push_back(*rit);
   }
 }
 
@@ -415,4 +400,3 @@ void initPlanningRequest(std::vector<int>& allocatedWpList, pb_urs::State* initi
     at->set_wp_id(wpId);
   }
 }
-
