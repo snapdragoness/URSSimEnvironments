@@ -165,6 +165,7 @@ int main(int argc, char **argv)
     {
       problemDef += "  (:goal " + goalDef + ")\n";
     }
+    problemDef += ")";
 
     std::ofstream pddlfile;
     pddlfile.open ("urs.pddl");
