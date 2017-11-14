@@ -72,6 +72,9 @@ public:
   ~Navigator();
 
   // important methods
+  void init() {
+    nh = boost::make_shared<ros::NodeHandle>();
+  }
   void navigate(Controller& controller, const Pose targetPose, const bool oriented);
   void cancel();
 

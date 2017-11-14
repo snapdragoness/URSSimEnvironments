@@ -52,6 +52,9 @@ public:
   ~Controller();
 
   // important methods
+  void init() {
+    nh = boost::make_shared<ros::NodeHandle>();
+  }
   void start(double height = 1.0);
 
   // auxiliary methods

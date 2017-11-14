@@ -10,7 +10,6 @@ Controller::~Controller()
 
 Controller::Controller(const std::string& ns)
 {
-  nh = boost::make_shared<ros::NodeHandle>();
   this->ns = ns;
 
   // set PID values

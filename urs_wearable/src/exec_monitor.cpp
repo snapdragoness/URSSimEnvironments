@@ -1,6 +1,8 @@
 #include "urs_wearable/pose.h"
 #include "urs_wearable/controller.h"
 #include "urs_wearable/navigator.h"
+#include "urs_wearable/pool.h"
+#include "urs_wearable/thread_manager.h"
 
 #include "protobuf_helper.h"
 #include "planning.pb.h"
@@ -9,10 +11,7 @@
 #include "action.pb.h"
 #include "wearable.pb.h"
 
-#include "pool.h"
-
 #include <ros/ros.h>
-#include <boost/thread.hpp>
 
 /*** Socket communication ***/
 #include <vector>
@@ -33,16 +32,23 @@ const uint16_t PORT_EXEC_MONITOR = 8080;
 
 const unsigned int N_UAV = 4;
 
-const int WP_TABLE_SIZE = 100;
+const int WP_POOL_SIZE = 100;
 
 const double REGION_X0 = -50;
 const double REGION_Y0 = -50;
 const double REGION_X1 = 50;
 const double REGION_Y1 = 50;
 
-Pool<Waypoint, WP_TABLE_SIZE> wpPool;
+const double DRONE_STATE_PUBLISH_RATE = 10;
 
-void initPlanningRequest(std::vector<int>&, pb_urs::State*, Controller*);
+Pool<Waypoint, WP_POOL_SIZE> wpPool;
+ThreadManager threadManager;
+
+Controller controller[N_UAV];
+Navigator navigator[N_UAV];
+
+void initPlanningRequest(std::vector<int>&, pb_urs::State*);
+void droneStatePublisher(int);
 
 int main(int argc, char **argv)
 {
@@ -61,13 +67,13 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-  Controller controller[N_UAV];
-  Navigator navigator[N_UAV];
-
   for (unsigned int i = 0; i < N_UAV; i++)
   {
+    controller[i].init();
     controller[i].setNamespace("/uav" + std::to_string(i));
     controller[i].start();
+
+    navigator[i].init();
     navigator[i].setNamespace("/uav" + std::to_string(i));
   }
 
@@ -183,6 +189,9 @@ int main(int argc, char **argv)
 
       // add the new socket to the vector of sockets
       wearableSockFDList.push_back(newSockFD);
+
+      // create drone's state publisher thread
+      threadManager.add(newSockFD, new boost::thread(droneStatePublisher, newSockFD));
     }
     else    // else it is some IO operations on some other sockets
     {
@@ -202,6 +211,9 @@ int main(int argc, char **argv)
             // some client has disconnected, get its details and print
             getpeername(wearableSockFD, (struct sockaddr*)&execMonitorAddress, (socklen_t*)&execMonitorAddressLen);
             ROS_INFO("Client disconnected [IP: %s, Port: %d]", inet_ntoa(execMonitorAddress.sin_addr), ntohs(execMonitorAddress.sin_port));
+
+            // interrupt any running threads for this wearableSockFD
+            threadManager.remove(wearableSockFD);
 
             // close the socket
             close(wearableSockFD);
@@ -256,7 +268,7 @@ int main(int argc, char **argv)
             {
               // Construct Planning Request
               pb_urs::PlanningRequest planningRequest;
-              initPlanningRequest(allocatedWpList, planningRequest.mutable_initial(), controller);
+              initPlanningRequest(allocatedWpList, planningRequest.mutable_initial());
 
               pb_urs::State* goalState = planningRequest.mutable_goal();
               const pb_wearable::SetDestRepeated& setDestRepeated = wearableRequest.set_dest_repeated();
@@ -349,7 +361,7 @@ int main(int argc, char **argv)
   google::protobuf::ShutdownProtobufLibrary();
 }
 
-void initPlanningRequest(std::vector<int>& allocatedWpList, pb_urs::State* initialState, Controller* controller)
+void initPlanningRequest(std::vector<int>& allocatedWpList, pb_urs::State* initialState)
 {
   for (unsigned int i = 0; i < N_UAV; i++)
   {
@@ -360,5 +372,37 @@ void initPlanningRequest(std::vector<int>& allocatedWpList, pb_urs::State* initi
     pb_urs::At* at = initialState->add_at();
     at->set_uav_id(i);
     at->set_wp_id(wpId);
+  }
+}
+
+void droneStatePublisher(int wearableSockFD)
+{
+  ros::Rate r(DRONE_STATE_PUBLISH_RATE);
+  while(ros::ok())
+  {
+    try
+    {
+      pb_wearable::WearableResponse wearableResponse;
+      wearableResponse.set_type(wearableResponse.POSE_REPEATED);
+
+      for (unsigned int uav_id = 0; uav_id < N_UAV; uav_id++)
+      {
+        Pose pose = controller[uav_id].getPose();
+
+        pb_wearable::PoseRepeated_Pose* poseRepeated_pose = wearableResponse.mutable_pose_repeated()->add_pose();
+        poseRepeated_pose->set_uav_id(uav_id);
+        poseRepeated_pose->set_x(pose.x);
+        poseRepeated_pose->set_y(pose.y);
+        poseRepeated_pose->set_z(pose.z);
+        poseRepeated_pose->set_yaw(pose.yaw);
+      }
+
+      writeDelimitedToSockFD(wearableSockFD, wearableResponse);
+      r.sleep();
+    }
+    catch (boost::thread_interrupted&)
+    {
+      break;
+    }
   }
 }

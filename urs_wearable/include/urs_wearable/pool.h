@@ -2,11 +2,13 @@
 #define URS_WEARABLE_INCLUDE_URS_WEARABLE_POOL_H_
 
 #include <vector>
+#include <boost/thread.hpp>
 
 template<typename T, const int POOL_SIZE>
   class Pool
   {
     std::vector<int> idList;
+    boost::mutex mut;
 
     void init()
     {
@@ -27,18 +29,22 @@ template<typename T, const int POOL_SIZE>
 
     int newId(std::vector<int>& allocatedIdList)
     {
+      mut.lock();
       int id = idList.back();
       idList.pop_back();
+      mut.unlock();
       allocatedIdList.push_back(id);
       return id;
     }
 
     void retrieveId(std::vector<int>& allocatedIdList)
     {
+      mut.lock();
       for (std::vector<int>::reverse_iterator rit = allocatedIdList.rbegin(); rit != allocatedIdList.rend(); rit++)
       {
         idList.push_back(*rit);
       }
+      mut.unlock();
     }
   };
 

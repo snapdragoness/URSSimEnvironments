@@ -53,15 +53,28 @@ int main(int argc, char const *argv[])
   /* initialize random seed: */
   srand(time(NULL));
 
+  pb_wearable::WearableRequest request;
+  pb_wearable::WearableResponse response;
+
   /***************************/
   /* Put your test code here */
   /***************************/
 
-  // 1
-  pb_wearable::WearableRequest req1;
-  req1.set_type(req1.SET_DEST_REPEATED);
+  // 0
+  while (true) {
+    if (!readDelimitedFromSockFD(execMonitorSockFD, response))
+    {
+      std::cerr << "Something is wrong" << std::endl;
+      return -1;
+    }
 
-  pb_wearable::SetDestRepeated* setDestRepeated = req1.mutable_set_dest_repeated();
+    std::cout << "wearableResponse: " << std::endl << response.DebugString();
+  }
+
+  // 1
+  request.set_type(request.SET_DEST_REPEATED);
+
+  pb_wearable::SetDestRepeated* setDestRepeated = request.mutable_set_dest_repeated();
   pb_wearable::SetDestRepeated_SetDest* setDest = setDestRepeated->add_set_dest();
   setDest->set_uav_id(1);
   setDest->set_x(rand() % 10 - 4);
@@ -74,22 +87,16 @@ int main(int argc, char const *argv[])
   setDest->set_y(rand() % 11 - 4);
   setDest->set_z(rand() % 10 + 1);
 
-  std::cout << "SET_DEST_REPEATED - " << writeDelimitedToSockFD(execMonitorSockFD, req1) << std::endl;
-
   // 2
-  pb_wearable::WearableRequest req2;
-  req2.set_type(req2.GET_REGION);
+  request.set_type(request.GET_REGION);
 
-  std::cout << "GET_REGION - " <<  writeDelimitedToSockFD(execMonitorSockFD, req2) << std::endl;
-
-  pb_wearable::WearableResponse res1;
-  if (!readDelimitedFromSockFD(execMonitorSockFD, res1))
+  if (!readDelimitedFromSockFD(execMonitorSockFD, response))
   {
     std::cerr << "Something is wrong" << std::endl;
     return -1;
   }
 
-  std::cout << "wearableResponse: " << std::endl << res1.DebugString();
+  std::cout << "wearableResponse: " << std::endl << response.DebugString();
 
 CLEANUP:
   close(execMonitorSockFD);
