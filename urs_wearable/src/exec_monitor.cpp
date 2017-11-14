@@ -9,9 +9,10 @@
 #include "action.pb.h"
 #include "wearable.pb.h"
 
-#include <ros/ros.h>
+#include "pool.h"
 
-const unsigned int N_UAV = 4;
+#include <ros/ros.h>
+#include <boost/thread.hpp>
 
 /*** Socket communication ***/
 #include <vector>
@@ -30,28 +31,16 @@ const char* PLANNER_PATH_NAME = CPA_PLUS_PATH_NAME;
 const uint16_t PORT_EXEC_MONITOR = 8080;
 /*** Socket communication [end] ***/
 
-/*** Waypoint ***/
-typedef struct Waypoint
-{
-  Pose pose;
-  bool rotate;
-} Waypoint;
+const unsigned int N_UAV = 4;
 
 const int WP_TABLE_SIZE = 100;
-Waypoint wpTable[WP_TABLE_SIZE];
-std::vector<int> wpUnusedIdList;
 
-void wpInit();
-int newWpId(std::vector<int>&);
-void retrieveWpId(std::vector<int>&);
-/*** Waypoint [end] ***/
-
-/*** Region ***/
 const double REGION_X0 = -50;
 const double REGION_Y0 = -50;
 const double REGION_X1 = 50;
 const double REGION_Y1 = 50;
-/*** Region [end] ***/
+
+Pool<Waypoint, WP_TABLE_SIZE> wpPool;
 
 void initPlanningRequest(std::vector<int>&, pb_urs::State*, Controller*);
 
@@ -81,8 +70,6 @@ int main(int argc, char **argv)
     controller[i].start();
     navigator[i].setNamespace("/uav" + std::to_string(i));
   }
-
-  wpInit();
 
   /************************************************/
   /* Establish a client to connect to the planner */
@@ -275,18 +262,18 @@ int main(int argc, char **argv)
               const pb_wearable::SetDestRepeated& setDestRepeated = wearableRequest.set_dest_repeated();
               for (int i = 0; i < setDestRepeated.set_dest_size(); i++)
               {
-                int wpId = newWpId(allocatedWpList);
-                wpTable[wpId].pose.x = setDestRepeated.set_dest(i).x();
-                wpTable[wpId].pose.y = setDestRepeated.set_dest(i).y();
-                wpTable[wpId].pose.z = setDestRepeated.set_dest(i).z();
+                int wpId = wpPool.newId(allocatedWpList);
+                wpPool.data[wpId].pose.x = setDestRepeated.set_dest(i).x();
+                wpPool.data[wpId].pose.y = setDestRepeated.set_dest(i).y();
+                wpPool.data[wpId].pose.z = setDestRepeated.set_dest(i).z();
                 if (setDestRepeated.set_dest(i).has_yaw())
                 {
-                  wpTable[wpId].pose.yaw = setDestRepeated.set_dest(i).yaw();
-                  wpTable[wpId].rotate = true;
+                  wpPool.data[wpId].pose.yaw = setDestRepeated.set_dest(i).yaw();
+                  wpPool.data[wpId].rotate = true;
                 }
                 else
                 {
-                  wpTable[wpId].rotate = false;
+                  wpPool.data[wpId].rotate = false;
                 }
 
                 pb_urs::At* at = goalState->add_at();
@@ -335,20 +322,20 @@ int main(int argc, char **argv)
               {
                 const pb_urs::Goto& action_goto = action.goto_();
                 int wpId = action_goto.wp_id();
-                if (wpTable[wpId].rotate)
+                if (wpPool.data[wpId].rotate)
                 {
-                  controller[action_goto.uav_id()].setDest(wpTable[wpId].pose);
+                  controller[action_goto.uav_id()].setDest(wpPool.data[wpId].pose);
                 }
                 else
                 {
-                  controller[action_goto.uav_id()].setDest(wpTable[wpId].pose.x, wpTable[wpId].pose.y, wpTable[wpId].pose.z);
+                  controller[action_goto.uav_id()].setDest(wpPool.data[wpId].pose.x, wpPool.data[wpId].pose.y, wpPool.data[wpId].pose.z);
                 }
                 break;
               }
             }
           }
 
-          retrieveWpId(allocatedWpList);
+          wpPool.retrieveId(allocatedWpList);
         }
       }
     }
@@ -362,38 +349,13 @@ int main(int argc, char **argv)
   google::protobuf::ShutdownProtobufLibrary();
 }
 
-void wpInit()
-{
-  wpUnusedIdList.reserve(WP_TABLE_SIZE);
-  for (int i = WP_TABLE_SIZE - 1; i >= 0; i--)
-  {
-    wpUnusedIdList.push_back(i);
-  }
-}
-
-int newWpId(std::vector<int>& allocatedWpList)
-{
-  int wp = wpUnusedIdList.back();
-  wpUnusedIdList.pop_back();
-  allocatedWpList.push_back(wp);
-  return wp;
-}
-
-void retrieveWpId(std::vector<int>& allocatedWpList)
-{
-  for (std::vector<int>::reverse_iterator rit = allocatedWpList.rbegin(); rit != allocatedWpList.rend(); rit++)
-  {
-    wpUnusedIdList.push_back(*rit);
-  }
-}
-
 void initPlanningRequest(std::vector<int>& allocatedWpList, pb_urs::State* initialState, Controller* controller)
 {
   for (unsigned int i = 0; i < N_UAV; i++)
   {
-    int wpId = newWpId(allocatedWpList);
-    wpTable[wpId].pose = controller[i].getPose();
-    wpTable[wpId].rotate = false;
+    int wpId = wpPool.newId(allocatedWpList);
+    wpPool.data[wpId].pose = controller[i].getPose();
+    wpPool.data[wpId].rotate = false;
 
     pb_urs::At* at = initialState->add_at();
     at->set_uav_id(i);

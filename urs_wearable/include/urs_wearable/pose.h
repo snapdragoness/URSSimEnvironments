@@ -7,4 +7,10 @@ typedef struct Pose
   double yaw;
 } Pose;
 
+typedef struct Waypoint
+{
+  Pose pose;
+  bool rotate;
+} Waypoint;
+
 #endif /* URS_WEARABLE_INCLUDE_URS_WEARABLE_POSE_H_ */
