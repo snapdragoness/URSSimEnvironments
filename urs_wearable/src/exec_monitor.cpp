@@ -54,7 +54,7 @@ Navigator navigator[N_UAV];
 
 void initPlanningRequest(std::vector<int>&, pb_urs::State*);
 void droneStatePublisher(int);
-void wearableRequestHandler(int, const pb_wearable::WearableRequest&);
+void wearableRequestHandler(int, const pb_wearable::WearableRequest);
 
 int main(int argc, char **argv)
 {
@@ -236,11 +236,10 @@ int main(int argc, char **argv)
             continue;
           }
 
-          ROS_INFO("Received Wearable Request");
-          std::cout << wearableRequest.DebugString();
+          std::cout << "Received Wearable Request" << std::endl << wearableRequest.DebugString();
 
           // create a wearableRequestHandler thread for the incoming request
-          boost::thread(wearableRequestHandler, wearableSockFD, boost::ref(wearableRequest));
+          boost::thread(wearableRequestHandler, wearableSockFD, wearableRequest);
         }
       }
     }
@@ -302,7 +301,7 @@ void droneStatePublisher(int wearableSockFD)
   }
 }
 
-void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableRequest& wearableRequest)
+void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableRequest wearableRequest)
 {
   /******************************/
   /* Evaluate the input request */
@@ -319,9 +318,6 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
 
   switch (wearableRequest.type())
   {
-    // 'break' is used when a call to the planner is required
-    // 'return' is used when no calling to the planner is required
-
     case wearableRequest.GET_POSE_REPEATED:
     {
       pb_wearable::WearableResponse wearableResponse;
@@ -371,6 +367,7 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
         at->set_uav_id(setDestRepeated.set_dest(i).uav_id());
         at->set_wp_id(wpId);
       }
+
       break;
     }
     case wearableRequest.GET_REGION:

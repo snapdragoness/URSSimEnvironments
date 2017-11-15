@@ -62,16 +62,16 @@ int main(int argc, char const *argv[])
   /***************************/
 
   // 0
-  while (true) {
-    pb_wearable::Status status;
-    if (!readDelimitedFromSockFD(execMonitorSockFD, status))
-    {
-      std::cerr << "Something is wrong" << std::endl;
-      return -1;
-    }
-
-    std::cout << "Status: " << std::endl << status.DebugString();
-  }
+//  while (true) {
+//    pb_wearable::Status status;
+//    if (!readDelimitedFromSockFD(execMonitorSockFD, status))
+//    {
+//      std::cerr << "Something is wrong" << std::endl;
+//      return -1;
+//    }
+//
+//    std::cout << "Status: " << std::endl << status.DebugString();
+//  }
 
   while(true)
   {
@@ -92,22 +92,22 @@ int main(int argc, char const *argv[])
     setDest->set_y(rand() % 11 - 4);
     setDest->set_z(rand() % 10 + 1);
 
-    writeDelimitedToSockFD(execMonitorSockFD, req1);
+    std::cout << "SET_DEST_REPEATED - " << writeDelimitedToSockFD(execMonitorSockFD, req1) << std::endl;
 
     // 2
-    pb_wearable::WearableRequest req2;
-    req2.set_type(req2.GET_REGION);
-    writeDelimitedToSockFD(execMonitorSockFD, req2);
-
-    pb_wearable::WearableResponse response;
-    if (!readDelimitedFromSockFD(execMonitorSockFD, response))
-    {
-      std::cerr << "Something is wrong" << std::endl;
-      return -1;
-    }
-    std::cout << "wearableResponse: " << std::endl << response.DebugString();
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+//    pb_wearable::WearableRequest req2;
+//    req2.set_type(req2.GET_REGION);
+//    std::cout << "GET_REGION - " << writeDelimitedToSockFD(execMonitorSockFD, req2) << std::endl;
+//
+//    pb_wearable::WearableResponse response;
+//    if (!readDelimitedFromSockFD(execMonitorSockFD, response))
+//    {
+//      std::cerr << "Something is wrong" << std::endl;
+//      return -1;
+//    }
+//    std::cout << "wearableResponse: " << std::endl << response.DebugString();
+//
+//    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
   }
 
 CLEANUP:
