@@ -62,16 +62,16 @@ int main(int argc, char const *argv[])
   /***************************/
 
   // 0
-//  while (true) {
-//    pb_wearable::WearableResponse response;
-//    if (!readDelimitedFromSockFD(execMonitorSockFD, response))
-//    {
-//      std::cerr << "Something is wrong" << std::endl;
-//      return -1;
-//    }
-//
-//    std::cout << "wearableResponse: " << std::endl << response.DebugString();
-//  }
+  while (true) {
+    pb_wearable::Status status;
+    if (!readDelimitedFromSockFD(execMonitorSockFD, status))
+    {
+      std::cerr << "Something is wrong" << std::endl;
+      return -1;
+    }
+
+    std::cout << "Status: " << std::endl << status.DebugString();
+  }
 
   while(true)
   {

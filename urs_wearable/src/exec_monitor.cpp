@@ -277,22 +277,21 @@ void droneStatePublisher(int wearableSockFD)
   {
     try
     {
-      pb_wearable::WearableResponse wearableResponse;
-      wearableResponse.set_type(wearableResponse.POSE_REPEATED);
+      pb_wearable::Status status;
 
       for (unsigned int uav_id = 0; uav_id < N_UAV; uav_id++)
       {
         Pose pose = controller[uav_id].getPose();
 
-        pb_wearable::PoseRepeated_Pose* poseRepeated_pose = wearableResponse.mutable_pose_repeated()->add_pose();
-        poseRepeated_pose->set_uav_id(uav_id);
-        poseRepeated_pose->set_x(pose.x);
-        poseRepeated_pose->set_y(pose.y);
-        poseRepeated_pose->set_z(pose.z);
-        poseRepeated_pose->set_yaw(pose.yaw);
+        pb_wearable::Status_Pose* status_pose = status.add_pose();
+        status_pose->set_uav_id(uav_id);
+        status_pose->set_x(pose.x);
+        status_pose->set_y(pose.y);
+        status_pose->set_z(pose.z);
+        status_pose->set_yaw(pose.yaw);
       }
 
-      writeDelimitedToSockFD(wearableSockFD, wearableResponse);
+      writeDelimitedToSockFD(wearableSockFD, status);
 
       boost::this_thread::sleep_for(boost::chrono::milliseconds{DRONE_STATE_PUBLISH_DELAY_MS});
     }
