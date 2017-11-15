@@ -29,7 +29,7 @@
 #define BUILT_DATE "-"
 #endif
 
-const char* CPA_PLUS_PATH_NAME = "/tmp/cpa_plus_socket";
+const char* CPA_PLUS_PATH_NAME = "/tmp/cpa_plus_socket_2";
 
 Reader reader;
 Timer timer;

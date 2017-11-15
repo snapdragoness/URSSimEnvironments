@@ -1,0 +1,1070 @@
+State 0 conflicts: 1 reduce/reduce
+
+
+Grammar
+
+    0 $accept: input $end
+
+    1 input: %empty
+    2      | fluent_decls action_decls domain init_spec goal_spec
+
+    3 id: ID
+
+    4 constant: NUMBER
+    5         | id
+
+    6 param: constant
+
+    7 param_list: param
+    8           | param_list COMMA param
+
+    9 fluent: id
+   10       | id LEFT_PAREN param_list RIGHT_PAREN
+
+   11 fluent_list: fluent
+   12            | fluent_list COMMA fluent
+
+   13 literal: fluent
+   14        | NEGATION fluent
+
+   15 literal_list: literal
+   16             | literal_list COMMA literal
+
+   17 formula: literal
+   18        | formula COMMA formula
+   19        | formula OR formula
+   20        | LEFT_PAREN formula RIGHT_PAREN
+
+   21 fluent_decl: FLUENT fluent_list SEMICOLON
+
+   22 fluent_decls: %empty
+   23             | fluent_decls fluent_decl
+
+   24 action: id
+   25       | id LEFT_PAREN param_list RIGHT_PAREN
+
+   26 action_list: action
+   27            | action_list COMMA action
+
+   28 action_decl: ACTION action_list SEMICOLON
+
+   29 action_decls: %empty
+   30             | action_decls action_decl
+
+   31 if_part: %empty
+   32        | IF literal_list
+
+   33 static_law: literal_list if_part SEMICOLON
+
+   34 dynamic_law: action CAUSES literal_list if_part SEMICOLON
+
+   35 executability: EXECUTABLE action if_part SEMICOLON
+
+   36 impossibility: IMPOSSIBLE action if_part SEMICOLON
+
+   37 proposition: static_law
+   38            | dynamic_law
+   39            | executability
+   40            | impossibility
+
+   41 domain: %empty
+   42       | domain proposition
+
+   43 init: INIT formula SEMICOLON
+
+   44 init_spec: %empty
+   45          | init_spec init
+
+   46 gd_formula: literal
+   47           | gd_formula COMMA gd_formula
+   48           | gd_formula OR gd_formula
+   49           | LEFT_PAREN gd_formula RIGHT_PAREN
+
+   50 goal: GOAL gd_formula SEMICOLON
+
+   51 goal_spec: %empty
+   52          | goal_spec goal
+
+
+Terminals, with rules where they appear
+
+$end (0) 0
+error (256)
+OR (258) 19 48
+COMMA (259) 8 12 16 18 27 47
+SEMICOLON (260) 21 28 33 34 35 36 43 50
+LEFT_PAREN (261) 10 20 25 49
+RIGHT_PAREN (262) 10 20 25 49
+ID (263) 3
+NEGATION (264) 14
+NUMBER (265) 4
+FLUENT (266) 21
+ACTION (267) 28
+IF (268) 32
+CAUSES (269) 34
+EXECUTABLE (270) 35
+IMPOSSIBLE (271) 36
+INIT (272) 43
+GOAL (273) 50
+
+
+Nonterminals, with rules where they appear
+
+$accept (19)
+    on left: 0
+input (20)
+    on left: 1 2, on right: 0
+id (21)
+    on left: 3, on right: 5 9 10 24 25
+constant (22)
+    on left: 4 5, on right: 6
+param (23)
+    on left: 6, on right: 7 8
+param_list (24)
+    on left: 7 8, on right: 8 10 25
+fluent (25)
+    on left: 9 10, on right: 11 12 13 14
+fluent_list (26)
+    on left: 11 12, on right: 12 21
+literal (27)
+    on left: 13 14, on right: 15 16 17 46
+literal_list (28)
+    on left: 15 16, on right: 16 32 33 34
+formula (29)
+    on left: 17 18 19 20, on right: 18 19 20 43
+fluent_decl (30)
+    on left: 21, on right: 23
+fluent_decls (31)
+    on left: 22 23, on right: 2 23
+action (32)
+    on left: 24 25, on right: 26 27 34 35 36
+action_list (33)
+    on left: 26 27, on right: 27 28
+action_decl (34)
+    on left: 28, on right: 30
+action_decls (35)
+    on left: 29 30, on right: 2 30
+if_part (36)
+    on left: 31 32, on right: 33 34 35 36
+static_law (37)
+    on left: 33, on right: 37
+dynamic_law (38)
+    on left: 34, on right: 38
+executability (39)
+    on left: 35, on right: 39
+impossibility (40)
+    on left: 36, on right: 40
+proposition (41)
+    on left: 37 38 39 40, on right: 42
+domain (42)
+    on left: 41 42, on right: 2 42
+init (43)
+    on left: 43, on right: 45
+init_spec (44)
+    on left: 44 45, on right: 2 45
+gd_formula (45)
+    on left: 46 47 48 49, on right: 47 48 49 50
+goal (46)
+    on left: 50, on right: 52
+goal_spec (47)
+    on left: 51 52, on right: 2 52
+
+
+State 0
+
+    0 $accept: . input $end
+
+    $end      reduce using rule 1 (input)
+    $end      [reduce using rule 22 (fluent_decls)]
+    $default  reduce using rule 22 (fluent_decls)
+
+    input         go to state 1
+    fluent_decls  go to state 2
+
+
+State 1
+
+    0 $accept: input . $end
+
+    $end  shift, and go to state 3
+
+
+State 2
+
+    2 input: fluent_decls . action_decls domain init_spec goal_spec
+   23 fluent_decls: fluent_decls . fluent_decl
+
+    FLUENT  shift, and go to state 4
+
+    $default  reduce using rule 29 (action_decls)
+
+    fluent_decl   go to state 5
+    action_decls  go to state 6
+
+
+State 3
+
+    0 $accept: input $end .
+
+    $default  accept
+
+
+State 4
+
+   21 fluent_decl: FLUENT . fluent_list SEMICOLON
+
+    ID  shift, and go to state 7
+
+    id           go to state 8
+    fluent       go to state 9
+    fluent_list  go to state 10
+
+
+State 5
+
+   23 fluent_decls: fluent_decls fluent_decl .
+
+    $default  reduce using rule 23 (fluent_decls)
+
+
+State 6
+
+    2 input: fluent_decls action_decls . domain init_spec goal_spec
+   30 action_decls: action_decls . action_decl
+
+    ACTION  shift, and go to state 11
+
+    $default  reduce using rule 41 (domain)
+
+    action_decl  go to state 12
+    domain       go to state 13
+
+
+State 7
+
+    3 id: ID .
+
+    $default  reduce using rule 3 (id)
+
+
+State 8
+
+    9 fluent: id .
+   10       | id . LEFT_PAREN param_list RIGHT_PAREN
+
+    LEFT_PAREN  shift, and go to state 14
+
+    $default  reduce using rule 9 (fluent)
+
+
+State 9
+
+   11 fluent_list: fluent .
+
+    $default  reduce using rule 11 (fluent_list)
+
+
+State 10
+
+   12 fluent_list: fluent_list . COMMA fluent
+   21 fluent_decl: FLUENT fluent_list . SEMICOLON
+
+    COMMA      shift, and go to state 15
+    SEMICOLON  shift, and go to state 16
+
+
+State 11
+
+   28 action_decl: ACTION . action_list SEMICOLON
+
+    ID  shift, and go to state 7
+
+    id           go to state 17
+    action       go to state 18
+    action_list  go to state 19
+
+
+State 12
+
+   30 action_decls: action_decls action_decl .
+
+    $default  reduce using rule 30 (action_decls)
+
+
+State 13
+
+    2 input: fluent_decls action_decls domain . init_spec goal_spec
+   42 domain: domain . proposition
+
+    ID          shift, and go to state 7
+    NEGATION    shift, and go to state 20
+    EXECUTABLE  shift, and go to state 21
+    IMPOSSIBLE  shift, and go to state 22
+
+    $default  reduce using rule 44 (init_spec)
+
+    id             go to state 23
+    fluent         go to state 24
+    literal        go to state 25
+    literal_list   go to state 26
+    action         go to state 27
+    static_law     go to state 28
+    dynamic_law    go to state 29
+    executability  go to state 30
+    impossibility  go to state 31
+    proposition    go to state 32
+    init_spec      go to state 33
+
+
+State 14
+
+   10 fluent: id LEFT_PAREN . param_list RIGHT_PAREN
+
+    ID      shift, and go to state 7
+    NUMBER  shift, and go to state 34
+
+    id          go to state 35
+    constant    go to state 36
+    param       go to state 37
+    param_list  go to state 38
+
+
+State 15
+
+   12 fluent_list: fluent_list COMMA . fluent
+
+    ID  shift, and go to state 7
+
+    id      go to state 8
+    fluent  go to state 39
+
+
+State 16
+
+   21 fluent_decl: FLUENT fluent_list SEMICOLON .
+
+    $default  reduce using rule 21 (fluent_decl)
+
+
+State 17
+
+   24 action: id .
+   25       | id . LEFT_PAREN param_list RIGHT_PAREN
+
+    LEFT_PAREN  shift, and go to state 40
+
+    $default  reduce using rule 24 (action)
+
+
+State 18
+
+   26 action_list: action .
+
+    $default  reduce using rule 26 (action_list)
+
+
+State 19
+
+   27 action_list: action_list . COMMA action
+   28 action_decl: ACTION action_list . SEMICOLON
+
+    COMMA      shift, and go to state 41
+    SEMICOLON  shift, and go to state 42
+
+
+State 20
+
+   14 literal: NEGATION . fluent
+
+    ID  shift, and go to state 7
+
+    id      go to state 8
+    fluent  go to state 43
+
+
+State 21
+
+   35 executability: EXECUTABLE . action if_part SEMICOLON
+
+    ID  shift, and go to state 7
+
+    id      go to state 17
+    action  go to state 44
+
+
+State 22
+
+   36 impossibility: IMPOSSIBLE . action if_part SEMICOLON
+
+    ID  shift, and go to state 7
+
+    id      go to state 17
+    action  go to state 45
+
+
+State 23
+
+    9 fluent: id .
+   10       | id . LEFT_PAREN param_list RIGHT_PAREN
+   24 action: id .
+   25       | id . LEFT_PAREN param_list RIGHT_PAREN
+
+    LEFT_PAREN  shift, and go to state 46
+
+    CAUSES    reduce using rule 24 (action)
+    $default  reduce using rule 9 (fluent)
+
+
+State 24
+
+   13 literal: fluent .
+
+    $default  reduce using rule 13 (literal)
+
+
+State 25
+
+   15 literal_list: literal .
+
+    $default  reduce using rule 15 (literal_list)
+
+
+State 26
+
+   16 literal_list: literal_list . COMMA literal
+   33 static_law: literal_list . if_part SEMICOLON
+
+    COMMA  shift, and go to state 47
+    IF     shift, and go to state 48
+
+    $default  reduce using rule 31 (if_part)
+
+    if_part  go to state 49
+
+
+State 27
+
+   34 dynamic_law: action . CAUSES literal_list if_part SEMICOLON
+
+    CAUSES  shift, and go to state 50
+
+
+State 28
+
+   37 proposition: static_law .
+
+    $default  reduce using rule 37 (proposition)
+
+
+State 29
+
+   38 proposition: dynamic_law .
+
+    $default  reduce using rule 38 (proposition)
+
+
+State 30
+
+   39 proposition: executability .
+
+    $default  reduce using rule 39 (proposition)
+
+
+State 31
+
+   40 proposition: impossibility .
+
+    $default  reduce using rule 40 (proposition)
+
+
+State 32
+
+   42 domain: domain proposition .
+
+    $default  reduce using rule 42 (domain)
+
+
+State 33
+
+    2 input: fluent_decls action_decls domain init_spec . goal_spec
+   45 init_spec: init_spec . init
+
+    INIT  shift, and go to state 51
+
+    $default  reduce using rule 51 (goal_spec)
+
+    init       go to state 52
+    goal_spec  go to state 53
+
+
+State 34
+
+    4 constant: NUMBER .
+
+    $default  reduce using rule 4 (constant)
+
+
+State 35
+
+    5 constant: id .
+
+    $default  reduce using rule 5 (constant)
+
+
+State 36
+
+    6 param: constant .
+
+    $default  reduce using rule 6 (param)
+
+
+State 37
+
+    7 param_list: param .
+
+    $default  reduce using rule 7 (param_list)
+
+
+State 38
+
+    8 param_list: param_list . COMMA param
+   10 fluent: id LEFT_PAREN param_list . RIGHT_PAREN
+
+    COMMA        shift, and go to state 54
+    RIGHT_PAREN  shift, and go to state 55
+
+
+State 39
+
+   12 fluent_list: fluent_list COMMA fluent .
+
+    $default  reduce using rule 12 (fluent_list)
+
+
+State 40
+
+   25 action: id LEFT_PAREN . param_list RIGHT_PAREN
+
+    ID      shift, and go to state 7
+    NUMBER  shift, and go to state 34
+
+    id          go to state 35
+    constant    go to state 36
+    param       go to state 37
+    param_list  go to state 56
+
+
+State 41
+
+   27 action_list: action_list COMMA . action
+
+    ID  shift, and go to state 7
+
+    id      go to state 17
+    action  go to state 57
+
+
+State 42
+
+   28 action_decl: ACTION action_list SEMICOLON .
+
+    $default  reduce using rule 28 (action_decl)
+
+
+State 43
+
+   14 literal: NEGATION fluent .
+
+    $default  reduce using rule 14 (literal)
+
+
+State 44
+
+   35 executability: EXECUTABLE action . if_part SEMICOLON
+
+    IF  shift, and go to state 48
+
+    $default  reduce using rule 31 (if_part)
+
+    if_part  go to state 58
+
+
+State 45
+
+   36 impossibility: IMPOSSIBLE action . if_part SEMICOLON
+
+    IF  shift, and go to state 48
+
+    $default  reduce using rule 31 (if_part)
+
+    if_part  go to state 59
+
+
+State 46
+
+   10 fluent: id LEFT_PAREN . param_list RIGHT_PAREN
+   25 action: id LEFT_PAREN . param_list RIGHT_PAREN
+
+    ID      shift, and go to state 7
+    NUMBER  shift, and go to state 34
+
+    id          go to state 35
+    constant    go to state 36
+    param       go to state 37
+    param_list  go to state 60
+
+
+State 47
+
+   16 literal_list: literal_list COMMA . literal
+
+    ID        shift, and go to state 7
+    NEGATION  shift, and go to state 20
+
+    id       go to state 8
+    fluent   go to state 24
+    literal  go to state 61
+
+
+State 48
+
+   32 if_part: IF . literal_list
+
+    ID        shift, and go to state 7
+    NEGATION  shift, and go to state 20
+
+    id            go to state 8
+    fluent        go to state 24
+    literal       go to state 25
+    literal_list  go to state 62
+
+
+State 49
+
+   33 static_law: literal_list if_part . SEMICOLON
+
+    SEMICOLON  shift, and go to state 63
+
+
+State 50
+
+   34 dynamic_law: action CAUSES . literal_list if_part SEMICOLON
+
+    ID        shift, and go to state 7
+    NEGATION  shift, and go to state 20
+
+    id            go to state 8
+    fluent        go to state 24
+    literal       go to state 25
+    literal_list  go to state 64
+
+
+State 51
+
+   43 init: INIT . formula SEMICOLON
+
+    LEFT_PAREN  shift, and go to state 65
+    ID          shift, and go to state 7
+    NEGATION    shift, and go to state 20
+
+    id       go to state 8
+    fluent   go to state 24
+    literal  go to state 66
+    formula  go to state 67
+
+
+State 52
+
+   45 init_spec: init_spec init .
+
+    $default  reduce using rule 45 (init_spec)
+
+
+State 53
+
+    2 input: fluent_decls action_decls domain init_spec goal_spec .
+   52 goal_spec: goal_spec . goal
+
+    GOAL  shift, and go to state 68
+
+    $default  reduce using rule 2 (input)
+
+    goal  go to state 69
+
+
+State 54
+
+    8 param_list: param_list COMMA . param
+
+    ID      shift, and go to state 7
+    NUMBER  shift, and go to state 34
+
+    id        go to state 35
+    constant  go to state 36
+    param     go to state 70
+
+
+State 55
+
+   10 fluent: id LEFT_PAREN param_list RIGHT_PAREN .
+
+    $default  reduce using rule 10 (fluent)
+
+
+State 56
+
+    8 param_list: param_list . COMMA param
+   25 action: id LEFT_PAREN param_list . RIGHT_PAREN
+
+    COMMA        shift, and go to state 54
+    RIGHT_PAREN  shift, and go to state 71
+
+
+State 57
+
+   27 action_list: action_list COMMA action .
+
+    $default  reduce using rule 27 (action_list)
+
+
+State 58
+
+   35 executability: EXECUTABLE action if_part . SEMICOLON
+
+    SEMICOLON  shift, and go to state 72
+
+
+State 59
+
+   36 impossibility: IMPOSSIBLE action if_part . SEMICOLON
+
+    SEMICOLON  shift, and go to state 73
+
+
+State 60
+
+    8 param_list: param_list . COMMA param
+   10 fluent: id LEFT_PAREN param_list . RIGHT_PAREN
+   25 action: id LEFT_PAREN param_list . RIGHT_PAREN
+
+    COMMA        shift, and go to state 54
+    RIGHT_PAREN  shift, and go to state 74
+
+
+State 61
+
+   16 literal_list: literal_list COMMA literal .
+
+    $default  reduce using rule 16 (literal_list)
+
+
+State 62
+
+   16 literal_list: literal_list . COMMA literal
+   32 if_part: IF literal_list .
+
+    COMMA  shift, and go to state 47
+
+    $default  reduce using rule 32 (if_part)
+
+
+State 63
+
+   33 static_law: literal_list if_part SEMICOLON .
+
+    $default  reduce using rule 33 (static_law)
+
+
+State 64
+
+   16 literal_list: literal_list . COMMA literal
+   34 dynamic_law: action CAUSES literal_list . if_part SEMICOLON
+
+    COMMA  shift, and go to state 47
+    IF     shift, and go to state 48
+
+    $default  reduce using rule 31 (if_part)
+
+    if_part  go to state 75
+
+
+State 65
+
+   20 formula: LEFT_PAREN . formula RIGHT_PAREN
+
+    LEFT_PAREN  shift, and go to state 65
+    ID          shift, and go to state 7
+    NEGATION    shift, and go to state 20
+
+    id       go to state 8
+    fluent   go to state 24
+    literal  go to state 66
+    formula  go to state 76
+
+
+State 66
+
+   17 formula: literal .
+
+    $default  reduce using rule 17 (formula)
+
+
+State 67
+
+   18 formula: formula . COMMA formula
+   19        | formula . OR formula
+   43 init: INIT formula . SEMICOLON
+
+    OR         shift, and go to state 77
+    COMMA      shift, and go to state 78
+    SEMICOLON  shift, and go to state 79
+
+
+State 68
+
+   50 goal: GOAL . gd_formula SEMICOLON
+
+    LEFT_PAREN  shift, and go to state 80
+    ID          shift, and go to state 7
+    NEGATION    shift, and go to state 20
+
+    id          go to state 8
+    fluent      go to state 24
+    literal     go to state 81
+    gd_formula  go to state 82
+
+
+State 69
+
+   52 goal_spec: goal_spec goal .
+
+    $default  reduce using rule 52 (goal_spec)
+
+
+State 70
+
+    8 param_list: param_list COMMA param .
+
+    $default  reduce using rule 8 (param_list)
+
+
+State 71
+
+   25 action: id LEFT_PAREN param_list RIGHT_PAREN .
+
+    $default  reduce using rule 25 (action)
+
+
+State 72
+
+   35 executability: EXECUTABLE action if_part SEMICOLON .
+
+    $default  reduce using rule 35 (executability)
+
+
+State 73
+
+   36 impossibility: IMPOSSIBLE action if_part SEMICOLON .
+
+    $default  reduce using rule 36 (impossibility)
+
+
+State 74
+
+   10 fluent: id LEFT_PAREN param_list RIGHT_PAREN .
+   25 action: id LEFT_PAREN param_list RIGHT_PAREN .
+
+    CAUSES    reduce using rule 25 (action)
+    $default  reduce using rule 10 (fluent)
+
+
+State 75
+
+   34 dynamic_law: action CAUSES literal_list if_part . SEMICOLON
+
+    SEMICOLON  shift, and go to state 83
+
+
+State 76
+
+   18 formula: formula . COMMA formula
+   19        | formula . OR formula
+   20        | LEFT_PAREN formula . RIGHT_PAREN
+
+    OR           shift, and go to state 77
+    COMMA        shift, and go to state 78
+    RIGHT_PAREN  shift, and go to state 84
+
+
+State 77
+
+   19 formula: formula OR . formula
+
+    LEFT_PAREN  shift, and go to state 65
+    ID          shift, and go to state 7
+    NEGATION    shift, and go to state 20
+
+    id       go to state 8
+    fluent   go to state 24
+    literal  go to state 66
+    formula  go to state 85
+
+
+State 78
+
+   18 formula: formula COMMA . formula
+
+    LEFT_PAREN  shift, and go to state 65
+    ID          shift, and go to state 7
+    NEGATION    shift, and go to state 20
+
+    id       go to state 8
+    fluent   go to state 24
+    literal  go to state 66
+    formula  go to state 86
+
+
+State 79
+
+   43 init: INIT formula SEMICOLON .
+
+    $default  reduce using rule 43 (init)
+
+
+State 80
+
+   49 gd_formula: LEFT_PAREN . gd_formula RIGHT_PAREN
+
+    LEFT_PAREN  shift, and go to state 80
+    ID          shift, and go to state 7
+    NEGATION    shift, and go to state 20
+
+    id          go to state 8
+    fluent      go to state 24
+    literal     go to state 81
+    gd_formula  go to state 87
+
+
+State 81
+
+   46 gd_formula: literal .
+
+    $default  reduce using rule 46 (gd_formula)
+
+
+State 82
+
+   47 gd_formula: gd_formula . COMMA gd_formula
+   48           | gd_formula . OR gd_formula
+   50 goal: GOAL gd_formula . SEMICOLON
+
+    OR         shift, and go to state 88
+    COMMA      shift, and go to state 89
+    SEMICOLON  shift, and go to state 90
+
+
+State 83
+
+   34 dynamic_law: action CAUSES literal_list if_part SEMICOLON .
+
+    $default  reduce using rule 34 (dynamic_law)
+
+
+State 84
+
+   20 formula: LEFT_PAREN formula RIGHT_PAREN .
+
+    $default  reduce using rule 20 (formula)
+
+
+State 85
+
+   18 formula: formula . COMMA formula
+   19        | formula . OR formula
+   19        | formula OR formula .
+
+    COMMA  shift, and go to state 78
+
+    $default  reduce using rule 19 (formula)
+
+
+State 86
+
+   18 formula: formula . COMMA formula
+   18        | formula COMMA formula .
+   19        | formula . OR formula
+
+    $default  reduce using rule 18 (formula)
+
+
+State 87
+
+   47 gd_formula: gd_formula . COMMA gd_formula
+   48           | gd_formula . OR gd_formula
+   49           | LEFT_PAREN gd_formula . RIGHT_PAREN
+
+    OR           shift, and go to state 88
+    COMMA        shift, and go to state 89
+    RIGHT_PAREN  shift, and go to state 91
+
+
+State 88
+
+   48 gd_formula: gd_formula OR . gd_formula
+
+    LEFT_PAREN  shift, and go to state 80
+    ID          shift, and go to state 7
+    NEGATION    shift, and go to state 20
+
+    id          go to state 8
+    fluent      go to state 24
+    literal     go to state 81
+    gd_formula  go to state 92
+
+
+State 89
+
+   47 gd_formula: gd_formula COMMA . gd_formula
+
+    LEFT_PAREN  shift, and go to state 80
+    ID          shift, and go to state 7
+    NEGATION    shift, and go to state 20
+
+    id          go to state 8
+    fluent      go to state 24
+    literal     go to state 81
+    gd_formula  go to state 93
+
+
+State 90
+
+   50 goal: GOAL gd_formula SEMICOLON .
+
+    $default  reduce using rule 50 (goal)
+
+
+State 91
+
+   49 gd_formula: LEFT_PAREN gd_formula RIGHT_PAREN .
+
+    $default  reduce using rule 49 (gd_formula)
+
+
+State 92
+
+   47 gd_formula: gd_formula . COMMA gd_formula
+   48           | gd_formula . OR gd_formula
+   48           | gd_formula OR gd_formula .
+
+    COMMA  shift, and go to state 89
+
+    $default  reduce using rule 48 (gd_formula)
+
+
+State 93
+
+   47 gd_formula: gd_formula . COMMA gd_formula
+   47           | gd_formula COMMA gd_formula .
+   48           | gd_formula . OR gd_formula
+
+    $default  reduce using rule 47 (gd_formula)

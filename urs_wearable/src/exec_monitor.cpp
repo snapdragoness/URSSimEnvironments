@@ -12,6 +12,19 @@
 #include "wearable.pb.h"
 
 #include <ros/ros.h>
+#include <boost/chrono.hpp>
+
+const unsigned int N_UAV = 4;
+
+const int WP_POOL_SIZE = 100;
+const int PLANNER_POOL_SIZE = 2;
+
+const double REGION_X0 = -50;
+const double REGION_Y0 = -50;
+const double REGION_X1 = 50;
+const double REGION_Y1 = 50;
+
+const int DRONE_STATE_PUBLISH_DELAY_MS = 100;
 
 /*** Socket communication ***/
 #include <vector>
@@ -23,25 +36,17 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-const char* CPA_PLUS_PATH_NAME = "/tmp/cpa_plus_socket";
-const char* MADAGASCAR_PATH_NAME = "/tmp/madagascar_socket";
-const char* PLANNER_PATH_NAME = CPA_PLUS_PATH_NAME;
+const char* plannerPathName[PLANNER_POOL_SIZE] =
+{
+  "/tmp/cpa_plus_socket_1",
+  "/tmp/cpa_plus_socket_2"
+};
 
 const uint16_t PORT_EXEC_MONITOR = 8080;
 /*** Socket communication [end] ***/
 
-const unsigned int N_UAV = 4;
-
-const int WP_POOL_SIZE = 100;
-
-const double REGION_X0 = -50;
-const double REGION_Y0 = -50;
-const double REGION_X1 = 50;
-const double REGION_Y1 = 50;
-
-const double DRONE_STATE_PUBLISH_RATE = 10;
-
 Pool<Waypoint, WP_POOL_SIZE> wpPool;
+Pool<int, PLANNER_POOL_SIZE> plannerPool;
 ThreadManager threadManager;
 
 Controller controller[N_UAV];
@@ -49,6 +54,7 @@ Navigator navigator[N_UAV];
 
 void initPlanningRequest(std::vector<int>&, pb_urs::State*);
 void droneStatePublisher(int);
+void wearableRequestHandler(int, const pb_wearable::WearableRequest&);
 
 int main(int argc, char **argv)
 {
@@ -80,25 +86,31 @@ int main(int argc, char **argv)
   /************************************************/
   /* Establish a client to connect to the planner */
   /************************************************/
-  int plannerSockFD;
-  struct sockaddr_un plannerAddress;
-
-  // create a socket for the client
-  if ((plannerSockFD = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+  for (int i = 0; i < PLANNER_POOL_SIZE; i++)
   {
-    ROS_ERROR("Failed to create a planner socket");
-    exit(EXIT_FAILURE);
-  }
+    int plannerSockFD;
+    struct sockaddr_un plannerAddress;
 
-  // name the socket, as agreed with the server
-  plannerAddress.sun_family = AF_UNIX;
-  strcpy(plannerAddress.sun_path, PLANNER_PATH_NAME);
+    // create a socket for the client
+    if ((plannerSockFD = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+    {
+      ROS_ERROR("Failed to create a planner socket for %s", plannerPathName[i]);
+      exit(EXIT_FAILURE);
+    }
 
-  // now connect our socket to the server's socket
-  if (connect(plannerSockFD, (struct sockaddr*)&plannerAddress, sizeof(struct sockaddr_un)) == -1)
-  {
-    ROS_ERROR("Failed to connect to the planner");
-    exit(EXIT_FAILURE);
+    // name the socket, as agreed with the server
+    plannerAddress.sun_family = AF_UNIX;
+    strcpy(plannerAddress.sun_path, plannerPathName[i]);
+
+    // now connect our socket to the server's socket
+    if (connect(plannerSockFD, (struct sockaddr*)&plannerAddress, sizeof(struct sockaddr_un)) == -1)
+    {
+      ROS_ERROR("Failed to connect to %s", plannerPathName[i]);
+      exit(EXIT_FAILURE);
+    }
+
+    plannerPool.data[i] = plannerSockFD;
+    ROS_INFO("Successfully connect to %s", plannerPathName[i]);
   }
 
   /*********************************************************/
@@ -212,7 +224,7 @@ int main(int argc, char **argv)
             getpeername(wearableSockFD, (struct sockaddr*)&execMonitorAddress, (socklen_t*)&execMonitorAddressLen);
             ROS_INFO("Client disconnected [IP: %s, Port: %d]", inet_ntoa(execMonitorAddress.sin_addr), ntohs(execMonitorAddress.sin_port));
 
-            // interrupt any running threads for this wearableSockFD
+            // remove any running threads from this wearable
             threadManager.remove(wearableSockFD);
 
             // close the socket
@@ -227,135 +239,19 @@ int main(int argc, char **argv)
           ROS_INFO("Received Wearable Request");
           std::cout << wearableRequest.DebugString();
 
-          /******************************/
-          /* Evaluate the input request */
-          /******************************/
-          // Depending on the request, it may
-          // - call the planner
-          // - respond to the wearable
-          // - just perform some actions
-          // - a mix of the above
-
-          std::vector<int> allocatedWpList;
-          switch (wearableRequest.type())
-          {
-            // 'break' is used when a call to the planner is required
-            // 'continue' is used when no calling to the planner is required
-
-            case wearableRequest.GET_POSE_REPEATED:
-            {
-              pb_wearable::WearableResponse wearableResponse;
-              wearableResponse.set_type(wearableResponse.POSE_REPEATED);
-
-              const pb_wearable::GetPoseRepeated& getPoseRepeated = wearableRequest.get_pose_repeated();
-              for (int i = 0; i < getPoseRepeated.get_pose_size(); i++)
-              {
-                int uav_id = getPoseRepeated.get_pose(i).uav_id();
-                Pose pose = controller[uav_id].getPose();
-
-                pb_wearable::PoseRepeated_Pose* poseRepeated_pose = wearableResponse.mutable_pose_repeated()->add_pose();
-                poseRepeated_pose->set_uav_id(uav_id);
-                poseRepeated_pose->set_x(pose.x);
-                poseRepeated_pose->set_y(pose.y);
-                poseRepeated_pose->set_z(pose.z);
-                poseRepeated_pose->set_yaw(pose.yaw);
-              }
-
-              writeDelimitedToSockFD(wearableSockFD, wearableResponse);
-              continue;
-            }
-            case wearableRequest.SET_DEST_REPEATED:
-            {
-              // Construct Planning Request
-              pb_urs::PlanningRequest planningRequest;
-              initPlanningRequest(allocatedWpList, planningRequest.mutable_initial());
-
-              pb_urs::State* goalState = planningRequest.mutable_goal();
-              const pb_wearable::SetDestRepeated& setDestRepeated = wearableRequest.set_dest_repeated();
-              for (int i = 0; i < setDestRepeated.set_dest_size(); i++)
-              {
-                int wpId = wpPool.newId(allocatedWpList);
-                wpPool.data[wpId].pose.x = setDestRepeated.set_dest(i).x();
-                wpPool.data[wpId].pose.y = setDestRepeated.set_dest(i).y();
-                wpPool.data[wpId].pose.z = setDestRepeated.set_dest(i).z();
-                if (setDestRepeated.set_dest(i).has_yaw())
-                {
-                  wpPool.data[wpId].pose.yaw = setDestRepeated.set_dest(i).yaw();
-                  wpPool.data[wpId].rotate = true;
-                }
-                else
-                {
-                  wpPool.data[wpId].rotate = false;
-                }
-
-                pb_urs::At* at = goalState->add_at();
-                at->set_uav_id(setDestRepeated.set_dest(i).uav_id());
-                at->set_wp_id(wpId);
-              }
-
-              writeDelimitedToSockFD(plannerSockFD, planningRequest);
-              break;
-            }
-            case wearableRequest.GET_REGION:
-            {
-              pb_wearable::WearableResponse wearableResponse;
-              wearableResponse.set_type(wearableResponse.REGION);
-
-              pb_wearable::Region* wearableResponse_region = wearableResponse.mutable_region();
-              wearableResponse_region->set_x0(REGION_X0);
-              wearableResponse_region->set_y0(REGION_Y0);
-              wearableResponse_region->set_x1(REGION_X1);
-              wearableResponse_region->set_y1(REGION_Y1);
-
-              writeDelimitedToSockFD(wearableSockFD, wearableResponse);
-              continue;
-            }
-          }
-
-          /*******************************/
-          /* Retrieve a plan and execute */
-          /*******************************/
-          pb_urs::PlanningResponse planningResponse;
-          if (!readDelimitedFromSockFD(plannerSockFD, planningResponse))
-          {
-            std::cerr << "Planner has disconnected" << std::endl;
-            break;
-          }
-
-          ROS_INFO("Received Planning Response");
-          std::cout << planningResponse.DebugString();
-
-          for (int i = 0; i < planningResponse.actions_size(); i++)
-          {
-            const pb_urs::Action& action = planningResponse.actions(i);
-            switch (action.type())
-            {
-              case action.GOTO:
-              {
-                const pb_urs::Goto& action_goto = action.goto_();
-                int wpId = action_goto.wp_id();
-                if (wpPool.data[wpId].rotate)
-                {
-                  controller[action_goto.uav_id()].setDest(wpPool.data[wpId].pose);
-                }
-                else
-                {
-                  controller[action_goto.uav_id()].setDest(wpPool.data[wpId].pose.x, wpPool.data[wpId].pose.y, wpPool.data[wpId].pose.z);
-                }
-                break;
-              }
-            }
-          }
-
-          wpPool.retrieveId(allocatedWpList);
+          // create a wearableRequestHandler thread for the incoming request
+          boost::thread(wearableRequestHandler, wearableSockFD, boost::ref(wearableRequest));
         }
       }
     }
   }
 
   // clean up
+  for (int i = 0; i < PLANNER_POOL_SIZE; i++)
+  {
+    close(plannerPool.data[i]);
+  }
   close(execMonitorSockFD);
-  close(plannerSockFD);
 
   // (optional) delete all global objects allocated by libprotobuf
   google::protobuf::ShutdownProtobufLibrary();
@@ -377,8 +273,7 @@ void initPlanningRequest(std::vector<int>& allocatedWpList, pb_urs::State* initi
 
 void droneStatePublisher(int wearableSockFD)
 {
-  ros::Rate r(DRONE_STATE_PUBLISH_RATE);
-  while(ros::ok())
+  while(true)
   {
     try
     {
@@ -398,11 +293,142 @@ void droneStatePublisher(int wearableSockFD)
       }
 
       writeDelimitedToSockFD(wearableSockFD, wearableResponse);
-      r.sleep();
+
+      boost::this_thread::sleep_for(boost::chrono::milliseconds{DRONE_STATE_PUBLISH_DELAY_MS});
     }
     catch (boost::thread_interrupted&)
     {
       break;
     }
   }
+}
+
+void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableRequest& wearableRequest)
+{
+  /******************************/
+  /* Evaluate the input request */
+  /******************************/
+  // Depending on the request, it may
+  // - call the planner
+  // - respond to the wearable
+  // - just perform some actions
+  // - a mix of the above
+
+  std::vector<int> allocatedWpList;
+  std::vector<int> allocatedPlannerList;
+  pb_urs::PlanningRequest planningRequest;
+
+  switch (wearableRequest.type())
+  {
+    // 'break' is used when a call to the planner is required
+    // 'return' is used when no calling to the planner is required
+
+    case wearableRequest.GET_POSE_REPEATED:
+    {
+      pb_wearable::WearableResponse wearableResponse;
+      wearableResponse.set_type(wearableResponse.POSE_REPEATED);
+
+      const pb_wearable::GetPoseRepeated& getPoseRepeated = wearableRequest.get_pose_repeated();
+      for (int i = 0; i < getPoseRepeated.get_pose_size(); i++)
+      {
+        int uav_id = getPoseRepeated.get_pose(i).uav_id();
+        Pose pose = controller[uav_id].getPose();
+
+        pb_wearable::PoseRepeated_Pose* poseRepeated_pose = wearableResponse.mutable_pose_repeated()->add_pose();
+        poseRepeated_pose->set_uav_id(uav_id);
+        poseRepeated_pose->set_x(pose.x);
+        poseRepeated_pose->set_y(pose.y);
+        poseRepeated_pose->set_z(pose.z);
+        poseRepeated_pose->set_yaw(pose.yaw);
+      }
+
+      writeDelimitedToSockFD(wearableSockFD, wearableResponse);
+      return;
+    }
+    case wearableRequest.SET_DEST_REPEATED:
+    {
+      // Construct Planning Request
+      initPlanningRequest(allocatedWpList, planningRequest.mutable_initial());
+
+      pb_urs::State* goalState = planningRequest.mutable_goal();
+      const pb_wearable::SetDestRepeated& setDestRepeated = wearableRequest.set_dest_repeated();
+      for (int i = 0; i < setDestRepeated.set_dest_size(); i++)
+      {
+        int wpId = wpPool.newId(allocatedWpList);
+        wpPool.data[wpId].pose.x = setDestRepeated.set_dest(i).x();
+        wpPool.data[wpId].pose.y = setDestRepeated.set_dest(i).y();
+        wpPool.data[wpId].pose.z = setDestRepeated.set_dest(i).z();
+        if (setDestRepeated.set_dest(i).has_yaw())
+        {
+          wpPool.data[wpId].pose.yaw = setDestRepeated.set_dest(i).yaw();
+          wpPool.data[wpId].rotate = true;
+        }
+        else
+        {
+          wpPool.data[wpId].rotate = false;
+        }
+
+        pb_urs::At* at = goalState->add_at();
+        at->set_uav_id(setDestRepeated.set_dest(i).uav_id());
+        at->set_wp_id(wpId);
+      }
+      break;
+    }
+    case wearableRequest.GET_REGION:
+    {
+      pb_wearable::WearableResponse wearableResponse;
+      wearableResponse.set_type(wearableResponse.REGION);
+
+      pb_wearable::Region* wearableResponse_region = wearableResponse.mutable_region();
+      wearableResponse_region->set_x0(REGION_X0);
+      wearableResponse_region->set_y0(REGION_Y0);
+      wearableResponse_region->set_x1(REGION_X1);
+      wearableResponse_region->set_y1(REGION_Y1);
+
+      writeDelimitedToSockFD(wearableSockFD, wearableResponse);
+      return;
+    }
+  }
+
+  // Send a planning request
+  int plannerSockFD = plannerPool.data[plannerPool.newId(allocatedWpList)];
+  writeDelimitedToSockFD(plannerSockFD, planningRequest);
+
+  /*********************************/
+  /* Retrieve the plan and execute */
+  /*********************************/
+  pb_urs::PlanningResponse planningResponse;
+  if (!readDelimitedFromSockFD(plannerSockFD, planningResponse))
+  {
+    std::cerr << "Planner has disconnected" << std::endl;
+    return;
+  }
+
+  ROS_INFO("Received Planning Response");
+  std::cout << planningResponse.DebugString();
+
+  for (int i = 0; i < planningResponse.actions_size(); i++)
+  {
+    const pb_urs::Action& action = planningResponse.actions(i);
+    switch (action.type())
+    {
+      case action.GOTO:
+      {
+        const pb_urs::Goto& action_goto = action.goto_();
+        int wpId = action_goto.wp_id();
+        if (wpPool.data[wpId].rotate)
+        {
+          controller[action_goto.uav_id()].setDest(wpPool.data[wpId].pose);
+        }
+        else
+        {
+          controller[action_goto.uav_id()].setDest(wpPool.data[wpId].pose.x, wpPool.data[wpId].pose.y, wpPool.data[wpId].pose.z);
+        }
+        break;
+      }
+    }
+  }
+
+  plannerPool.retrieveId(allocatedPlannerList);
+  wpPool.retrieveId(allocatedWpList);
 }

@@ -90,3 +90,18 @@ message Region {
   required double x1 = 3;
   required double y1 = 4;
 }
+
+/* **********************************************/
+/* Messages to be periodically sent to wearable */
+/* **********************************************/
+message Status {
+  repeated Pose pose = 1;
+
+  message Pose {
+    required int32 uav_id = 1;
+    required double x = 2;
+    required double y = 3;
+    required double z = 4;
+    optional double yaw = 5;
+  }
+}

@@ -7,7 +7,6 @@
 #include <boost/thread.hpp>
 
 class ThreadManager {
-  boost::thread_group threadGroup;
   std::unordered_multimap<int, boost::thread*> umm;
   boost::mutex mut;
 
@@ -17,7 +16,6 @@ public:
     mut.lock();
     std::pair<int, boost::thread*> pair(id, thread);
     umm.insert(pair);
-    threadGroup.add_thread(thread);
     mut.unlock();
   }
 
@@ -28,8 +26,6 @@ public:
     for (auto it = its.first; it != its.second; ++it)
     {
       it->second->interrupt();
-      threadGroup.remove_thread(it->second);
-      delete it->second;
     }
     umm.erase(id);
     mut.unlock();

@@ -10,21 +10,16 @@ template<typename T, const int POOL_SIZE>
     std::vector<int> idList;
     boost::mutex mut;
 
-    void init()
+  public:
+    T data[POOL_SIZE];
+
+    Pool()
     {
       idList.reserve(POOL_SIZE);
       for (int i = POOL_SIZE - 1; i >= 0; i--)
       {
         idList.push_back(i);
       }
-    }
-
-  public:
-    T data[POOL_SIZE];
-
-    Pool()
-    {
-      init();
     }
 
     int newId(std::vector<int>& allocatedIdList)
