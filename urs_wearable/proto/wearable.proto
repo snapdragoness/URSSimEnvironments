@@ -20,25 +20,25 @@ message WearableRequest {
     SET_DEST_REPEATED = 1;
     GET_REGION = 2;
   }
-}
 
-message GetPoseRepeated {
-  repeated GetPose get_pose = 1;
+  message GetPoseRepeated {
+    repeated GetPose get_pose = 1;
 
-  message GetPose {
-    required int32 uav_id = 1;
+    message GetPose {
+      required int32 uav_id = 1;
+    }
   }
-}
 
-message SetDestRepeated {
-  repeated SetDest set_dest = 1;
+  message SetDestRepeated {
+    repeated SetDest set_dest = 1;
 
-  message SetDest {
-    required int32 uav_id = 1;
-    required double x = 2;
-    required double y = 3;
-    required double z = 4;
-    optional double yaw = 5;
+    message SetDest {
+      required int32 uav_id = 1;
+      required double x = 2;
+      required double y = 3;
+      required double z = 4;
+      optional double yaw = 5;
+    }
   }
 }
 
@@ -49,59 +49,57 @@ message WearableResponse {
   required WearableResponseType type = 1;
   
   oneof oneof_wearableresponse {
-    PoseRepeated pose_repeated = 2;
+    PeriodicStatus periodic_status = 2;
+    PoseRepeated pose_repeated = 3;
 
     // Infrequent responses should come last
-    Region region = 3;
+    Region region = 4;
   }
   
   enum WearableResponseType {
-    POSE_REPEATED = 0;
-    REGION = 1;
+    PERIODIC_STATUS = 0;
+    POSE_REPEATED = 1;
+    REGION = 2;
   }
-}
 
-message PoseRepeated {
-  repeated Pose pose = 1;
+  message PoseRepeated {
+    repeated Pose pose = 1;
 
-  message Pose {
-    required int32 uav_id = 1;
-    required double x = 2;
-    required double y = 3;
-    required double z = 4;
-    optional double yaw = 5;
+    message Pose {
+      required int32 uav_id = 1;
+      required double x = 2;
+      required double y = 3;
+      required double z = 4;
+      optional double yaw = 5;
+    }
   }
-}
 
-message Region {
-//             y
-//             ^
-//      -------|---(x1,y1)
-//      |      |      |
-//      |      |      |
-// <-----------+-----------> x
-//      |      |      |
-//   (x0,y0)---|-------
-//             |
-//             v
+  message Region {
+    //             y
+    //             ^
+    //      -------|---(x1,y1)
+    //      |      |      |
+    //      |      |      |
+    // <-----------+-----------> x
+    //      |      |      |
+    //   (x0,y0)---|-------
+    //             |
+    //             v
+    required double x0 = 1;
+    required double y0 = 2;
+    required double x1 = 3;
+    required double y1 = 4;
+  }
 
-  required double x0 = 1;
-  required double y0 = 2;
-  required double x1 = 3;
-  required double y1 = 4;
-}
+  message PeriodicStatus {
+    repeated Pose pose = 1;
 
-/* **********************************************/
-/* Messages to be periodically sent to wearable */
-/* **********************************************/
-message Status {
-  repeated Pose pose = 1;
-
-  message Pose {
-    required int32 uav_id = 1;
-    required double x = 2;
-    required double y = 3;
-    required double z = 4;
-    optional double yaw = 5;
+    message Pose {
+      required int32 uav_id = 1;
+      required double x = 2;
+      required double y = 3;
+      required double z = 4;
+      optional double yaw = 5;
+    }
   }
 }

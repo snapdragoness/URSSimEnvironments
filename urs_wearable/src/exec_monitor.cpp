@@ -3,6 +3,7 @@
 #include "urs_wearable/navigator.h"
 #include "urs_wearable/pool.h"
 #include "urs_wearable/thread_manager.h"
+#include "urs_wearable/colormod.h"
 
 #include "protobuf_helper.h"
 #include "planning.pb.h"
@@ -51,6 +52,9 @@ ThreadManager threadManager;
 
 Controller controller[N_UAV];
 Navigator navigator[N_UAV];
+
+Color::Modifier fg_green(Color::FG_GREEN);
+Color::Modifier fg_default(Color::FG_DEFAULT);
 
 void initPlanningRequest(std::vector<int>&, pb_urs::State*);
 void droneStatePublisher(int);
@@ -236,7 +240,7 @@ int main(int argc, char **argv)
             continue;
           }
 
-          std::cout << "Received Wearable Request" << std::endl << wearableRequest.DebugString();
+          std::cout << fg_green << "-> Received WearableRequest" << fg_default << std::endl << wearableRequest.DebugString();
 
           // create a wearableRequestHandler thread for the incoming request
           boost::thread(wearableRequestHandler, wearableSockFD, wearableRequest);
@@ -276,23 +280,24 @@ void droneStatePublisher(int wearableSockFD)
   {
     try
     {
-      pb_wearable::Status status;
+      pb_wearable::WearableResponse wearableResponse;
+      wearableResponse.set_type(pb_wearable::WearableResponse::PERIODIC_STATUS);
 
       for (unsigned int uav_id = 0; uav_id < N_UAV; uav_id++)
       {
         Pose pose = controller[uav_id].getPose();
 
-        pb_wearable::Status_Pose* status_pose = status.add_pose();
-        status_pose->set_uav_id(uav_id);
-        status_pose->set_x(pose.x);
-        status_pose->set_y(pose.y);
-        status_pose->set_z(pose.z);
-        status_pose->set_yaw(pose.yaw);
+        pb_wearable::WearableResponse_PeriodicStatus_Pose* _pose = wearableResponse.mutable_periodic_status()->add_pose();
+        _pose->set_uav_id(uav_id);
+        _pose->set_x(pose.x);
+        _pose->set_y(pose.y);
+        _pose->set_z(pose.z);
+        _pose->set_yaw(pose.yaw);
       }
 
-      writeDelimitedToSockFD(wearableSockFD, status);
+      writeDelimitedToSockFD(wearableSockFD, wearableResponse);
 
-      boost::this_thread::sleep_for(boost::chrono::milliseconds{DRONE_STATE_PUBLISH_DELAY_MS});
+      boost::this_thread::sleep_for(boost::chrono::milliseconds(DRONE_STATE_PUBLISH_DELAY_MS));
     }
     catch (boost::thread_interrupted&)
     {
@@ -318,35 +323,35 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
 
   switch (wearableRequest.type())
   {
-    case wearableRequest.GET_POSE_REPEATED:
+    case pb_wearable::WearableRequest::GET_POSE_REPEATED:
     {
       pb_wearable::WearableResponse wearableResponse;
-      wearableResponse.set_type(wearableResponse.POSE_REPEATED);
+      wearableResponse.set_type(pb_wearable::WearableResponse::POSE_REPEATED);
 
-      const pb_wearable::GetPoseRepeated& getPoseRepeated = wearableRequest.get_pose_repeated();
+      const pb_wearable::WearableRequest_GetPoseRepeated& getPoseRepeated = wearableRequest.get_pose_repeated();
       for (int i = 0; i < getPoseRepeated.get_pose_size(); i++)
       {
         int uav_id = getPoseRepeated.get_pose(i).uav_id();
         Pose pose = controller[uav_id].getPose();
 
-        pb_wearable::PoseRepeated_Pose* poseRepeated_pose = wearableResponse.mutable_pose_repeated()->add_pose();
-        poseRepeated_pose->set_uav_id(uav_id);
-        poseRepeated_pose->set_x(pose.x);
-        poseRepeated_pose->set_y(pose.y);
-        poseRepeated_pose->set_z(pose.z);
-        poseRepeated_pose->set_yaw(pose.yaw);
+        pb_wearable::WearableResponse_PoseRepeated_Pose* _pose = wearableResponse.mutable_pose_repeated()->add_pose();
+        _pose->set_uav_id(uav_id);
+        _pose->set_x(pose.x);
+        _pose->set_y(pose.y);
+        _pose->set_z(pose.z);
+        _pose->set_yaw(pose.yaw);
       }
 
       writeDelimitedToSockFD(wearableSockFD, wearableResponse);
       return;
     }
-    case wearableRequest.SET_DEST_REPEATED:
+    case pb_wearable::WearableRequest::SET_DEST_REPEATED:
     {
       // Construct Planning Request
       initPlanningRequest(allocatedWpList, planningRequest.mutable_initial());
 
       pb_urs::State* goalState = planningRequest.mutable_goal();
-      const pb_wearable::SetDestRepeated& setDestRepeated = wearableRequest.set_dest_repeated();
+      const pb_wearable::WearableRequest_SetDestRepeated& setDestRepeated = wearableRequest.set_dest_repeated();
       for (int i = 0; i < setDestRepeated.set_dest_size(); i++)
       {
         int wpId = wpPool.newId(allocatedWpList);
@@ -370,16 +375,16 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
 
       break;
     }
-    case wearableRequest.GET_REGION:
+    case pb_wearable::WearableRequest::GET_REGION:
     {
       pb_wearable::WearableResponse wearableResponse;
-      wearableResponse.set_type(wearableResponse.REGION);
+      wearableResponse.set_type(pb_wearable::WearableResponse::REGION);
 
-      pb_wearable::Region* wearableResponse_region = wearableResponse.mutable_region();
-      wearableResponse_region->set_x0(REGION_X0);
-      wearableResponse_region->set_y0(REGION_Y0);
-      wearableResponse_region->set_x1(REGION_X1);
-      wearableResponse_region->set_y1(REGION_Y1);
+      pb_wearable::WearableResponse_Region* region = wearableResponse.mutable_region();
+      region->set_x0(REGION_X0);
+      region->set_y0(REGION_Y0);
+      region->set_x1(REGION_X1);
+      region->set_y1(REGION_Y1);
 
       writeDelimitedToSockFD(wearableSockFD, wearableResponse);
       return;
@@ -400,8 +405,7 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
     return;
   }
 
-  ROS_INFO("Received Planning Response");
-  std::cout << planningResponse.DebugString();
+  std::cout << fg_green << "-> Received PlanningResponse" << fg_default << std::endl << planningResponse.DebugString();
 
   for (int i = 0; i < planningResponse.actions_size(); i++)
   {
