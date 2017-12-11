@@ -2,7 +2,6 @@
 beginner_tutorials/
 multimaster_fkie/
 mastering_ros/
-quadrotor_moveit_nav/
 
 urs_wearable/include/*.pb.*
 
