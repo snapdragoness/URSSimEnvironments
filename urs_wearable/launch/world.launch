@@ -3,4 +3,5 @@
 <launch>
   <include file="$(find urs_wearable)/launch/gas_station.launch" />
   <include file="$(find urs_wearable)/launch/spawn_four_quadrotors.launch" />
+  <include file="$(find urs_wearable)/launch/action_server.launch" />
 </launch>
