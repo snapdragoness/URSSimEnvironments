@@ -71,51 +71,19 @@ public:
     switch (goal->action_type)
     {
       case 1:
-        actionGotoRotate(goal);
-        break;
-      case 2:
-        actionGotoNoRotate(goal);
+        actionGoto(goal);
         break;
     }
   }
 
-  void actionGotoRotate(const urs_wearable::ActionsGoalConstPtr &goal)
+  void actionGoto(const urs_wearable::ActionsGoalConstPtr &goal)
   {
     urs_wearable::Pose dest;
     dest.x = goal->pose.x;
     dest.y = goal->pose.y;
     dest.z = goal->pose.z;
-    boost::thread destPubThread = boost::thread(&Actions::_destPub, this, 10, dest);
-
-    Pose dest_;
-    dest_.x = dest.x;
-    dest_.y = dest.y;
-    dest_.z = dest.z;
-
-    ros::Rate r(10);
-    while (!as.isPreemptRequested() && ros::ok())
-    {
-      mut_pose.lock();
-      if (Navigator::getDistance(pose, dest_) <= 0.1)
-      {
-        mut_pose.unlock();
-        as.setSucceeded();
-        destPubThread.interrupt();
-        return;
-      }
-      mut_pose.unlock();
-      r.sleep();
-    }
-    as.setAborted();
-    destPubThread.interrupt();
-  }
-
-  void actionGotoNoRotate(const urs_wearable::ActionsGoalConstPtr &goal)
-  {
-    urs_wearable::Pose dest;
-    dest.x = goal->pose.x;
-    dest.y = goal->pose.y;
-    dest.z = goal->pose.z;
+    dest.yaw = goal->pose.yaw;
+    dest.rotate = goal->pose.rotate;
     boost::thread destPubThread = boost::thread(&Actions::_destPub, this, 10, dest);
 
     Pose dest_;
@@ -143,7 +111,7 @@ public:
 
   void _destPub(ros::Rate rate, urs_wearable::Pose& dest)
   {
-    ros::Publisher destPub = nh.advertise<urs_wearable::Pose>(ns + "/urs_wearable/dest_no_rotate", 10, false);
+    ros::Publisher destPub = nh.advertise<urs_wearable::Pose>(ns + "/urs_wearable/dest", 10, false);
 
     while (ros::ok())
     {

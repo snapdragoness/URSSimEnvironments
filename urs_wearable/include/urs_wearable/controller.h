@@ -37,8 +37,7 @@ class Controller {
   ros::Subscriber poseSub;    // subscriber of the UAV's ground truth
   geometry_msgs::Twist cmd;   // a twist message to be sent to /cmd_vel
 
-  ros::Subscriber destRotateSub;
-  ros::Subscriber destNoRotateSub;
+  ros::Subscriber destSub;
 
   boost::thread commanderThread;
   boost::thread posePubThread;
@@ -66,9 +65,8 @@ public:
   // auxiliary methods
   Pose getPose();
   Pose getDest();
-  void setDest(const Pose& dest);
-  void setDestRotateCB(const urs_wearable::PoseConstPtr& dest);
-  void setDestNoRotateCB(const urs_wearable::PoseConstPtr& dest);
+  void setDest(const Pose& dest, bool rotate);
+  void setDest(const urs_wearable::PoseConstPtr& dest);
   void setNamespace(const std::string& ns);
 
   // static methods

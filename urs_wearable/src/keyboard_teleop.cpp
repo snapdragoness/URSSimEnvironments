@@ -60,42 +60,42 @@ int main(int argc, char **argv)
       case 'w':
       case 'W':
         destActive.x += moveStep;
-        controller[activeID].setDest(destActive);
+        controller[activeID].setDest(destActive, false);
         break;
       case 's':
       case 'S':
         destActive.x -= moveStep;
-        controller[activeID].setDest(destActive);
+        controller[activeID].setDest(destActive, false);
         break;
       case 'a':
       case 'A':
         destActive.y += moveStep;
-        controller[activeID].setDest(destActive);
+        controller[activeID].setDest(destActive, false);
         break;
       case 'd':
       case 'D':
         destActive.y -= moveStep;
-        controller[activeID].setDest(destActive);
+        controller[activeID].setDest(destActive, false);
         break;
       case 'r':
       case 'R':
         destActive.z += moveStep;
-        controller[activeID].setDest(destActive);
+        controller[activeID].setDest(destActive, false);
         break;
       case 'f':
       case 'F':
         destActive.z -= moveStep;
-        controller[activeID].setDest(destActive);
+        controller[activeID].setDest(destActive, false);
         break;
       case 'q':
       case 'Q':
         destActive.yaw += rotateStep;
-        controller[activeID].setDest(destActive);
+        controller[activeID].setDest(destActive, true);
         break;
       case 'e':
       case 'E':
         destActive.yaw -= rotateStep;
-        controller[activeID].setDest(destActive);
+        controller[activeID].setDest(destActive, true);
         break;
       case 't':
       case 'T':
@@ -151,7 +151,7 @@ int main(int argc, char **argv)
                 // TODO: write takeoff function
                 Pose dest = controller[uavID].getDest();
                 dest.z = 0.5;
-                controller[uavID].setDest(dest);
+                controller[uavID].setDest(dest, false);
               }
             }
             else if (tokens.size() == 5 && !tokens[0].compare("move"))
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
                 double degree = std::stod(tokens[2]);
                 Pose dest = controller[uavID].getDest();
                 dest.yaw = degree * M_PI / 180.0;
-                controller[uavID].setDest(dest);
+                controller[uavID].setDest(dest, true);
               }
             }
             else if (tokens.size() == 2 && !tokens[0].compare("cancel"))

@@ -5,8 +5,7 @@
 Controller::~Controller()
 {
   poseSub.shutdown();
-  destRotateSub.shutdown();
-  destNoRotateSub.shutdown();
+  destSub.shutdown();
 
   commanderThread.interrupt();
   posePubThread.interrupt();
@@ -47,8 +46,7 @@ void Controller::start(double height)
     dest.yaw = Controller::quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
 
     poseSub = nh->subscribe(ns + "/ground_truth_to_tf/pose", 10, &Controller::_controller, this);
-    destRotateSub = nh->subscribe(ns + "/urs_wearable/dest_rotate", 10, &Controller::setDestRotateCB, this);
-    destNoRotateSub = nh->subscribe(ns + "/urs_wearable/dest_no_rotate", 10, &Controller::setDestNoRotateCB, this);
+    destSub = nh->subscribe(ns + "/urs_wearable/dest", 10, &Controller::setDest, this);
 
     commanderThread = boost::thread(&Controller::_commander, this, 10);
     posePubThread = boost::thread(&Controller::_posePub, this, 10);
@@ -214,32 +212,29 @@ Pose Controller::getDest()
   return dest;
 }
 
-void Controller::setDest(const Pose& dest)
+void Controller::setDest(const Pose& dest, bool rotate)
 {
   mut_dest.lock();
   this->dest.x = dest.x;
   this->dest.y = dest.y;
   this->dest.z = dest.z;
-//  this->dest.yaw = dest.yaw;
+  if (rotate)
+  {
+    this->dest.yaw = dest.yaw;
+  }
   mut_dest.unlock();
 }
 
-void Controller::setDestRotateCB(const urs_wearable::PoseConstPtr& dest)
+void Controller::setDest(const urs_wearable::PoseConstPtr& dest)
 {
   mut_dest.lock();
   this->dest.x = dest->x;
   this->dest.y = dest->y;
   this->dest.z = dest->z;
-  this->dest.yaw = dest->yaw;
-  mut_dest.unlock();
-}
-
-void Controller::setDestNoRotateCB(const urs_wearable::PoseConstPtr& dest)
-{
-  mut_dest.lock();
-  this->dest.x = dest->x;
-  this->dest.y = dest->y;
-  this->dest.z = dest->z;
+  if (dest->rotate)
+  {
+    this->dest.yaw = dest->yaw;
+  }
   mut_dest.unlock();
 }
 

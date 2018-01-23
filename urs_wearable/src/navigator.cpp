@@ -58,7 +58,7 @@ void Navigator::_navigate(Controller& controller, const Pose targetPose, const b
         {
           Pose dest = controller.getDest();
           dest.yaw = targetPose.yaw;
-          controller.setDest(dest);
+          controller.setDest(dest, true);
         }
       }
       else  // otherwise, begin navigating
@@ -96,7 +96,7 @@ void Navigator::_navigate(Controller& controller, const Pose targetPose, const b
         {
           Pose dest = controller.getDest();
           dest.yaw = yawHeaded;
-          controller.setDest(dest);
+          controller.setDest(dest, true);
         }
 
         // if the quadrotor has aligned itself to the partial target destination
@@ -307,7 +307,7 @@ void Navigator::_navigate(Controller& controller, const Pose targetPose, const b
               {
                 dest.z = currentPose.z - (sonarRange - distFromObsVertical);
               }
-              controller.setDest(dest);
+              controller.setDest(dest, false);
               std::cout << "Destination unreachable [by the sonar sensor]" << std::endl;
               break;
             }
@@ -331,7 +331,7 @@ void Navigator::_navigate(Controller& controller, const Pose targetPose, const b
           dest.x = partialTargetPose.x;
           dest.y = partialTargetPose.y;
           dest.z = partialTargetPose.z;
-          controller.setDest(dest);
+          controller.setDest(dest, false);
         }
       }
 
