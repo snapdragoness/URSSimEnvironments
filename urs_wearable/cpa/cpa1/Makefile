@@ -52,4 +52,4 @@ protobuf_helper.o: $(PROTO_HELPER_SRC_DIR)/protobuf_helper.cpp $(PROTO_HELPER_HD
 	$(CC) $(CFLAGS) -I$(PROTO_HELPER_HDR_DIR) $<
 
 clean:
-	rm -f *.o *~ *.pb.* lex.c bison.c tok.h lcp.tab.c lcp.tab.h lcp.output cpa+
+	rm -f *.o *~ *.pb.* lex.c bison.c tok.h lcp.tab.c lcp.tab.h lcp.output trash cpa+
