@@ -5,7 +5,11 @@
 Controller::~Controller()
 {
   poseSub.shutdown();
+  destRotateSub.shutdown();
+  destNoRotateSub.shutdown();
+
   commanderThread.interrupt();
+  posePubThread.interrupt();
 }
 
 Controller::Controller(const std::string& ns)
@@ -43,8 +47,11 @@ void Controller::start(double height)
     dest.yaw = Controller::quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
 
     poseSub = nh->subscribe(ns + "/ground_truth_to_tf/pose", 10, &Controller::_controller, this);
+    destRotateSub = nh->subscribe(ns + "/urs_wearable/dest_rotate", 10, &Controller::setDestRotateCB, this);
+    destNoRotateSub = nh->subscribe(ns + "/urs_wearable/dest_no_rotate", 10, &Controller::setDestNoRotateCB, this);
 
     commanderThread = boost::thread(&Controller::_commander, this, 10);
+    posePubThread = boost::thread(&Controller::_posePub, this, 10);
   }
   else
   {
@@ -139,7 +146,6 @@ void Controller::_controller(const geometry_msgs::PoseStampedConstPtr& msg)
 void Controller::_commander(ros::Rate rate)
 {
   ros::Publisher cmdPub = nh->advertise<geometry_msgs::Twist>(ns + "/cmd_vel", 10, false);
-
   while (ros::ok())
   {
     try
@@ -158,6 +164,38 @@ void Controller::_commander(ros::Rate rate)
 
   /* clean up the publisher */
   cmdPub.shutdown();
+}
+
+void Controller::_posePub(ros::Rate rate)
+{
+  ros::Publisher posePub = nh->advertise<urs_wearable::Pose>(ns + "/urs_wearable/pose", 10, false);
+
+  while (ros::ok())
+  {
+    try
+    {
+      urs_wearable::Pose pose;
+
+      mut_pose.lock();
+      pose.x = this->pose.x;
+      pose.y = this->pose.y;
+      pose.z = this->pose.z;
+      pose.yaw = this->pose.yaw;
+      mut_pose.unlock();
+
+      posePub.publish(pose);
+
+      ros::spinOnce();
+      rate.sleep();
+    }
+    catch (boost::thread_interrupted&)
+    {
+      break;
+    }
+  }
+
+  /* clean up the publisher */
+  posePub.shutdown();
 }
 
 Pose Controller::getPose()
@@ -179,16 +217,29 @@ Pose Controller::getDest()
 void Controller::setDest(const Pose& dest)
 {
   mut_dest.lock();
-  this->dest = dest;
+  this->dest.x = dest.x;
+  this->dest.y = dest.y;
+  this->dest.z = dest.z;
+//  this->dest.yaw = dest.yaw;
   mut_dest.unlock();
 }
 
-void Controller::setDest(double x, double y, double z)
+void Controller::setDestRotateCB(const urs_wearable::PoseConstPtr& dest)
 {
   mut_dest.lock();
-  this->dest.x = x;
-  this->dest.y = y;
-  this->dest.z = z;
+  this->dest.x = dest->x;
+  this->dest.y = dest->y;
+  this->dest.z = dest->z;
+  this->dest.yaw = dest->yaw;
+  mut_dest.unlock();
+}
+
+void Controller::setDestNoRotateCB(const urs_wearable::PoseConstPtr& dest)
+{
+  mut_dest.lock();
+  this->dest.x = dest->x;
+  this->dest.y = dest->y;
+  this->dest.z = dest->z;
   mut_dest.unlock();
 }
 

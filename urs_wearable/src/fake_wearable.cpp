@@ -23,10 +23,6 @@
 
 const uint16_t PORT_EXEC_MONITOR = 8080;
 
-Color::Modifier fg_blue(Color::FG_BLUE);
-Color::Modifier fg_green(Color::FG_GREEN);
-Color::Modifier fg_default(Color::FG_DEFAULT);
-
 int expectedWearableResponseType = -1;
 pb_wearable::WearableResponse expectedWearableResponse;
 
@@ -83,7 +79,7 @@ int main(int argc, char const *argv[])
 //    std::cout << "Status: " << std::endl << wearableResponse.DebugString();
 //  }
 
-  boost::thread(wearableResponseListener, execMonitorSockFD);
+  boost::thread wearableResponseListenerThread = boost::thread(wearableResponseListener, execMonitorSockFD);
 
   while (true)
   {
@@ -104,25 +100,27 @@ int main(int argc, char const *argv[])
     setDest->set_y(rand() % 11 - 4);
     setDest->set_z(rand() % 10 + 1);
 
-    std::cout << fg_blue << "WearableRequest::SET_DEST_REPEATED sent - " << fg_default
+    std::cout << Color::fg_blue << "WearableRequest::SET_DEST_REPEATED sent - " << Color::fg_default
         << writeDelimitedToSockFD(execMonitorSockFD, req1) << std::endl;
 
     // 2
     pb_wearable::WearableRequest req2;
     req2.set_type(pb_wearable::WearableRequest::GET_REGION);
     expectedWearableResponseType = pb_wearable::WearableRequest::GET_REGION;
-    std::cout << fg_blue << "WearableRequest::GET_REGION sent - " << fg_default
+    std::cout << Color::fg_blue << "WearableRequest::GET_REGION sent - " << Color::fg_default
         << writeDelimitedToSockFD(execMonitorSockFD, req2) << std::endl;
 
     while (expectedWearableResponseType != -1)
     {
       boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
     }
-    std::cout << fg_green << "-> Received WearableResponse" << std::endl << expectedWearableResponse.DebugString() << fg_default;
+    std::cout << Color::fg_green << "-> Received WearableResponse" << std::endl
+        << expectedWearableResponse.DebugString() << Color::fg_default;
 
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(10000));
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(2000));
   }
 
+  wearableResponseListenerThread.interrupt();
   close(execMonitorSockFD);
   return 0;
 }

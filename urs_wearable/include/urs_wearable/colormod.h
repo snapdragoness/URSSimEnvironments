@@ -4,6 +4,7 @@
 #define URS_WEARABLE_INCLUDE_URS_WEARABLE_COLORMOD_H_
 
 #include <ostream>
+
 namespace Color
 {
 enum Code
@@ -13,17 +14,24 @@ enum Code
 class Modifier
 {
   Code code;
+
 public:
-  Modifier(Code pCode) :
-      code(pCode)
-  {
-  }
-  friend std::ostream&
-  operator<<(std::ostream& os, const Modifier& mod)
+  Modifier(Code pCode) : code(pCode){}
+
+  friend std::ostream& operator<<(std::ostream& os, const Modifier& mod)
   {
     return os << "\033[" << mod.code << "m";
   }
 };
+
+Color::Modifier fg_red(Color::FG_RED);
+Color::Modifier fg_green(Color::FG_GREEN);
+Color::Modifier fg_blue(Color::FG_BLUE);
+Color::Modifier fg_default(Color::FG_DEFAULT);
+Color::Modifier bg_red(Color::BG_RED);
+Color::Modifier bg_green(Color::BG_GREEN);
+Color::Modifier bg_blue(Color::BG_BLUE);
+Color::Modifier bg_default(Color::BG_DEFAULT);
 }
 
 #endif /* URS_WEARABLE_INCLUDE_URS_WEARABLE_COLORMOD_H_ */

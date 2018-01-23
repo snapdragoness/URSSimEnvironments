@@ -10,7 +10,8 @@ add_definitions(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
-  hector_quadrotor_interface 
+  hector_quadrotor_interface
+  actionlib
 )
 
 ## System dependencies are found with CMake's conventions
@@ -47,11 +48,9 @@ find_package(Protobuf REQUIRED)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES Pose.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -61,17 +60,15 @@ find_package(Protobuf REQUIRED)
 # )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+add_action_files(
+  DIRECTORY action
+  FILES Actions.action
+)
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES actionlib_msgs std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -105,7 +102,7 @@ find_package(Protobuf REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES urs_wearable
-  CATKIN_DEPENDS roscpp std_msgs
+  CATKIN_DEPENDS roscpp std_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -148,6 +145,7 @@ add_library(protobuf_helper src/protobuf_helper.cpp)
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/urs_wearable_node.cpp)
 add_executable(keyboard_teleop src/keyboard_teleop.cpp)
+add_executable(action_server src/action_server.cpp src/navigator.cpp)
 add_executable(exec_monitor src/exec_monitor.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 add_executable(fake_wearable src/fake_wearable.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 
@@ -163,8 +161,9 @@ add_executable(fake_wearable src/fake_wearable.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(keyboard_teleop controller navigator ${catkin_LIBRARIES})
-target_link_libraries(exec_monitor controller navigator protobuf_helper ${PROTOBUF_LIBRARIES} ${catkin_LIBRARIES})
-target_link_libraries(fake_wearable controller navigator protobuf_helper ${PROTOBUF_LIBRARIES} ${catkin_LIBRARIES})
+target_link_libraries(action_server controller navigator ${catkin_LIBRARIES})
+target_link_libraries(exec_monitor controller navigator ${catkin_LIBRARIES} protobuf_helper ${PROTOBUF_LIBRARIES})
+target_link_libraries(fake_wearable controller navigator ${catkin_LIBRARIES} protobuf_helper ${PROTOBUF_LIBRARIES})
 
 #############
 ## Install ##

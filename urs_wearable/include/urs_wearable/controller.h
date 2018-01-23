@@ -2,6 +2,7 @@
 #define URS_WEARABLE_INCLUDE_URS_WEARABLE_CONTROLLER_H_
 
 #include "urs_wearable/pose.h"
+#include "urs_wearable/Pose.h"
 
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -36,7 +37,11 @@ class Controller {
   ros::Subscriber poseSub;    // subscriber of the UAV's ground truth
   geometry_msgs::Twist cmd;   // a twist message to be sent to /cmd_vel
 
+  ros::Subscriber destRotateSub;
+  ros::Subscriber destNoRotateSub;
+
   boost::thread commanderThread;
+  boost::thread posePubThread;
 
   boost::mutex mut_dest;
   boost::mutex mut_pose;
@@ -45,6 +50,7 @@ class Controller {
   // methods with an underscore in front are supposed to be created as threads
   void _controller(const geometry_msgs::PoseStampedConstPtr& msg);
   void _commander(ros::Rate rate);
+  void _posePub(ros::Rate rate);
 
 public:
   Controller(const std::string& ns);
@@ -61,7 +67,8 @@ public:
   Pose getPose();
   Pose getDest();
   void setDest(const Pose& dest);
-  void setDest(double x, double y, double z);
+  void setDestRotateCB(const urs_wearable::PoseConstPtr& dest);
+  void setDestNoRotateCB(const urs_wearable::PoseConstPtr& dest);
   void setNamespace(const std::string& ns);
 
   // static methods

@@ -25,6 +25,11 @@ template<typename T, const int POOL_SIZE>
     int newId(std::vector<int>& allocatedIdList)
     {
       mut.lock();
+      if (idList.empty())
+      {
+        mut.unlock();
+        return -1;
+      }
       int id = idList.back();
       idList.pop_back();
       mut.unlock();

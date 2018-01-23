@@ -1,4 +1,3 @@
-#include "urs_wearable/pose.h"
 #include "urs_wearable/controller.h"
 #include "urs_wearable/navigator.h"
 #include "urs_wearable/pool.h"
@@ -12,7 +11,10 @@
 #include "action.pb.h"
 #include "wearable.pb.h"
 
+#include "urs_wearable/ActionsAction.h"
+
 #include <ros/ros.h>
+#include <actionlib/client/service_client.h>
 #include <boost/chrono.hpp>
 
 const unsigned int N_UAV = 4;
@@ -37,24 +39,22 @@ const int DRONE_STATE_PUBLISH_DELAY_MS = 100;
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-const char* plannerPathName[PLANNER_POOL_SIZE] =
+const char* PLANNER_PATH_NAME[PLANNER_POOL_SIZE] =
 {
   "/tmp/cpa_plus_socket_1",
-  "/tmp/cpa_plus_socket_2"
+  "/tmp/cpa_plus_socket_2",
 };
 
 const uint16_t PORT_EXEC_MONITOR = 8080;
 /*** Socket communication [end] ***/
 
-Pool<Waypoint, WP_POOL_SIZE> wpPool;
-Pool<int, PLANNER_POOL_SIZE> plannerPool;
+Pool<Waypoint, WP_POOL_SIZE> wp_pool;
+Pool<int, PLANNER_POOL_SIZE> planner_pool;
 ThreadManager threadManager;
 
 Controller controller[N_UAV];
 Navigator navigator[N_UAV];
-
-Color::Modifier fg_green(Color::FG_GREEN);
-Color::Modifier fg_default(Color::FG_DEFAULT);
+actionlib::SimpleActionClient<urs_wearable::ActionsAction>* action_client[N_UAV];
 
 void initPlanningRequest(std::vector<int>&, pb_urs::State*);
 void droneStatePublisher(int);
@@ -85,6 +85,9 @@ int main(int argc, char **argv)
 
     navigator[i].init();
     navigator[i].setNamespace("/uav" + std::to_string(i));
+
+    action_client[i] = new (actionlib::SimpleActionClient<urs_wearable::ActionsAction>) ("action_server_" + std::to_string(i));
+    action_client[i]->waitForServer();
   }
 
   /************************************************/
@@ -98,23 +101,23 @@ int main(int argc, char **argv)
     // create a socket for the client
     if ((plannerSockFD = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
     {
-      ROS_ERROR("Failed to create a planner socket for %s", plannerPathName[i]);
+      ROS_ERROR("Failed to create a planner socket for %s", PLANNER_PATH_NAME[i]);
       exit(EXIT_FAILURE);
     }
 
     // name the socket, as agreed with the server
     plannerAddress.sun_family = AF_UNIX;
-    strcpy(plannerAddress.sun_path, plannerPathName[i]);
+    strcpy(plannerAddress.sun_path, PLANNER_PATH_NAME[i]);
 
     // now connect our socket to the server's socket
     if (connect(plannerSockFD, (struct sockaddr*)&plannerAddress, sizeof(struct sockaddr_un)) == -1)
     {
-      ROS_ERROR("Failed to connect to %s", plannerPathName[i]);
+      ROS_ERROR("Failed to connect to %s", PLANNER_PATH_NAME[i]);
       exit(EXIT_FAILURE);
     }
 
-    plannerPool.data[i] = plannerSockFD;
-    ROS_INFO("Successfully connect to %s", plannerPathName[i]);
+    planner_pool.data[i] = plannerSockFD;
+    ROS_INFO("Successfully connect to %s", PLANNER_PATH_NAME[i]);
   }
 
   /*********************************************************/
@@ -240,7 +243,7 @@ int main(int argc, char **argv)
             continue;
           }
 
-          std::cout << fg_green << "-> Received WearableRequest" << fg_default << std::endl << wearableRequest.DebugString();
+          std::cout << Color::fg_green << "-> Received WearableRequest" << Color::fg_default << std::endl << wearableRequest.DebugString();
 
           // create a wearableRequestHandler thread for the incoming request
           boost::thread(wearableRequestHandler, wearableSockFD, wearableRequest);
@@ -250,9 +253,14 @@ int main(int argc, char **argv)
   }
 
   // clean up
+  for (int i = 0; i < N_UAV; i++)
+  {
+    delete action_client[i];
+  }
+
   for (int i = 0; i < PLANNER_POOL_SIZE; i++)
   {
-    close(plannerPool.data[i]);
+    close(planner_pool.data[i]);
   }
   close(execMonitorSockFD);
 
@@ -264,9 +272,15 @@ void initPlanningRequest(std::vector<int>& allocatedWpList, pb_urs::State* initi
 {
   for (unsigned int i = 0; i < N_UAV; i++)
   {
-    int wpId = wpPool.newId(allocatedWpList);
-    wpPool.data[wpId].pose = controller[i].getPose();
-    wpPool.data[wpId].rotate = false;
+    int wpId = wp_pool.newId(allocatedWpList);
+    while (wpId == -1)
+    {
+      boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+      wpId = wp_pool.newId(allocatedWpList);
+    }
+
+    wp_pool.data[wpId].pose = controller[i].getPose();
+    wp_pool.data[wpId].rotate = false;
 
     pb_urs::At* at = initialState->add_at();
     at->set_uav_id(i);
@@ -354,18 +368,24 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
       const pb_wearable::WearableRequest_SetDestRepeated& setDestRepeated = wearableRequest.set_dest_repeated();
       for (int i = 0; i < setDestRepeated.set_dest_size(); i++)
       {
-        int wpId = wpPool.newId(allocatedWpList);
-        wpPool.data[wpId].pose.x = setDestRepeated.set_dest(i).x();
-        wpPool.data[wpId].pose.y = setDestRepeated.set_dest(i).y();
-        wpPool.data[wpId].pose.z = setDestRepeated.set_dest(i).z();
+        int wpId = wp_pool.newId(allocatedWpList);
+        while (wpId == -1)
+        {
+          boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+          wpId = wp_pool.newId(allocatedWpList);
+        }
+
+        wp_pool.data[wpId].pose.x = setDestRepeated.set_dest(i).x();
+        wp_pool.data[wpId].pose.y = setDestRepeated.set_dest(i).y();
+        wp_pool.data[wpId].pose.z = setDestRepeated.set_dest(i).z();
         if (setDestRepeated.set_dest(i).has_yaw())
         {
-          wpPool.data[wpId].pose.yaw = setDestRepeated.set_dest(i).yaw();
-          wpPool.data[wpId].rotate = true;
+          wp_pool.data[wpId].pose.yaw = setDestRepeated.set_dest(i).yaw();
+          wp_pool.data[wpId].rotate = true;
         }
         else
         {
-          wpPool.data[wpId].rotate = false;
+          wp_pool.data[wpId].rotate = false;
         }
 
         pb_urs::At* at = goalState->add_at();
@@ -392,7 +412,14 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
   }
 
   // Send a planning request
-  int plannerSockFD = plannerPool.data[plannerPool.newId(allocatedWpList)];
+  int plannerId = planner_pool.newId(allocatedPlannerList);
+  while (plannerId == -1)
+  {
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+    plannerId = planner_pool.newId(allocatedPlannerList);
+  }
+  int plannerSockFD = planner_pool.data[plannerId];
+
   writeDelimitedToSockFD(plannerSockFD, planningRequest);
 
   /*********************************/
@@ -404,8 +431,9 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
     std::cerr << "Planner has disconnected" << std::endl;
     return;
   }
+  planner_pool.retrieveId(allocatedPlannerList);
 
-  std::cout << fg_green << "-> Received PlanningResponse" << fg_default << std::endl << planningResponse.DebugString();
+  std::cout << Color::fg_green << "-> Received PlanningResponse" << Color::fg_default << std::endl << planningResponse.DebugString();
 
   for (int i = 0; i < planningResponse.actions_size(); i++)
   {
@@ -416,19 +444,36 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
       {
         const pb_urs::Goto& action_goto = action.goto_();
         int wpId = action_goto.wp_id();
-        if (wpPool.data[wpId].rotate)
+        urs_wearable::ActionsGoal goal;
+
+        if (wp_pool.data[wpId].rotate)
         {
-          controller[action_goto.uav_id()].setDest(wpPool.data[wpId].pose);
+          goal.action_type = 1;
         }
         else
         {
-          controller[action_goto.uav_id()].setDest(wpPool.data[wpId].pose.x, wpPool.data[wpId].pose.y, wpPool.data[wpId].pose.z);
+          goal.action_type = 2;
         }
+
+        goal.pose.x = wp_pool.data[wpId].pose.x;
+        goal.pose.y = wp_pool.data[wpId].pose.y;
+        goal.pose.z = wp_pool.data[wpId].pose.z;
+        goal.pose.yaw = wp_pool.data[wpId].pose.yaw;
+
+        action_client[action_goto.uav_id()]->sendGoal(goal);
+//        action_client[action_goto.uav_id()]->waitForResult(ros::Duration(5.0));
+
+        ros::Rate r(100);
+        while (action_client[action_goto.uav_id()]->getState() == actionlib::SimpleClientGoalState::ACTIVE)
+        {
+          r.sleep();
+        }
+
+        std::cout << Color::fg_blue << action_client[action_goto.uav_id()]->getState().toString() << Color::fg_default << std::endl;
         break;
       }
     }
   }
 
-  plannerPool.retrieveId(allocatedPlannerList);
-  wpPool.retrieveId(allocatedWpList);
+  wp_pool.retrieveId(allocatedWpList);
 }
