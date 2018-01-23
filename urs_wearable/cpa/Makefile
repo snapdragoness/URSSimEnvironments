@@ -1,4 +1,4 @@
-SUBDIRS = cpa1 cpa2
+SUBDIRS = pddl2a cpa1 cpa2
 
 all:
 	for dir in $(SUBDIRS); do \
