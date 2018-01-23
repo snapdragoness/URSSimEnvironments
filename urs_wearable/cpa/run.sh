@@ -1,3 +1,5 @@
 #!/bin/sh
 
-gnome-terminal --tab -e "./cpa1/cpa+" --tab -e "./cpa2/cpa+"
+gnome-terminal \
+--tab --working-directory=$PWD/cpa1 -e "./cpa+" \
+--tab --working-directory=$PWD/cpa2 -e "./cpa+"

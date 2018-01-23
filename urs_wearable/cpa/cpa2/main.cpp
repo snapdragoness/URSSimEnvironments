@@ -40,6 +40,7 @@ int main(int argc, char **argv)
   // compatible with the version of the headers we compiled against.
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
+  system("pwd");
   std::cout << "CPA+ version " << VERSION << " - Built date: " << BUILT_DATE << std::endl;
 
   /*****************************************************/
