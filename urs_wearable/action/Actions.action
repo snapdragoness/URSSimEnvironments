@@ -6,6 +6,7 @@
 int8 action_type
 
 Pose pose
+bool rotate
 ---
 ## Result ##
 

@@ -451,7 +451,7 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
         goal.pose.y = wp_pool.data[wpId].pose.y;
         goal.pose.z = wp_pool.data[wpId].pose.z;
         goal.pose.yaw = wp_pool.data[wpId].pose.yaw;
-        goal.pose.rotate = wp_pool.data[wpId].rotate;
+        goal.rotate = wp_pool.data[wpId].rotate;
 
         action_client[action_goto.uav_id()]->sendGoal(goal);
 //        action_client[action_goto.uav_id()]->waitForResult(ros::Duration(5.0));

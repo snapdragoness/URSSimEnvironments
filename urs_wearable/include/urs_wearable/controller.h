@@ -3,6 +3,7 @@
 
 #include "urs_wearable/pose.h"
 #include "urs_wearable/Pose.h"
+#include "urs_wearable/SetDest.h"
 
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -37,10 +38,10 @@ class Controller {
   ros::Subscriber poseSub;    // subscriber of the UAV's ground truth
   geometry_msgs::Twist cmd;   // a twist message to be sent to /cmd_vel
 
-  ros::Subscriber destSub;
-
   boost::thread commanderThread;
   boost::thread posePubThread;
+
+  ros::ServiceServer setDestService;
 
   boost::mutex mut_dest;
   boost::mutex mut_pose;
@@ -66,7 +67,7 @@ public:
   Pose getPose();
   Pose getDest();
   void setDest(const Pose& dest, bool rotate);
-  void setDest(const urs_wearable::PoseConstPtr& dest);
+  bool setDest(urs_wearable::SetDest::Request &req, urs_wearable::SetDest::Response &res);
   void setNamespace(const std::string& ns);
 
   // static methods

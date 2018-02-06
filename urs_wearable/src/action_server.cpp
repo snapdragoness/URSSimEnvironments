@@ -1,5 +1,6 @@
 #include "urs_wearable/ActionsAction.h"
 #include "urs_wearable/Pose.h"
+#include "urs_wearable/SetDest.h"
 
 #include "urs_wearable/navigator.h"
 
@@ -78,58 +79,22 @@ public:
 
   void actionGoto(const urs_wearable::ActionsGoalConstPtr &goal)
   {
-    urs_wearable::Pose dest;
-    dest.x = goal->pose.x;
-    dest.y = goal->pose.y;
-    dest.z = goal->pose.z;
-    dest.yaw = goal->pose.yaw;
-    dest.rotate = goal->pose.rotate;
-    boost::thread destPubThread = boost::thread(&Actions::_destPub, this, 10, dest);
+    urs_wearable::SetDest setDest;
+    setDest.request.pose.x = goal->pose.x;
+    setDest.request.pose.y = goal->pose.y;
+    setDest.request.pose.z = goal->pose.z;
+    setDest.request.rotate = goal->rotate;
 
-    Pose dest_;
-    dest_.x = dest.x;
-    dest_.y = dest.y;
-    dest_.z = dest.z;
-
-    ros::Rate r(10);
-    while (!as.isPreemptRequested() && ros::ok())
+    if (ros::service::call(ns + "/set_dest", setDest))
     {
-      mut_pose.lock();
-      if (Navigator::getDistance(pose, dest_) <= 0.1)
-      {
-        mut_pose.unlock();
-        as.setSucceeded();
-        destPubThread.interrupt();
-        return;
-      }
-      mut_pose.unlock();
-      r.sleep();
+      ROS_INFO("%s: actionGoto OK", action_name.c_str());
     }
-    as.setAborted();
-    destPubThread.interrupt();
-  }
-
-  void _destPub(ros::Rate rate, urs_wearable::Pose& dest)
-  {
-    ros::Publisher destPub = nh.advertise<urs_wearable::Pose>(ns + "/urs_wearable/dest", 10, false);
-
-    while (ros::ok())
+    else
     {
-      try
-      {
-        destPub.publish(dest);
-
-        ros::spinOnce();
-        rate.sleep();
-      }
-      catch (boost::thread_interrupted&)
-      {
-        break;
-      }
+      ROS_INFO("%s: actionGoto FAILED", action_name.c_str());
     }
 
-    /* clean up the publisher */
-    destPub.shutdown();
+    as.setSucceeded();
   }
 };
 
