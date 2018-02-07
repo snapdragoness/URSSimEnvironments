@@ -147,6 +147,12 @@ add_executable(action_server src/action_server.cpp src/navigator.cpp)
 add_executable(exec_monitor src/exec_monitor.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 add_executable(fake_wearable src/fake_wearable.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 
+add_dependencies(controller ${catkin_EXPORTED_TARGETS})
+add_dependencies(navigator ${catkin_EXPORTED_TARGETS})
+add_dependencies(action_server ${catkin_EXPORTED_TARGETS})
+add_dependencies(exec_monitor ${catkin_EXPORTED_TARGETS})
+add_dependencies(fake_wearable ${catkin_EXPORTED_TARGETS})
+
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
