@@ -10,6 +10,7 @@ add_definitions(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
+  message_generation
   hector_quadrotor_interface
   actionlib
 )
@@ -147,11 +148,11 @@ add_executable(action_server src/action_server.cpp src/navigator.cpp)
 add_executable(exec_monitor src/exec_monitor.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 add_executable(fake_wearable src/fake_wearable.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 
-add_dependencies(controller ${catkin_EXPORTED_TARGETS})
-add_dependencies(navigator ${catkin_EXPORTED_TARGETS})
-add_dependencies(action_server ${catkin_EXPORTED_TARGETS})
-add_dependencies(exec_monitor ${catkin_EXPORTED_TARGETS})
-add_dependencies(fake_wearable ${catkin_EXPORTED_TARGETS})
+add_dependencies(controller ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+add_dependencies(navigator ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+add_dependencies(action_server ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+add_dependencies(exec_monitor ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+add_dependencies(fake_wearable ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
