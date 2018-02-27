@@ -17,23 +17,25 @@ message WearableRequest {
   }
   
   enum WearableRequestType {
-    GET_REGION = 0;
-    GET_POSE_REPEATED = 1;
+    GET_REGION = 0;                   // No message instance required
+    GET_POSE_REPEATED = 1;            // Require message: get_pose_repeated
 
-    SET_POSE_REPEATED = 2;
-    SET_POSE_WAYPOINT_REPEATED = 3;
+    SET_POSE_REPEATED = 2;            // Require message: set_pose_repeated
+    SET_POSE_WAYPOINT_REPEATED = 3;   // Require message: set_pose_waypoint_repeated
   }
 
+  // Response message type: POSE_REPEATED
   message GetPoseRepeated {
-    repeated GetPose get_pose = 1;  // uav_id must be different in each instance
+    repeated GetPose get_pose = 1;    // uav_id must be different in each instance
 
     message GetPose {
       required int32 uav_id = 1;
     }
   }
 
+  // Response message type: none
   message SetPoseRepeated {
-    repeated SetPose set_pose = 1;  // uav_id must be different in each instance
+    repeated SetPose set_pose = 1;    // uav_id must be different in each instance
 
     message SetPose {
       required int32 uav_id = 1;
@@ -44,6 +46,7 @@ message WearableRequest {
     }
   }
 
+  // Response message type: none
   message SetPoseWaypointRepeated {
     required int32 uav_id = 1;
     repeated SetPoseWaypoint set_pose_waypoint = 2;
@@ -53,7 +56,7 @@ message WearableRequest {
       required double y = 2;
       required double z = 3;
       optional double yaw = 4;
-      optional int32 delay_ms = 5;
+      optional int32 delay_ms = 5;    // Stop duration when the waypoint is reached [default: 0 ms]
     }
   }
 }
@@ -73,11 +76,12 @@ message WearableResponse {
   }
   
   enum WearableResponseType {
-    PERIODIC_STATUS = 0;
-    POSE_REPEATED = 1;
-    REGION = 2;
+    PERIODIC_STATUS = 0;              // Require message: periodic_status
+    POSE_REPEATED = 1;                // Require message: pose_repeated
+    REGION = 2;                       // Require message: region
   }
 
+  // Request message type: GET_POSE_REPEATED
   message PoseRepeated {
     repeated Pose pose = 1;
 
@@ -90,6 +94,7 @@ message WearableResponse {
     }
   }
 
+  // Request message type: GET_REGION
   message Region {
     //             y
     //             ^
@@ -107,6 +112,8 @@ message WearableResponse {
     required double y1 = 4;
   }
 
+  // Request message type: none
+  // This message will be sent to client every few milliseconds
   message PeriodicStatus {
     repeated Pose pose = 1;
 
