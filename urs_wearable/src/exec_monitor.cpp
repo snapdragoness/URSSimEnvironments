@@ -337,6 +337,22 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
 
   switch (wearableRequest.type())
   {
+    /* GET */
+    case pb_wearable::WearableRequest::GET_REGION:
+    {
+      pb_wearable::WearableResponse wearableResponse;
+      wearableResponse.set_type(pb_wearable::WearableResponse::REGION);
+
+      pb_wearable::WearableResponse_Region* region = wearableResponse.mutable_region();
+      region->set_x0(REGION_X0);
+      region->set_y0(REGION_Y0);
+      region->set_x1(REGION_X1);
+      region->set_y1(REGION_Y1);
+
+      writeDelimitedToSockFD(wearableSockFD, wearableResponse);
+      return;
+    }
+
     case pb_wearable::WearableRequest::GET_POSE_REPEATED:
     {
       pb_wearable::WearableResponse wearableResponse;
@@ -359,14 +375,16 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
       writeDelimitedToSockFD(wearableSockFD, wearableResponse);
       return;
     }
-    case pb_wearable::WearableRequest::SET_DEST_REPEATED:
+
+    /* SET */
+    case pb_wearable::WearableRequest::SET_POSE_REPEATED:
     {
       // Construct Planning Request
       initPlanningRequest(allocatedWpList, planningRequest.mutable_initial());
 
       pb_urs::State* goalState = planningRequest.mutable_goal();
-      const pb_wearable::WearableRequest_SetDestRepeated& setDestRepeated = wearableRequest.set_dest_repeated();
-      for (int i = 0; i < setDestRepeated.set_dest_size(); i++)
+      const pb_wearable::WearableRequest_SetPoseRepeated& setPoseRepeated = wearableRequest.set_pose_repeated();
+      for (int i = 0; i < setPoseRepeated.set_pose_size(); i++)
       {
         int wpId = wp_pool.newId(allocatedWpList);
         while (wpId == -1)
@@ -375,12 +393,39 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
           wpId = wp_pool.newId(allocatedWpList);
         }
 
-        wp_pool.data[wpId].pose.x = setDestRepeated.set_dest(i).x();
-        wp_pool.data[wpId].pose.y = setDestRepeated.set_dest(i).y();
-        wp_pool.data[wpId].pose.z = setDestRepeated.set_dest(i).z();
-        if (setDestRepeated.set_dest(i).has_yaw())
+        int uavId = setPoseRepeated.set_pose(i).uav_id();
+        Pose dest = controller[uavId].getDest();
+
+        if (setPoseRepeated.set_pose(i).has_x())
         {
-          wp_pool.data[wpId].pose.yaw = setDestRepeated.set_dest(i).yaw();
+          wp_pool.data[wpId].pose.x = setPoseRepeated.set_pose(i).x();
+        }
+        else
+        {
+          wp_pool.data[wpId].pose.x = dest.x;
+        }
+
+        if (setPoseRepeated.set_pose(i).has_y())
+        {
+          wp_pool.data[wpId].pose.y = setPoseRepeated.set_pose(i).y();
+        }
+        else
+        {
+          wp_pool.data[wpId].pose.y = dest.y;
+        }
+
+        if (setPoseRepeated.set_pose(i).has_z())
+        {
+          wp_pool.data[wpId].pose.z = setPoseRepeated.set_pose(i).z();
+        }
+        else
+        {
+          wp_pool.data[wpId].pose.z = dest.z;
+        }
+
+        if (setPoseRepeated.set_pose(i).has_yaw())
+        {
+          wp_pool.data[wpId].pose.yaw = setPoseRepeated.set_pose(i).yaw();
           wp_pool.data[wpId].rotate = true;
         }
         else
@@ -389,25 +434,11 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
         }
 
         pb_urs::At* at = goalState->add_at();
-        at->set_uav_id(setDestRepeated.set_dest(i).uav_id());
+        at->set_uav_id(uavId);
         at->set_wp_id(wpId);
       }
 
       break;
-    }
-    case pb_wearable::WearableRequest::GET_REGION:
-    {
-      pb_wearable::WearableResponse wearableResponse;
-      wearableResponse.set_type(pb_wearable::WearableResponse::REGION);
-
-      pb_wearable::WearableResponse_Region* region = wearableResponse.mutable_region();
-      region->set_x0(REGION_X0);
-      region->set_y0(REGION_Y0);
-      region->set_x1(REGION_X1);
-      region->set_y1(REGION_Y1);
-
-      writeDelimitedToSockFD(wearableSockFD, wearableResponse);
-      return;
     }
   }
 

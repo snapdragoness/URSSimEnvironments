@@ -85,20 +85,21 @@ int main(int argc, char const *argv[])
   {
     // 1
     pb_wearable::WearableRequest req1;
-    req1.set_type(pb_wearable::WearableRequest::SET_DEST_REPEATED);
+    req1.set_type(pb_wearable::WearableRequest::SET_POSE_REPEATED);
 
-    pb_wearable::WearableRequest_SetDestRepeated* setDestRepeated = req1.mutable_set_dest_repeated();
-    pb_wearable::WearableRequest_SetDestRepeated_SetDest* setDest = setDestRepeated->add_set_dest();
-    setDest->set_uav_id(rand() % 4);
-    setDest->set_x(rand() % 10 - 4);
-    setDest->set_y(rand() % 10 - 4);
-    setDest->set_z(rand() % 10 + 1);
+    pb_wearable::WearableRequest_SetPoseRepeated* setPostRepeated = req1.mutable_set_pose_repeated();
+    pb_wearable::WearableRequest_SetPoseRepeated_SetPose* setPose = setPostRepeated->add_set_pose();
+    int uavId = rand() % 4;
+    setPose->set_uav_id(uavId);
+    setPose->set_x(rand() % 10 - 4);
+    setPose->set_y(rand() % 10 - 4);
+    setPose->set_z(rand() % 10 + 1);
 
-    setDest = setDestRepeated->add_set_dest();
-    setDest->set_uav_id(rand() % 4);
-    setDest->set_x(rand() % 11 - 4);
-    setDest->set_y(rand() % 11 - 4);
-    setDest->set_z(rand() % 10 + 1);
+    setPose = setPostRepeated->add_set_pose();
+    setPose->set_uav_id((uavId + (rand() % 3) + 1) % 4);
+    setPose->set_x(rand() % 11 - 4);
+    setPose->set_y(rand() % 11 - 4);
+    setPose->set_z(rand() % 10 + 1);
 
     std::cout << Color::fg_blue << "WearableRequest::SET_DEST_REPEATED sent - " << Color::fg_default
         << writeDelimitedToSockFD(execMonitorSockFD, req1) << std::endl;

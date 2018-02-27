@@ -9,36 +9,42 @@ message WearableRequest {
   required WearableRequestType type = 1;
   
   oneof oneof_wearablerequest {
-    GetPoseRepeated get_pose_repeated = 2;
-    SetDestRepeated set_dest_repeated = 3;
+    SetPoseRepeated set_pose_repeated = 2;
 
     // Infrequent requests should come last
+    GetPoseRepeated get_pose_repeated = 4;
   }
   
   enum WearableRequestType {
-    GET_POSE_REPEATED = 0;
-    SET_DEST_REPEATED = 1;
-    GET_REGION = 2;
+    GET_REGION = 0;
+    GET_POSE_REPEATED = 1;
+
+    SET_POSE_REPEATED = 2;
+    SET_POSE_WAYPOINT_REPEATED = 3;
   }
 
   message GetPoseRepeated {
-    repeated GetPose get_pose = 1;
+    repeated GetPose get_pose = 1;  // uav_id must be different in each instance
 
     message GetPose {
       required int32 uav_id = 1;
     }
   }
 
-  message SetDestRepeated {
-    repeated SetDest set_dest = 1;
+  message SetPoseRepeated {
+    repeated SetPose set_pose = 1;  // uav_id must be different in each instance
 
-    message SetDest {
+    message SetPose {
       required int32 uav_id = 1;
-      required double x = 2;
-      required double y = 3;
-      required double z = 4;
+      optional double x = 2;
+      optional double y = 3;
+      optional double z = 4;
       optional double yaw = 5;
     }
+  }
+
+  message SetPoseWaypointRepeated {
+
   }
 }
 
