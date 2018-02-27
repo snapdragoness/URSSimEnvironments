@@ -10,6 +10,7 @@ message WearableRequest {
   
   oneof oneof_wearablerequest {
     SetPoseRepeated set_pose_repeated = 2;
+    SetPoseWaypointRepeated set_pose_waypoint_repeated = 3;
 
     // Infrequent requests should come last
     GetPoseRepeated get_pose_repeated = 4;
@@ -44,7 +45,16 @@ message WearableRequest {
   }
 
   message SetPoseWaypointRepeated {
+    required int32 uav_id = 1;
+    repeated SetPoseWaypoint set_pose_waypoint = 2;
 
+    message SetPoseWaypoint {
+      required double x = 1;
+      required double y = 2;
+      required double z = 3;
+      optional double yaw = 4;
+      optional int32 delay_ms = 5;
+    }
   }
 }
 

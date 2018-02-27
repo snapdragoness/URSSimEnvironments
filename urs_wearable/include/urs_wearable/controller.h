@@ -3,6 +3,7 @@
 
 #include "urs_wearable/pose.h"
 #include "urs_wearable/Pose.h"
+#include "urs_wearable/GetPose.h"
 #include "urs_wearable/SetDest.h"
 
 #include <ros/ros.h>
@@ -41,6 +42,7 @@ class Controller {
   boost::thread commanderThread;
   boost::thread posePubThread;
 
+  ros::ServiceServer getPoseService;
   ros::ServiceServer setDestService;
 
   boost::mutex mut_dest;
@@ -65,6 +67,7 @@ public:
 
   // auxiliary methods
   Pose getPose();
+  bool getPose(urs_wearable::GetPose::Request &req, urs_wearable::GetPose::Response &res);
   Pose getDest();
   void setDest(const Pose& dest, bool rotate);
   bool setDest(urs_wearable::SetDest::Request &req, urs_wearable::SetDest::Response &res);

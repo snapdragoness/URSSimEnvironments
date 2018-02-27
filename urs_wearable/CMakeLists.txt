@@ -55,12 +55,13 @@ add_message_files(
 
 ## Generate services in the 'srv' folder
 add_service_files(
-  FILES SetDest.srv
+  FILES
+  GetPose.srv
+  SetDest.srv 
 )
 
 ## Generate actions in the 'action' folder
 add_action_files(
-#  DIRECTORY action
   FILES Actions.action
 )
 

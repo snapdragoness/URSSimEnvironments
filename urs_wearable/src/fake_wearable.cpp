@@ -81,45 +81,68 @@ int main(int argc, char const *argv[])
 
   boost::thread wearableResponseListenerThread = boost::thread(wearableResponseListener, execMonitorSockFD);
 
-  while (true)
-  {
-    // 1
-    pb_wearable::WearableRequest req1;
-    req1.set_type(pb_wearable::WearableRequest::SET_POSE_REPEATED);
+  pb_wearable::WearableRequest req1;
+  req1.set_type(pb_wearable::WearableRequest::SET_POSE_WAYPOINT_REPEATED);
 
-    pb_wearable::WearableRequest_SetPoseRepeated* setPostRepeated = req1.mutable_set_pose_repeated();
-    pb_wearable::WearableRequest_SetPoseRepeated_SetPose* setPose = setPostRepeated->add_set_pose();
-    int uavId = rand() % 4;
-    setPose->set_uav_id(uavId);
-    setPose->set_x(rand() % 10 - 4);
-    setPose->set_y(rand() % 10 - 4);
-    setPose->set_z(rand() % 10 + 1);
+  pb_wearable::WearableRequest_SetPoseWaypointRepeated* setPostWaypointRepeated = req1.mutable_set_pose_waypoint_repeated();
+  setPostWaypointRepeated->set_uav_id(0);
+  pb_wearable::WearableRequest_SetPoseWaypointRepeated_SetPoseWaypoint* setPoseWaypoint = setPostWaypointRepeated->add_set_pose_waypoint();
+  setPoseWaypoint->set_x(10);
+  setPoseWaypoint->set_y(0);
+  setPoseWaypoint->set_z(4);
 
-    setPose = setPostRepeated->add_set_pose();
-    setPose->set_uav_id((uavId + (rand() % 3) + 1) % 4);
-    setPose->set_x(rand() % 11 - 4);
-    setPose->set_y(rand() % 11 - 4);
-    setPose->set_z(rand() % 10 + 1);
+  setPoseWaypoint = setPostWaypointRepeated->add_set_pose_waypoint();
+  setPoseWaypoint->set_x(10);
+  setPoseWaypoint->set_y(-10);
+  setPoseWaypoint->set_z(10);
 
-    std::cout << Color::fg_blue << "WearableRequest::SET_DEST_REPEATED sent - " << Color::fg_default
-        << writeDelimitedToSockFD(execMonitorSockFD, req1) << std::endl;
+  setPoseWaypoint = setPostWaypointRepeated->add_set_pose_waypoint();
+  setPoseWaypoint->set_x(4);
+  setPoseWaypoint->set_y(0);
+  setPoseWaypoint->set_z(2);
 
-    // 2
-    pb_wearable::WearableRequest req2;
-    req2.set_type(pb_wearable::WearableRequest::GET_REGION);
-    expectedWearableResponseType = pb_wearable::WearableRequest::GET_REGION;
-    std::cout << Color::fg_blue << "WearableRequest::GET_REGION sent - " << Color::fg_default
-        << writeDelimitedToSockFD(execMonitorSockFD, req2) << std::endl;
+  std::cout << Color::fg_blue << "WearableRequest::SET_DEST_REPEATED sent - " << Color::fg_default
+      << writeDelimitedToSockFD(execMonitorSockFD, req1) << std::endl;
 
-    while (expectedWearableResponseType != -1)
-    {
-      boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
-    }
-    std::cout << Color::fg_green << "-> Received WearableResponse" << std::endl
-        << expectedWearableResponse.DebugString() << Color::fg_default;
-
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(2000));
-  }
+//  while (true)
+//  {
+//    // 1
+//    pb_wearable::WearableRequest req1;
+//    req1.set_type(pb_wearable::WearableRequest::SET_POSE_REPEATED);
+//
+//    pb_wearable::WearableRequest_SetPoseRepeated* setPostRepeated = req1.mutable_set_pose_repeated();
+//    pb_wearable::WearableRequest_SetPoseRepeated_SetPose* setPose = setPostRepeated->add_set_pose();
+//    int uavId = rand() % 4;
+//    setPose->set_uav_id(uavId);
+//    setPose->set_x(rand() % 10 - 4);
+//    setPose->set_y(rand() % 10 - 4);
+//    setPose->set_z(rand() % 10 + 1);
+//
+//    setPose = setPostRepeated->add_set_pose();
+//    setPose->set_uav_id((uavId + (rand() % 3) + 1) % 4);
+//    setPose->set_x(rand() % 11 - 4);
+//    setPose->set_y(rand() % 11 - 4);
+//    setPose->set_z(rand() % 10 + 1);
+//
+//    std::cout << Color::fg_blue << "WearableRequest::SET_DEST_REPEATED sent - " << Color::fg_default
+//        << writeDelimitedToSockFD(execMonitorSockFD, req1) << std::endl;
+//
+//    // 2
+//    pb_wearable::WearableRequest req2;
+//    req2.set_type(pb_wearable::WearableRequest::GET_REGION);
+//    expectedWearableResponseType = pb_wearable::WearableResponse::REGION;
+//    std::cout << Color::fg_blue << "WearableRequest::GET_REGION sent - " << Color::fg_default
+//        << writeDelimitedToSockFD(execMonitorSockFD, req2) << std::endl;
+//
+//    while (expectedWearableResponseType != -1)
+//    {
+//      boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+//    }
+//    std::cout << Color::fg_green << "-> Received WearableResponse" << std::endl
+//        << expectedWearableResponse.DebugString() << Color::fg_default;
+//
+//    boost::this_thread::sleep_for(boost::chrono::milliseconds(2000));
+//  }
 
   wearableResponseListenerThread.interrupt();
   close(execMonitorSockFD);
@@ -141,7 +164,7 @@ void wearableResponseListener(int execMonitorSockFD)
 
       if (wearableResponse.type() == pb_wearable::WearableResponse::PERIODIC_STATUS)
       {
-        std::cout << "-> Received WearableResponse::PERIODIC_STATUS" << std::endl;
+//        std::cout << "-> Received WearableResponse::PERIODIC_STATUS" << std::endl;
       }
       else if (wearableResponse.type() == expectedWearableResponseType)
       {

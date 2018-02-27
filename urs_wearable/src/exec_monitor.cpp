@@ -440,6 +440,48 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
 
       break;
     }
+
+    case pb_wearable::WearableRequest::SET_POSE_WAYPOINT_REPEATED:
+    {
+      const pb_wearable::WearableRequest_SetPoseWaypointRepeated& setPoseWaypointRepeated = wearableRequest.set_pose_waypoint_repeated();
+
+      int uavId = setPoseWaypointRepeated.uav_id();
+      actionlib::SimpleActionClient<urs_wearable::ActionsAction>& ac = *action_client[uavId];
+      for (int i = 0; i < setPoseWaypointRepeated.set_pose_waypoint_size(); i++)
+      {
+        urs_wearable::ActionsGoal goal;
+
+        goal.action_type = 1;
+        goal.pose.x = setPoseWaypointRepeated.set_pose_waypoint(i).x();
+        goal.pose.y = setPoseWaypointRepeated.set_pose_waypoint(i).y();
+        goal.pose.z = setPoseWaypointRepeated.set_pose_waypoint(i).z();
+        goal.rotate = setPoseWaypointRepeated.set_pose_waypoint(i).has_yaw();
+        if (goal.rotate)
+        {
+          goal.pose.yaw = setPoseWaypointRepeated.set_pose_waypoint(i).yaw();
+        }
+
+        action_client[uavId]->sendGoal(goal);
+
+        bool finished_before_timeout = action_client[uavId]->waitForResult(ros::Duration(30.0));
+        if (finished_before_timeout)
+        {
+          actionlib::SimpleClientGoalState state = ac.getState();
+          ROS_INFO("Action finished: %s",state.toString().c_str());
+        }
+        else
+        {
+          ROS_INFO("Action did not finish before the time out.");
+        }
+
+        if (setPoseWaypointRepeated.set_pose_waypoint(i).has_delay_ms())
+        {
+          boost::this_thread::sleep_for(boost::chrono::milliseconds(setPoseWaypointRepeated.set_pose_waypoint(i).delay_ms()));
+        }
+      }
+
+      return;
+    }
   }
 
   // Send a planning request
@@ -484,16 +526,21 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
         goal.pose.yaw = wp_pool.data[wpId].pose.yaw;
         goal.rotate = wp_pool.data[wpId].rotate;
 
-        action_client[action_goto.uav_id()]->sendGoal(goal);
-//        action_client[action_goto.uav_id()]->waitForResult(ros::Duration(5.0));
+        actionlib::SimpleActionClient<urs_wearable::ActionsAction>& ac = *action_client[action_goto.uav_id()];
 
-        ros::Rate r(100);
-        while (action_client[action_goto.uav_id()]->getState() == actionlib::SimpleClientGoalState::ACTIVE)
+        ac.sendGoal(goal);
+
+        bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+        if (finished_before_timeout)
         {
-          r.sleep();
+          actionlib::SimpleClientGoalState state = ac.getState();
+          ROS_INFO("Action finished: %s",state.toString().c_str());
+        }
+        else
+        {
+          ROS_INFO("Action did not finish before the time out.");
         }
 
-        std::cout << Color::fg_blue << action_client[action_goto.uav_id()]->getState().toString() << Color::fg_default << std::endl;
         break;
       }
     }

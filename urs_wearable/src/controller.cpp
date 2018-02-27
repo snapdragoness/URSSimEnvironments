@@ -51,6 +51,7 @@ void Controller::start(double height)
     commanderThread = boost::thread(&Controller::_commander, this, 10);
     posePubThread = boost::thread(&Controller::_posePub, this, 10);
 
+    getPoseService = nh->advertiseService(ns + "/get_pose", &Controller::getPose, this);
     setDestService = nh->advertiseService(ns + "/set_dest", &Controller::setDest, this);
   }
   else
@@ -204,6 +205,17 @@ Pose Controller::getPose()
   Pose pose = this->pose;
   mut_pose.unlock();
   return pose;
+}
+
+bool Controller::getPose(urs_wearable::GetPose::Request &req, urs_wearable::GetPose::Response &res)
+{
+  mut_pose.lock();
+  res.pose.x = this->pose.x;
+  res.pose.y= this->pose.y;
+  res.pose.z = this->pose.z;
+  res.pose.yaw = this->pose.yaw;
+  mut_pose.unlock();
+  return true;
 }
 
 Pose Controller::getDest()

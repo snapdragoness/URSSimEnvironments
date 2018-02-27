@@ -83,18 +83,46 @@ public:
     setDest.request.pose.x = goal->pose.x;
     setDest.request.pose.y = goal->pose.y;
     setDest.request.pose.z = goal->pose.z;
+    setDest.request.pose.yaw = goal->pose.yaw;
     setDest.request.rotate = goal->rotate;
 
     if (ros::service::call(ns + "/set_dest", setDest))
     {
-      ROS_INFO("%s: actionGoto OK", action_name.c_str());
+      ROS_INFO("%s: actionGoto set_dest OK", action_name.c_str());
     }
     else
     {
-      ROS_INFO("%s: actionGoto FAILED", action_name.c_str());
+      ROS_INFO("%s: actionGoto set_dest FAILED", action_name.c_str());
     }
 
-    as.setSucceeded();
+    Pose dest;
+    dest.x = goal->pose.x;
+    dest.y = goal->pose.y;
+    dest.z = goal->pose.z;
+    while (true)
+    {
+      urs_wearable::GetPose getPose;
+      if (!ros::service::call(ns + "/get_pose", getPose))
+      {
+        ROS_INFO("%s: actionGoto get_pose FAILED", action_name.c_str());
+        as.setAborted();
+        break;
+      }
+
+      Pose pose;
+      pose.x = getPose.response.pose.x;
+      pose.y = getPose.response.pose.y;
+      pose.z = getPose.response.pose.z;
+
+      if (Navigator::getDistance(pose, dest) < 0.2)
+      {
+        ROS_INFO("%s: actionGoto destination REACHED", action_name.c_str());
+        as.setSucceeded();
+        break;
+      }
+
+      boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+    }
   }
 };
 
