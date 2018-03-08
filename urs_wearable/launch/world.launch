@@ -4,4 +4,7 @@
   <include file="$(find urs_wearable)/launch/gas_station.launch" />
   <include file="$(find urs_wearable)/launch/spawn_four_quadrotors.launch" />
   <include file="$(find urs_wearable)/launch/action_server.launch" />
+
+  <!-- Start rviz visualization with preset config -->
+  <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find urs_wearable)/rviz_cfg/four_quadrotors.rviz" />  -->
 </launch>

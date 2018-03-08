@@ -45,7 +45,4 @@
       <!-- <arg name="Y" value="-1.5707963268" /> -->
     </include>
   </group>
-
-  <!-- Start rviz visualization with preset config -->
-  <!-- node pkg="rviz" type="rviz" name="rviz" args="-d $(find urs_wearable)/rviz_cfg/four_quadrotors.rviz" /-->
 </launch>
