@@ -1,22 +1,22 @@
 <?xml version="1.0"?>
 
 <robot name="quadrotor" xmlns:xacro="http://www.ros.org/wiki/xacro">
-	<xacro:property name="M_PI" value="3.1415926535897931" />
-	
-	<!-- Included URDF Files -->
-	<xacro:include filename="$(find hector_quadrotor_description)/urdf/quadrotor_base.urdf.xacro" />
-	
-	<!-- Instantiate quadrotor_base_macro once (has no parameters atm) -->
-	<xacro:quadrotor_base_macro />
-	
-	<!-- Asus Xiton Live Pro -->
-	<xacro:include filename="$(find hector_sensors_description)/urdf/asus_camera.urdf.xacro" />
-	<xacro:asus_camera name="camera" parent="base_link">
-	  <origin xyz="0.1 0.0 -0.03" rpy="0 ${M_PI/9} 0"/>
-	</xacro:asus_camera>
-	
-	<!-- Sonar height sensor (upward) -->
-	<xacro:sonar_sensor name="sonar_upward" parent="base_link" ros_topic="sonar_upward" update_rate="10" min_range="0.03" max_range="3.0" field_of_view="${40*pi/180}" ray_count="3">
-	  <origin xyz="0.0 0.0 0.04" rpy="0 ${270*pi/180} 0"/>
-	</xacro:sonar_sensor>
+  <xacro:property name="M_PI" value="3.1415926535897931" />
+
+  <!-- Included URDF Files -->
+  <xacro:include filename="$(find hector_quadrotor_description)/urdf/quadrotor_base.urdf.xacro" />
+
+  <!-- Instantiate quadrotor_base_macro once (has no parameters atm) -->
+  <xacro:quadrotor_base_macro />
+
+  <!-- Asus Xiton Live Pro -->
+  <xacro:include filename="$(find hector_sensors_description)/urdf/asus_camera.urdf.xacro" />
+  <xacro:asus_camera name="camera" parent="base_link">
+    <origin xyz="0.1 0.0 -0.03" rpy="0 ${M_PI/9} 0"/>
+  </xacro:asus_camera>
+
+  <!-- Sonar height sensor (upward) -->
+  <xacro:sonar_sensor name="sonar_upward" parent="base_link" ros_topic="sonar_upward" update_rate="10" min_range="0.03" max_range="3.0" field_of_view="${40*pi/180}" ray_count="3">
+    <origin xyz="0.0 0.0 0.04" rpy="0 ${270*pi/180} 0"/>
+  </xacro:sonar_sensor>
 </robot>
