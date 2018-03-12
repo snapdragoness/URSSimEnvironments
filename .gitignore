@@ -2,6 +2,7 @@
 beginner_tutorials/
 multimaster_fkie/
 mastering_ros/
+hector_navigation/
 
 urs_wearable/include/*.pb.*
 
