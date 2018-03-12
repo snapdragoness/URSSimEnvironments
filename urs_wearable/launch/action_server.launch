@@ -1,19 +1,19 @@
 <?xml version="1.0"?>
 
 <launch>
-	<node pkg="urs_wearable" type="action_server" name="action_server_0" respawn="true" output="screen">
+  <node pkg="urs_wearable" type="action_server" ns="uav0" name="action_server" respawn="true" output="screen">
     <param name="ns" value="/uav0" type="str" />
-	</node>
-	
-	<node pkg="urs_wearable" type="action_server" name="action_server_1" respawn="true" output="screen">
+  </node>
+
+  <node pkg="urs_wearable" type="action_server" ns="uav1" name="action_server" respawn="true" output="screen">
     <param name="ns" value="/uav1" type="str" />
   </node>
-  
-  <node pkg="urs_wearable" type="action_server" name="action_server_2" respawn="true" output="screen">
+
+  <node pkg="urs_wearable" type="action_server" ns="uav2" name="action_server" respawn="true" output="screen">
     <param name="ns" value="/uav2" type="str" />
   </node>
-  
-  <node pkg="urs_wearable" type="action_server" name="action_server_3" respawn="true" output="screen">
+
+  <node pkg="urs_wearable" type="action_server" ns="uav3" name="action_server" respawn="true" output="screen">
     <param name="ns" value="/uav3" type="str" />
   </node>
 </launch>

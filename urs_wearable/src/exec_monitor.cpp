@@ -86,7 +86,7 @@ int main(int argc, char **argv)
     navigator[i].init();
     navigator[i].setNamespace("/uav" + std::to_string(i));
 
-    action_client[i] = new (actionlib::SimpleActionClient<urs_wearable::ActionsAction>) ("action_server_" + std::to_string(i));
+    action_client[i] = new (actionlib::SimpleActionClient<urs_wearable::ActionsAction>) ("/uav" + std::to_string(i) + "/action_server");
     action_client[i]->waitForServer();
   }
 
