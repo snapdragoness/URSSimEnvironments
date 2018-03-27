@@ -5,6 +5,7 @@ mastering_ros/
 hector_navigation/
 
 urs_wearable/include/*.pb.*
+urs_wearable/models/*/*.blend?*
 
 urs_wearable/cpa/cpa1/bison.c
 urs_wearable/cpa/cpa1/built_date
