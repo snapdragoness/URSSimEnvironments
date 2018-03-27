@@ -2,7 +2,7 @@
 
 <launch>
   <include file="$(find urs_wearable)/launch/nmsu.launch" />
-  <include file="$(find urs_wearable)/launch/spawn_four_quadrotors.launch" />
+  <include file="$(find urs_wearable)/launch/spawn_quadrotors.launch" />
   <include file="$(find urs_wearable)/launch/action_server.launch" />
 
   <!-- Start rviz visualization with preset config -->
