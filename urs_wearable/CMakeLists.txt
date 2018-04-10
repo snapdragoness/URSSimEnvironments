@@ -8,11 +8,12 @@ add_definitions(-std=c++11)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  std_msgs
-  message_generation
-  hector_quadrotor_interface
   actionlib
+  hector_quadrotor_interface
+  message_generation
+  roscpp
+  sensor_msgs
+  std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -55,9 +56,7 @@ add_message_files(
 
 ## Generate services in the 'srv' folder
 add_service_files(
-  FILES
-  GetPose.srv
-  SetDest.srv 
+  FILES GetPose.srv SetDest.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -102,7 +101,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES urs_wearable
-  CATKIN_DEPENDS roscpp std_msgs message_runtime
+  CATKIN_DEPENDS hector_uav_msgs message_runtime roscpp sensor_msgs std_msgs
 #  DEPENDS system_lib
 )
 
@@ -119,6 +118,7 @@ include_directories(
   ${PROTOBUF_INCLUDE_DIRS}
   ${CMAKE_CURRENT_BINARY_DIR}
 )
+
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
   proto/planning.proto
   proto/state.proto
