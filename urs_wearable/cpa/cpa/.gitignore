@@ -3,3 +3,6 @@
 lcp.tab.cpp
 lcp.tab.hpp
 lex.yy.cpp
+
+new.pl
+urs.pddl
