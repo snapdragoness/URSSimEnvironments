@@ -1,0 +1,10 @@
+*.o
+*.pb.*
+*.pb-c.*
+M
+Mp
+MpC
+lex.yy.c
+parser.tab.c
+parser.tab.h
+zPRINTDATE
