@@ -14,14 +14,14 @@ endif()
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_EXTENSIONS ON) # Set OFF to use -std=c++11, otherwise it uses -std=gnu++11 by default
+set(CMAKE_CXX_EXTENSIONS OFF) # Set OFF to use -std=c++11, otherwise it uses -std=gnu++11 by default
 
 set(CMAKE_CXX_FLAGS_DEBUG "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
@@ -29,6 +29,9 @@ find_package(FLEX REQUIRED)
 BISON_TARGET(parser lcp.y ${CMAKE_CURRENT_SOURCE_DIR}/lcp.tab.cpp)
 FLEX_TARGET(scanner lcp.lex ${CMAKE_CURRENT_SOURCE_DIR}/lex.yy.cpp)
 ADD_FLEX_BISON_DEPENDENCY(scanner parser)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../rosbridgecpp)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../rosbridgecpp rosbridgecpp)
 
 add_executable(${PROJECT_NAME}
   action.cpp
@@ -41,4 +44,4 @@ add_executable(${PROJECT_NAME}
   ${FLEX_scanner_OUTPUTS}
 )
 
-target_link_libraries(${PROJECT_NAME} ${FLEX_LIBRARIES} ${BISON_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${FLEX_LIBRARIES} ${BISON_LIBRARIES} rosbridgecpp)
