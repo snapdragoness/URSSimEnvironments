@@ -43,6 +43,7 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <depend>actionlib</depend>
+  <depend>actionlib_msgs</depend>
   <depend>hector_quadrotor_interface</depend>
   <depend>hector_uav_msgs</depend>
   <depend>Protobuf</depend>
@@ -50,7 +51,6 @@
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
 
-  <build_depend>action_server</build_depend>
   <build_depend>message_generation</build_depend>
 
   <exec_depend>message_runtime</exec_depend>
