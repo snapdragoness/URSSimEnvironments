@@ -1,8 +1,15 @@
 /build
 
-lcp.tab.cpp
-lcp.tab.hpp
-lex.yy.cpp
+/cpa+
+/lcp.tab.cpp
+/lcp.tab.hpp
+/lex.yy.cpp
 
-new.pl
-urs.pddl
+/new.pl
+/urs.pddl
+
+/lcp.output
+/lcp.tab.c
+/lcp.tab.o
+/lex.yy.c
+/lex.yy.o
