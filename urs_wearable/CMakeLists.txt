@@ -134,7 +134,7 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
 )
 
 ## Add the directories of planners to be built here
-add_subdirectory(cpa/cpa)
+add_subdirectory(cpa)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
