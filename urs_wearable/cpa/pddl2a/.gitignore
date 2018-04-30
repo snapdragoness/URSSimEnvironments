@@ -1,9 +1,12 @@
-/bison.c
+/build
+
 /cpa.pddl2pl
+/lcp.tab.cpp
+/lcp.tab.hpp
+/lex.yy.cpp
+
 /lcp.output
 /lcp.tab.c
-/lcp.tab.h
-/lex.c
 /lex.yy.c
-/tok.h
+
 /*.o

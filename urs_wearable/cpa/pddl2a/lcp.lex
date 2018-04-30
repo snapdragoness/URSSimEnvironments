@@ -2,7 +2,7 @@
 
 %{
 #include "define.h"
-#include "tok.h"
+#include "lcp.tab.hpp"
 
 int yyerror(char *s);
 // int yylineno = 1;

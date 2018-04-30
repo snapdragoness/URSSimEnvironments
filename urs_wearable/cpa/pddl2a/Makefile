@@ -1,49 +1,29 @@
-# Makefile
+CC := g++
 
-OBJS = bison.o lex.o main.o define.o reader.o action.o planner.o state.o
+CFLAGS := -c -std=c++11 -Wall -O3
+LFLAGS := -lfl
 
-CC = g++
-CFLAGS = -Wall -std=c++11 -O3
+OBJS := lcp.tab.o lex.yy.o main.o define.o reader.o action.o planner.o state.o
+HDR := action.h define.h planner.h reader.h state.h timer.h utility.h
 
-cpa:		$(OBJS)
-		$(CC) $(CFLAGS) $(OBJS) -o cpa.pddl2pl -lfl
+cpa: $(OBJS)
+	$(CC) $(OBJS) $(LFLAGS) -o cpa.pddl2pl
 
-lex.o:		lex.c
-		$(CC) $(CFLAGS) -c lex.c -o lex.o
+lex.yy.o: lex.yy.c
+	$(CC) $(CFLAGS) $<
 
-lex.c:		lcp.lex 
-		flex lcp.lex
-		cp lex.yy.c lex.c
+lex.yy.c: lcp.lex
+	flex lcp.lex
 
-bison.o:	bison.c
-		$(CC) $(CFLAGS) -c bison.c -o bison.o
+lcp.tab.o: lcp.tab.c
+	$(CC) $(CFLAGS) $<
 
-bison.c:	lcp.y
-		bison -d -v lcp.y
-		cp lcp.tab.c bison.c
-		cmp -s lcp.tab.h tok.h || cp lcp.tab.h tok.h
+lcp.tab.c: lcp.y
+	bison -d -v lcp.y
+	mv lcp.tab.h lcp.tab.hpp
 
-main.o:	main.cpp planner.h define.h
-		$(CC) $(CFLAGS) -c main.cpp -o main.o
-
-define.o: define.cpp define.h
-	$(CC) $(CFLAGS) -c define.cpp -o define.o
-
-reader.o: reader.cpp reader.h  define.h
-	$(CC) $(CFLAGS) -c reader.cpp -o reader.o
-
-action.o: action.cpp action.h  define.h
-	$(CC) $(CFLAGS) -c action.cpp -o action.o
-
-state.o: state.cpp state.h  define.h
-	$(CC) $(CFLAGS) -c state.cpp -o state.o
-
-planner.o: planner.cpp planner.h  state.h define.h
-	$(CC) $(CFLAGS) -c planner.cpp -o planner.o
-
-lex.o yac.o main.o	: 
-lex.o main.o		: 
+%.o: %.cpp $(HDR)
+	$(CC) $(CFLAGS) $<
 
 clean:
-	rm -f *.o *~ lex.c lex.yy.c bison.c tok.h lcp.tab.c lcp.tab.h lcp.output cpa.pddl2pl
-
+	rm -f *.o *~ lex.yy.c lcp.tab.c lcp.tab.hpp lcp.output cpa.pddl2pl
