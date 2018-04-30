@@ -50,18 +50,24 @@ find_package(Protobuf REQUIRED)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-  FILES Pose.msg
+add_message_files(FILES
+  Action.msg
+  ActionGoto.msg
+  Pose.msg
+  PredicateAt.msg
+  State.msg
 )
 
 ## Generate services in the 'srv' folder
-add_service_files(
-  FILES GetPose.srv SetDest.srv
+add_service_files(FILES
+  GetPose.srv
+  Planning.srv
+  SetDest.srv
 )
 
 ## Generate actions in the 'action' folder
-add_action_files(
-  FILES Actions.action
+add_action_files(FILES
+  Actions.action
 )
 
 ## Generate added messages and services with any dependencies listed here

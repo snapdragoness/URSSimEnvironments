@@ -1,0 +1,4 @@
+State initialState
+State goalState
+---
+Action[] actions
