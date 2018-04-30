@@ -133,6 +133,9 @@ protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS
   proto/wearable.proto
 )
 
+## Add the directories of planners to be built here
+add_subdirectory(cpa/cpa)
+
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/urs_wearable.cpp
