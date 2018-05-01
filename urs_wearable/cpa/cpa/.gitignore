@@ -6,6 +6,9 @@
 /lex.yy.cpp
 
 /new.pl
+/pddl2pl.pl
+/trash
+/theory_*
 /urs.pddl
 
 /*.o
