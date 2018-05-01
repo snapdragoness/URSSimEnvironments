@@ -6,7 +6,9 @@
 
 #include <ros/ros.h>
 #include <actionlib/server/simple_action_server.h>
-#include <boost/thread.hpp>
+
+#include <chrono>
+#include <thread>
 
 class Actions
 {
@@ -99,7 +101,7 @@ public:
     dest.x = goal->pose.x;
     dest.y = goal->pose.y;
     dest.z = goal->pose.z;
-    while (true)
+    while (ros::ok() && as.isActive())
     {
       urs_wearable::GetPose getPose;
       if (!ros::service::call(ns + "/get_pose", getPose))
@@ -121,7 +123,7 @@ public:
         break;
       }
 
-      boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   }
 };

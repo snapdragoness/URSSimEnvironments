@@ -15,7 +15,9 @@
 
 #include <ros/ros.h>
 #include <actionlib/client/service_client.h>
-#include <boost/chrono.hpp>
+
+#include <chrono>
+#include <thread>
 
 const unsigned int N_UAV = 4;
 
@@ -275,7 +277,7 @@ void initPlanningRequest(std::vector<int>& allocatedWpList, pb_urs::State* initi
     int wpId = wp_pool.newId(allocatedWpList);
     while (wpId == -1)
     {
-      boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
       wpId = wp_pool.newId(allocatedWpList);
     }
 
@@ -311,7 +313,7 @@ void droneStatePublisher(int wearableSockFD)
 
       writeDelimitedToSockFD(wearableSockFD, wearableResponse);
 
-      boost::this_thread::sleep_for(boost::chrono::milliseconds(DRONE_STATE_PUBLISH_DELAY_MS));
+      std::this_thread::sleep_for(std::chrono::milliseconds(DRONE_STATE_PUBLISH_DELAY_MS));
     }
     catch (boost::thread_interrupted&)
     {
@@ -389,7 +391,7 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
         int wpId = wp_pool.newId(allocatedWpList);
         while (wpId == -1)
         {
-          boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
           wpId = wp_pool.newId(allocatedWpList);
         }
 
@@ -476,7 +478,7 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
 
         if (setPoseWaypointRepeated.set_pose_waypoint(i).has_delay_ms())
         {
-          boost::this_thread::sleep_for(boost::chrono::milliseconds(setPoseWaypointRepeated.set_pose_waypoint(i).delay_ms()));
+          std::this_thread::sleep_for(std::chrono::milliseconds(setPoseWaypointRepeated.set_pose_waypoint(i).delay_ms()));
         }
       }
 
@@ -488,7 +490,7 @@ void wearableRequestHandler(int wearableSockFD, const pb_wearable::WearableReque
   int plannerId = planner_pool.newId(allocatedPlannerList);
   while (plannerId == -1)
   {
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     plannerId = planner_pool.newId(allocatedPlannerList);
   }
   int plannerSockFD = planner_pool.data[plannerId];
