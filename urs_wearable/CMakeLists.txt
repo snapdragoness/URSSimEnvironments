@@ -61,8 +61,8 @@ add_message_files(FILES
 
 ## Generate services in the 'srv' folder
 add_service_files(FILES
+  GetPlan.srv
   GetPose.srv
-  Planning.srv
   SetDest.srv
 )
 
