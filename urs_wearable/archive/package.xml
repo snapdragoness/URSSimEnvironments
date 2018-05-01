@@ -46,6 +46,7 @@
   <depend>actionlib_msgs</depend>
   <depend>hector_quadrotor_interface</depend>
   <depend>hector_uav_msgs</depend>
+  <depend>Protobuf</depend>
   <depend>roscpp</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
