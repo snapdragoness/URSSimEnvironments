@@ -5,6 +5,7 @@ typedef struct Pose
 {
   double x, y, z;
   double yaw;
+  double pitch;
 } Pose;
 
 typedef struct Waypoint
