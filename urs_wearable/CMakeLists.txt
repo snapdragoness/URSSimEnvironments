@@ -10,6 +10,7 @@ add_definitions(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   actionlib
   actionlib_msgs
+  geometry_msgs
   hector_quadrotor_interface
   message_generation
   roscpp
@@ -51,17 +52,20 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Generate messages in the 'msg' folder
 add_message_files(FILES
-  Action.msg
   ActionGoto.msg
-  Pose.msg
+  Action.msg
+  DestEuler.msg
+  PoseEuler.msg
   PredicateAt.msg
+  Region.msg
   State.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(FILES
+  ControllerSetDest.srv
   GetPlan.srv
-  GetPose.srv
+  SetActiveRegion.srv
   SetDest.srv
 )
 
@@ -72,7 +76,7 @@ add_action_files(FILES
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
-  DEPENDENCIES actionlib_msgs std_msgs
+  DEPENDENCIES actionlib_msgs geometry_msgs sensor_msgs std_msgs
 )
 
 ################################################
@@ -169,7 +173,14 @@ target_link_libraries(fake_wearable controller navigator ${catkin_LIBRARIES})
 # TODO: Fix this
 # There is a problem when we include these lines but the required messages have not been generated.
 # A current dirty fix is to comment these lines to generate the messages first, then uncomment and re-build.
-add_subdirectory(cpa)
+#add_subdirectory(cpa)
+
+include(ExternalProject)
+
+ExternalProject_Add(cpa
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/urs_wearable/cpa"
+  DEPENDS ${PROJECT_NAME}_generate_messages_cpp
+)
 
 #############
 ## Install ##

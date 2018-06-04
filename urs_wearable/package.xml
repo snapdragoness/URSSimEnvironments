@@ -44,6 +44,7 @@
 
   <depend>actionlib</depend>
   <depend>actionlib_msgs</depend>
+  <depend>geometry_msgs</depend>
   <depend>hector_quadrotor_interface</depend>
   <depend>hector_uav_msgs</depend>
   <depend>roscpp</depend>

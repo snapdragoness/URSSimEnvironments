@@ -1,12 +1,12 @@
 ## Goal ##
 
 # action_type should accord with action.proto or planningResponse in exec_monitor.cpp
-# 1: GOTO
-# 2: ...
+# 0: GOTO
+# 1: ...
 int8 action_type
 
-Pose pose
-bool rotate
+PoseEuler pose
+bool set_orientation
 ---
 ## Result ##
 

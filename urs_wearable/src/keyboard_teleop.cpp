@@ -1,6 +1,7 @@
-#include "urs_wearable/pose.h"
 #include "urs_wearable/controller.h"
 #include "urs_wearable/navigator.h"
+
+#include "urs_wearable/PoseEuler.h"
 
 #include <ros/ros.h>
 
@@ -28,7 +29,7 @@ int main(int argc, char **argv)
 {
   /* initialize ROS, and sets up a node */
   ros::init(argc, argv, "keyboard_teleop");
-  ros::NodeHandlePtr nh = boost::make_shared<ros::NodeHandle>();
+  ros::NodeHandle nh;
 
   if (nUAV == 0) {
     ROS_ERROR("No UAV to control");
@@ -57,37 +58,37 @@ int main(int argc, char **argv)
   while (ros::ok())
   {
     char key = getch();
-    Pose destActive = controller[activeID].getDest();
+    urs_wearable::PoseEuler destActive = controller[activeID].getDest();
     switch (key)
     {
       case 'w':
       case 'W':
-        destActive.x += moveStep;
+        destActive.position.x += moveStep;
         controller[activeID].setDest(destActive, false);
         break;
       case 's':
       case 'S':
-        destActive.x -= moveStep;
+        destActive.position.x -= moveStep;
         controller[activeID].setDest(destActive, false);
         break;
       case 'a':
       case 'A':
-        destActive.y += moveStep;
+        destActive.position.y += moveStep;
         controller[activeID].setDest(destActive, false);
         break;
       case 'd':
       case 'D':
-        destActive.y -= moveStep;
+        destActive.position.y -= moveStep;
         controller[activeID].setDest(destActive, false);
         break;
       case 'r':
       case 'R':
-        destActive.z += moveStep;
+        destActive.position.z += moveStep;
         controller[activeID].setDest(destActive, false);
         break;
       case 'f':
       case 'F':
-        destActive.z -= moveStep;
+        destActive.position.z -= moveStep;
         controller[activeID].setDest(destActive, false);
         break;
       case 'q':
@@ -152,8 +153,8 @@ int main(int argc, char **argv)
               {
                 // TODO: should actually check from the downward sonar sensor and disable the motors
                 // TODO: write takeoff function
-                Pose dest = controller[uavID].getDest();
-                dest.z = 0.5;
+                urs_wearable::PoseEuler dest = controller[uavID].getDest();
+                dest.position.z = 0.5;
                 controller[uavID].setDest(dest, false);
               }
             }
@@ -162,14 +163,12 @@ int main(int argc, char **argv)
               int uavID = std::stoi(tokens[1]);
               if (uavID >= 0 && uavID < nUAV)
               {
-                Pose targetPose;
-                Pose pose = controller[uavID].getPose();
-                targetPose.x = pose.x + std::stod(tokens[2]);
-                targetPose.y = pose.y + std::stod(tokens[3]);
-                targetPose.z = pose.z + std::stod(tokens[4]);
-                targetPose.yaw = pose.yaw;
-
-                navigator[uavID].navigate(controller[uavID], targetPose, false);
+                urs_wearable::PoseEuler targetPose;
+                urs_wearable::PoseEuler pose = controller[uavID].getPose();
+                targetPose.position.x = pose.position.x + std::stod(tokens[2]);
+                targetPose.position.y = pose.position.y + std::stod(tokens[3]);
+                targetPose.position.z = pose.position.z + std::stod(tokens[4]);
+                controller[uavID].setDest(targetPose, false);
               }
             }
             else if (tokens.size() == 5 && !tokens[0].compare("goto"))
@@ -177,12 +176,10 @@ int main(int argc, char **argv)
               int uavID = std::stoi(tokens[1]);
               if (uavID >= 0 && uavID < nUAV)
               {
-                Pose targetPose;
-                Pose pose = controller[uavID].getPose();
-                targetPose.x = std::stod(tokens[2]);
-                targetPose.y = std::stod(tokens[3]);
-                targetPose.z = std::stod(tokens[4]);
-                targetPose.yaw = pose.yaw;
+                urs_wearable::PoseEuler targetPose;
+                targetPose.position.x = std::stod(tokens[2]);
+                targetPose.position.y = std::stod(tokens[3]);
+                targetPose.position.z = std::stod(tokens[4]);
 
                 navigator[uavID].navigate(controller[uavID], targetPose, false);
               }
@@ -193,7 +190,7 @@ int main(int argc, char **argv)
               if (uavID >= 0 && uavID < nUAV)
               {
                 double degree = std::stod(tokens[2]);
-                Pose dest = controller[uavID].getDest();
+                urs_wearable::PoseEuler dest = controller[uavID].getDest();
                 dest.yaw = degree * M_PI / 180.0;
                 controller[uavID].setDest(dest, true);
               }

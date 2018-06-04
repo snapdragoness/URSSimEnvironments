@@ -1,11 +1,13 @@
 #ifndef URS_WEARABLE_INCLUDE_URS_WEARABLE_NAVIGATOR_H_
 #define URS_WEARABLE_INCLUDE_URS_WEARABLE_NAVIGATOR_H_
 
-#include "urs_wearable/pose.h"
 #include "urs_wearable/controller.h"
 
+#include "urs_wearable/PoseEuler.h"
+
 #include <ros/ros.h>
-#include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/Image.h>
+//#include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/Range.h>
 
 #include <boost/thread.hpp>
@@ -14,15 +16,16 @@ class Navigator {
   ros::NodeHandlePtr nh;
   std::string ns;         // namespace of the UAV
 
-  ros::Subscriber laserSub;           // subscriber of the UAV's laser scanner
+  ros::Subscriber depthImageSub;      // subscriber of the UAV's depth image
+//  ros::Subscriber laserSub;           // subscriber of the UAV's laser scanner
   ros::Subscriber sonarDownwardSub;   // subscriber of the UAV's downward sonar sensor
   ros::Subscriber sonarUpwardSub;     // subscriber of the UAV's upward sonar sensor
 
   /* for laser scan */
-  sensor_msgs::LaserScan laserScan;             // range from 0.1 - 30 meters
-  const double laserAngularResolution = 0.25;   // a degree for each step
-  const int laserMeasurementSteps = 1080;       // total scan steps. This indicates the number of elements in laserScan.ranges
-  const int laserCenterStep = laserMeasurementSteps / 2;  // center front of the laser scanner
+//  sensor_msgs::LaserScan laserScan;             // range from 0.1 - 30 meters
+//  const double laserAngularResolution = 0.25;   // a degree for each step
+//  const int laserMeasurementSteps = 1080;       // total scan steps. This indicates the number of elements in laserScan.ranges
+//  const int laserCenterStep = laserMeasurementSteps / 2;  // center front of the laser scanner
 
   /*
     Legal indexes (that do not get blocked by the quadrotor's legs) of the laser scan are:
@@ -39,7 +42,14 @@ class Navigator {
            0    1080          ;       -135 deg   135 deg
   */
 
-  /* for sonar scan */
+  /* For depth Image */
+  const float* depthImageArray = NULL;
+  const int depthImageMeasurementSteps = 640;             // total scan steps. This indicates the number of elements in laserScan.ranges
+  const double hfov = 62.8;
+  const double depthImageAngularResolution = depthImageMeasurementSteps / hfov;        // a degree for each step
+  const int depthImageCenterStep = depthImageMeasurementSteps / 2;  // center front of the laser scanner
+
+  /* For sonar scan */
   float sonarDownwardRange = 1.0;     // range from 0.03 - 3 meters
   float sonarUpwardRange = 1.0;       // range from 0.03 - 3 meters
   const float sonarMaxRange = 3.0;    // maximum value possible from sonar sensors
@@ -57,12 +67,14 @@ class Navigator {
   boost::thread navigationThread;
 
   // methods with an underscore in front are supposed to be threads
-  void _readLaserScan(const sensor_msgs::LaserScanConstPtr& msg);
+  void _readDepthImage(const sensor_msgs::Image::ConstPtr& msg);
+//  void _readLaserScan(const sensor_msgs::LaserScanConstPtr& msg);
   void _readSonarDownward(const sensor_msgs::RangeConstPtr& msg);
   void _readSonarUpward(const sensor_msgs::RangeConstPtr& msg);
-  void _navigate(Controller& controller, const Pose targetPose, const bool oriented);
+  void _navigate(Controller& controller, const urs_wearable::PoseEuler targetPose, const bool set_orientation);
 
-  boost::mutex mut_laser;
+//  boost::mutex mut_depthImage;
+//  boost::mutex mut_laser;
   boost::mutex mut_sonarDownward;
   boost::mutex mut_sonarUpward;
 
@@ -75,14 +87,14 @@ public:
   void init() {
     nh = boost::make_shared<ros::NodeHandle>();
   }
-  void navigate(Controller& controller, const Pose targetPose, const bool oriented);
+  void navigate(Controller& controller, const urs_wearable::PoseEuler targetPose, const bool set_orientation);
   void cancel();
 
   // auxiliary methods
   void setNamespace(const std::string& ns);
 
   // static methods
-  static double getDistance(const Pose& from, const Pose& to);
+  static double getDistance(const urs_wearable::PoseEuler& from, const urs_wearable::PoseEuler& to);
   static double getYawDiff(double yaw1, double yaw2);
 };
 

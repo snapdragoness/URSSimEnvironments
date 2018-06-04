@@ -1,3 +1,3 @@
-Pose pose
-bool rotate
+uint8[] uav_id
+DestEuler[] dest
 ---
