@@ -4,7 +4,6 @@
 #include "urs_wearable/PoseEuler.h"
 
 #include "urs_wearable/ControllerSetDest.h"
-#include "urs_wearable/GetPose.h"
 #include "urs_wearable/SetDest.h"
 
 #include <ros/ros.h>
