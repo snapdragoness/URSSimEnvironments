@@ -99,7 +99,7 @@ void advertiseServiceCallback(std::shared_ptr<WsClient::Connection> /*connection
 
   problemDef += ")\n";
 
-  // TODO: There is a bug in CPA that :init must have "and"
+  // There is a bug in CPA that :init must have "and"
 //  if (nInit > 1)
 //  {
 //    problemDef += "  (:init (and " + initDef + "))\n";

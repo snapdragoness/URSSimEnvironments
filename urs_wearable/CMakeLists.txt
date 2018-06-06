@@ -125,13 +125,9 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/urs_wearable.cpp
-# )
 add_library(controller src/controller.cpp)
 add_library(navigator src/navigator.cpp)
 
@@ -170,17 +166,25 @@ target_link_libraries(action_server controller navigator ${catkin_LIBRARIES})
 target_link_libraries(exec_monitor controller navigator ${catkin_LIBRARIES})
 target_link_libraries(fake_wearable controller navigator ${catkin_LIBRARIES})
 
-# TODO: Fix this
-# There is a problem when we include these lines but the required messages have not been generated.
-# A current dirty fix is to comment these lines to generate the messages first, then uncomment and re-build.
-#add_subdirectory(cpa)
+###########################
+## Add external planners ##
+###########################
 
-include(ExternalProject)
+## Using add_subdirectory() takes care of rebuilding when there has been a change.
+## But there is no way to specify dependency, as a result it got built before its required headers are generated.
+## To get over this, EXCLUDE_FROM_ALL is added so that it will not get built.
+## You will need to manually remove EXCLUDE_FROM_ALL and catkin_make after the headers have been generated.
+add_subdirectory(cpa EXCLUDE_FROM_ALL)
 
-ExternalProject_Add(cpa
-  SOURCE_DIR "${CMAKE_SOURCE_DIR}/urs_wearable/cpa"
-  DEPENDS ${PROJECT_NAME}_generate_messages_cpp
-)
+## Using ExternalProject_Add() only builds once. It does not rebuild when there has been a change.
+#include(ExternalProject)
+#
+#ExternalProject_Add(cpa
+#  SOURCE_DIR "${CMAKE_SOURCE_DIR}/urs_wearable/cpa"
+#  DEPENDS ${PROJECT_NAME}_generate_messages_cpp
+#  CMAKE_ARGS -DCMAKE_PROJECT_cpa+_INCLUDE=${CMAKE_SOURCE_DIR}/catkin_include.cmake
+#  INSTALL_COMMAND cmake -E echo "Skipping install step"
+#)
 
 #############
 ## Install ##
