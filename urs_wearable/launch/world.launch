@@ -15,5 +15,5 @@
   </include>
 
   <!-- Start rviz visualization with preset config -->
-  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find urs_wearable)/rviz_cfg/four_quadrotors.rviz" />
+  <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find urs_wearable)/rviz_cfg/four_quadrotors.rviz" /> -->
 </launch>
