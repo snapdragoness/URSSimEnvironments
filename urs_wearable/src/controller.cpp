@@ -21,8 +21,8 @@ Controller::Controller(const std::string& ns)
   pid.i = 0.0;
   pid.d = 0.0;
 
-  error.position.x = error.position.y = error.position.z = error.yaw = 0.0;
-  integral.position.x = integral.position.y = integral.position.z = integral.yaw = 0.0;
+  error.position.x = error.position.y = error.position.z = error.orientation.z = 0.0;
+  integral.position.x = integral.position.y = integral.position.z = integral.orientation.z = 0.0;
 }
 
 void Controller::start(double height)
@@ -44,7 +44,7 @@ void Controller::start(double height)
     dest.position.x = msg->pose.position.x;
     dest.position.y = msg->pose.position.y;
     dest.position.z = msg->pose.position.z + height;
-    dest.yaw = Controller::quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
+    dest.orientation.z = Controller::quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
 
     poseSub = nh->subscribe(ns + "/ground_truth_to_tf/pose", 1, &Controller::controller, this);
     cmdPub = nh->advertise<geometry_msgs::Twist>(ns + "/cmd_vel", 1, false);
@@ -80,26 +80,26 @@ void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
   pose.position.x = msg->pose.position.x;
   pose.position.y = msg->pose.position.y;
   pose.position.z = msg->pose.position.z;
-  pose.yaw = yaw;
+  pose.orientation.z = yaw;
 //  pose.pitch = pitch;
   mut_pose.unlock();
 
   prevError.position.x = error.position.x;
   prevError.position.y = error.position.y;
   prevError.position.z = error.position.z;
-  prevError.yaw = error.yaw;
+  prevError.orientation.z = error.orientation.z;
 
   mut_dest.lock();
   error.position.x = dest.position.x - msg->pose.position.x;
   error.position.y = dest.position.y - msg->pose.position.y;
   error.position.z = dest.position.z - msg->pose.position.z;
-  error.yaw = dest.yaw - yaw;
+  error.orientation.z = dest.orientation.z - yaw;
   mut_dest.unlock();
 
-  if (error.yaw < -M_PI) {
-    error.yaw += M_PI + M_PI;
-  } else if (error.yaw > M_PI) {
-    error.yaw -= M_PI + M_PI;
+  if (error.orientation.z < -M_PI) {
+    error.orientation.z += M_PI + M_PI;
+  } else if (error.orientation.z > M_PI) {
+    error.orientation.z -= M_PI + M_PI;
   }
 
   proportional.position.x = pid.p * error.position.x;
@@ -124,7 +124,7 @@ void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
   cmd.linear.x = rx;
   cmd.linear.y = ry;
   cmd.linear.z = z;
-  cmd.angular.z = 2.0 * error.yaw;
+  cmd.angular.z = 2.0 * error.orientation.z;
 
   cmdPub.publish(cmd);
 }
@@ -143,7 +143,7 @@ void Controller::_posePub(ros::Rate rate)
       pose.position.x = this->pose.position.x;
       pose.position.y = this->pose.position.y;
       pose.position.z = this->pose.position.z;
-      pose.yaw = this->pose.yaw;
+      pose.orientation.z = this->pose.orientation.z;
       mut_pose.unlock();
 
       posePub.publish(pose);
@@ -185,7 +185,7 @@ void Controller::setDest(const urs_wearable::PoseEuler& dest, bool set_orientati
   this->dest.position.z = dest.position.z;
   if (set_orientation)
   {
-    this->dest.yaw = dest.yaw;
+    this->dest.orientation.z = dest.orientation.z;
   }
   mut_dest.unlock();
 }
@@ -198,7 +198,7 @@ bool Controller::setDest(urs_wearable::ControllerSetDest::Request& req, urs_wear
   this->dest.position.z = req.dest.pose.position.z;
   if (req.dest.set_orientation)
   {
-    this->dest.yaw = req.dest.pose.yaw;
+    this->dest.orientation.z = req.dest.pose.orientation.z;
   }
   mut_dest.unlock();
   return true;

@@ -67,7 +67,7 @@ public:
     this->pose.position.x = pose->position.x;
     this->pose.position.y = pose->position.y;
     this->pose.position.z = pose->position.z;
-    this->pose.yaw = pose->yaw;
+    this->pose.orientation.z = pose->orientation.z;
     mut_pose.unlock();
   }
 
@@ -87,7 +87,7 @@ public:
     controllerSetDest.request.dest.pose.position.x = goal->pose.position.x;
     controllerSetDest.request.dest.pose.position.y = goal->pose.position.y;
     controllerSetDest.request.dest.pose.position.z = goal->pose.position.z;
-    controllerSetDest.request.dest.pose.yaw = goal->pose.yaw;
+    controllerSetDest.request.dest.pose.orientation.z = goal->pose.orientation.z;
 
     if (ros::service::call(ns + "/set_dest", controllerSetDest))
     {

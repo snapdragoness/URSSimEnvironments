@@ -93,12 +93,12 @@ int main(int argc, char **argv)
         break;
       case 'q':
       case 'Q':
-        destActive.yaw += rotateStep;
+        destActive.orientation.z += rotateStep;
         controller[activeID].setDest(destActive, true);
         break;
       case 'e':
       case 'E':
-        destActive.yaw -= rotateStep;
+        destActive.orientation.z -= rotateStep;
         controller[activeID].setDest(destActive, true);
         break;
       case 't':
@@ -191,7 +191,7 @@ int main(int argc, char **argv)
               {
                 double degree = std::stod(tokens[2]);
                 urs_wearable::PoseEuler dest = controller[uavID].getDest();
-                dest.yaw = degree * M_PI / 180.0;
+                dest.orientation.z = degree * M_PI / 180.0;
                 controller[uavID].setDest(dest, true);
               }
             }

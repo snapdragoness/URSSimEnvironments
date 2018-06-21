@@ -1,2 +1,2 @@
 geometry_msgs/Point position
-float64 yaw
+geometry_msgs/Vector3 orientation

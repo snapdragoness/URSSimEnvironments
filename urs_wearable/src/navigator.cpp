@@ -84,13 +84,13 @@ void Navigator::_navigate(Controller& controller, const urs_wearable::PoseEuler 
     if (planarDistToTarget > maxPositionError)
     {
       urs_wearable::PoseEuler dest = controller.getDest();
-      dest.yaw = yawHeaded;
+      dest.orientation.z = yawHeaded;
       controller.setDest(dest, true);
 
       do
       {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      } while (Navigator::getYawDiff(controller.getPose().yaw, yawHeaded) > maxOrientationError * M_PI / 180.0);
+      } while (Navigator::getYawDiff(controller.getPose().orientation.z, yawHeaded) > maxOrientationError * M_PI / 180.0);
     }
 
     while (true)
@@ -110,7 +110,7 @@ void Navigator::_navigate(Controller& controller, const urs_wearable::PoseEuler 
 
         urs_wearable::PoseEuler partialTargetPose = targetPose;
         partialTargetPose.position.z = controller.getPose().position.z;
-        partialTargetPose.yaw = yawHeaded;
+        partialTargetPose.orientation.z = yawHeaded;
 
         controller.setDest(partialTargetPose, true);
       }
@@ -127,7 +127,7 @@ void Navigator::_navigate(Controller& controller, const urs_wearable::PoseEuler 
       {
         if (oriented)
         {
-          while (Navigator::getYawDiff(controller.getPose().yaw, targetPose.yaw) > maxOrientationError * M_PI / 180.0)
+          while (Navigator::getYawDiff(controller.getPose().orientation.z, targetPose.orientation.z) > maxOrientationError * M_PI / 180.0)
           {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
           }

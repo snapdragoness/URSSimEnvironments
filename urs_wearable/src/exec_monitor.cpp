@@ -58,7 +58,7 @@ bool setDest(urs_wearable::SetDest::Request &req, urs_wearable::SetDest::Respons
       wp_pool.data[wpId].pose.position.x = req.dest[i].pose.position.x;
       wp_pool.data[wpId].pose.position.y = req.dest[i].pose.position.y;
       wp_pool.data[wpId].pose.position.z = req.dest[i].pose.position.z;
-      wp_pool.data[wpId].pose.yaw = req.dest[i].pose.yaw;
+      wp_pool.data[wpId].pose.orientation.z = req.dest[i].pose.orientation.z;
       wp_pool.data[wpId].set_orientation = req.dest[i].set_orientation;
 
       urs_wearable::PredicateAt predicateAt;
@@ -130,7 +130,7 @@ void requestPlanAndExecute(urs_wearable::GetPlan& getPlanSrv)
           goal.pose.position.x = wp_pool.data[wpId].pose.position.x;
           goal.pose.position.y = wp_pool.data[wpId].pose.position.y;
           goal.pose.position.z = wp_pool.data[wpId].pose.position.z;
-          goal.pose.yaw = wp_pool.data[wpId].pose.yaw;
+          goal.pose.orientation.z = wp_pool.data[wpId].pose.orientation.z;
           goal.set_orientation = wp_pool.data[wpId].set_orientation;
 
           actionlib::SimpleActionClient<urs_wearable::ActionsAction>& ac = *action_client[actions[i].action_goto.uav_id];
