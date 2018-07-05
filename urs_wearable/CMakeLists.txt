@@ -195,7 +195,7 @@ target_link_libraries(fake_wearable ${catkin_LIBRARIES})
 
 ## Update: It turns out the planners do not need to include header files generated from ROS.
 ## So, just add_subdirectory() is fine.
-add_subdirectory(cpa)
+add_subdirectory(../cpa cpa)
 
 ## Using add_subdirectory() takes care of rebuilding when there has been a change.
 ## But there is no way to specify dependency, as a result it got built before its required headers are generated.
