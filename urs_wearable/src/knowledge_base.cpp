@@ -129,6 +129,11 @@ void KnowledgeBase::getPlanIfPlanHasChanged(executor_id_type executor_id, std::v
 // - predicate
 void KnowledgeBase::upsertPredicates(const std::vector<urs_wearable::Predicate>& new_preds)
 {
+  if (new_preds.size() == 0)
+  {
+    return;
+  }
+
   updating_instances_++;
 
   // Verdict: if + update_fn is faster than upsert especially when there are a large number of objects

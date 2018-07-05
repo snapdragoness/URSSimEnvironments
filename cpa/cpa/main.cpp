@@ -77,7 +77,7 @@ void advertiseServiceCallback(std::shared_ptr<WsClient::Connection> /*connection
       {
         std::string plan_step = std::regex_replace(m.first, std::regex("cpa_"), "");
 
-        // fluent API
+        // Fluent API
         plan.PushBack(rapidjson::Value().SetString(plan_step.c_str(), plan_step.length(), allocator), allocator);
 
 //        // Normal

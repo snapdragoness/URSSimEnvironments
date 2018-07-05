@@ -91,7 +91,7 @@ add_service_files(FILES
 
 ## Generate actions in the 'action' folder
 add_action_files(FILES
-  Actions.action
+  Drone.action
 )
 
 ## Generate added messages and services with any dependencies listed here
