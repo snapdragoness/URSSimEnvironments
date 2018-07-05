@@ -1,5 +1,7 @@
 ## Goal ##
-uint8 action_type  # should conform with action 'type' in Action.msg
+uint8 TYPE_GOTO=0
+
+uint8 action_type
 
 PoseEuler pose
 bool set_orientation

@@ -12,68 +12,64 @@
 
 class Actions
 {
-  ros::NodeHandle nh;
-  ros::NodeHandle private_nh;
-  std::string ns;
-  actionlib::SimpleActionServer<urs_wearable::ActionsAction> as;
-  std::string action_name;
-  urs_wearable::ActionsFeedback feedback;
-  urs_wearable::ActionsResult result;
+  ros::NodeHandle nh_;
+  ros::NodeHandle private_nh_;
+  std::string ns_;
+
+  actionlib::SimpleActionServer<urs_wearable::ActionsAction> as_;
+  std::string as_name_;
+  urs_wearable::ActionsFeedback feedback_;
+  urs_wearable::ActionsResult result_;
 
   ros::Subscriber pose_sub_;
   urs_wearable::PoseEuler pose_;
   std::mutex pose_mutex_;
 
 public:
-  Actions(std::string name) :
-      as(nh, name, boost::bind(&Actions::executeCB, this, _1), false), action_name(name), private_nh("~")
+  Actions(const std::string& name) :
+    as_(nh_, name, boost::bind(&Actions::executeCallback, this, _1), false), as_name_(name), private_nh_("~")
   {
-    if (private_nh.getParam("ns", ns))
+    if (private_nh_.getParam("ns", ns_))
     {
-      ROS_INFO("%s: namespace = %s", action_name.c_str(), ns.c_str());
+      ROS_INFO("%s: namespace = %s", as_name_.c_str(), ns_.c_str());
     }
     else
     {
-      ROS_ERROR("%s: failed to get namespace", action_name.c_str());
+      ROS_ERROR("%s: failed to get namespace", as_name_.c_str());
     }
 
-    // Register the goal and feeback callbacks
+//    // Register the goal and feeback callbacks
 //    as.registerGoalCallback(boost::bind(&Actions::goalCB, this));
 //    as.registerPreemptCallback(boost::bind(&Actions::preemptCB, this));
 
     // Subscribe to the data topic of interest
-    pose_sub_ = nh.subscribe(ns + "/urs_wearable/pose_euler", 10, &Actions::poseCB, this);
+    pose_sub_ = nh_.subscribe(ns_ + "/urs_wearable/pose_euler", 10, &Actions::poseCallback, this);
 
-    as.start();
-    ROS_INFO("%s: started", action_name.c_str());
+    as_.start();
+    ROS_INFO("%s: started", as_name_.c_str());
   }
 
   ~Actions()
   {
     pose_sub_.shutdown();
-
-    ROS_INFO("%s: destroyed", action_name.c_str());
+    ROS_INFO("%s: destroyed", as_name_.c_str());
   }
 
-  void poseCB(const urs_wearable::PoseEulerConstPtr& pose)
+  void poseCallback(const urs_wearable::PoseEulerConstPtr& pose)
   {
     // make sure that the action hasn't been canceled
-    if (!as.isActive())
+    if (!as_.isActive())
       return;
 
     std::lock_guard<std::mutex> lock(pose_mutex_);
-//    pose_ = pose;
-//    pose_.position.x = pose->position.x;
-//    pose_.position.y = pose->position.y;
-//    pose_.position.z = pose->position.z;
-//    pose_.orientation.z = pose->orientation.z;
+    pose_ = *pose;
   }
 
-  void executeCB(const urs_wearable::ActionsGoalConstPtr &goal)
+  void executeCallback(const urs_wearable::ActionsGoalConstPtr &goal)
   {
     switch (goal->action_type)
     {
-      case 0:
+      case urs_wearable::ActionsGoal::TYPE_GOTO:
         actionGoto(goal);
         break;
     }
@@ -82,22 +78,19 @@ public:
   void actionGoto(const urs_wearable::ActionsGoalConstPtr &goal)
   {
     urs_wearable::SetDest set_dest_srv;
-    set_dest_srv.request.dest.position.x = goal->pose.position.x;
-    set_dest_srv.request.dest.position.y = goal->pose.position.y;
-    set_dest_srv.request.dest.position.z = goal->pose.position.z;
-    set_dest_srv.request.dest.orientation.z = goal->pose.orientation.z;
+    set_dest_srv.request.dest = goal->pose;
+    set_dest_srv.request.set_orientation = goal->set_orientation;
 
-    if (ros::service::call(ns + "/set_dest", set_dest_srv))
+    if (ros::service::call(ns_ + "/set_dest", set_dest_srv))
     {
-      ROS_INFO("%s: actionGoto set_dest OK", action_name.c_str());
+      ROS_INFO("%s: actionGoto set_dest OK", as_name_.c_str());
     }
     else
     {
-      ROS_INFO("%s: actionGoto set_dest FAILED", action_name.c_str());
+      ROS_INFO("%s: actionGoto set_dest FAILED", as_name_.c_str());
     }
 
     // TODO: Monitor the ongoing action
-
 //    urs_wearable::Pose dest;
 //    dest.x = goal->pose.x;
 //    dest.y = goal->pose.y;
@@ -127,7 +120,7 @@ public:
 //      std::this_thread::sleep_for(std::chrono::milliseconds(10));
 //    }
 
-    as.setSucceeded();
+    as_.setSucceeded();
   }
 };
 
