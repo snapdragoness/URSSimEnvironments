@@ -11,6 +11,8 @@
 #include "urs_wearable/Action.h"
 #include "urs_wearable/ActionsAction.h"
 #include "urs_wearable/Feedback.h"
+#include "urs_wearable/LocationAdd.h"
+#include "urs_wearable/LocationRemove.h"
 #include "urs_wearable/PoseEuler.h"
 #include "urs_wearable/SetGoal.h"
 
@@ -71,24 +73,25 @@ void executor(urs_wearable::SetGoal::Request req)
 
         case urs_wearable::Action::TYPE_TAKE_OFF:
           {
-//            urs_wearable::ActionsGoal goal;
-//            goal.action_type = urs_wearable::Action::TYPE_TAKE_OFF;
-//
-//            auto& ac = *g_action_client[action.action_take_off.drone_id.value];
-//            ac.sendGoal(goal);
-//
-//            bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
-//            if (finished_before_timeout)
-//            {
-//              actionlib::SimpleClientGoalState state = ac.getState();
-//              ROS_INFO("Action finished: %s",state.toString().c_str());
-//            }
-//            else
-//            {
-//              ROS_INFO("Action did not finish before the time out.");
-//            }
+            urs_wearable::ActionsGoal goal;
+            goal.action_type = urs_wearable::Action::TYPE_TAKE_OFF;
 
-            // Upsert action effects
+            auto& ac = *g_action_client[action.action_take_off.drone_id.value];
+            ac.sendGoal(goal);
+
+            bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+            if (finished_before_timeout)
+            {
+              actionlib::SimpleClientGoalState state = ac.getState();
+              ROS_INFO("Action finished: %s",state.toString().c_str());
+            }
+            else
+            {
+              ROS_INFO("Action did not finish before the time out.");
+            }
+
+            // Upsert effects of the action
+
           }
           break;
       }
@@ -103,6 +106,18 @@ bool setGoal(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::Respons
 {
   std::thread thread_executor(executor, req);
   thread_executor.detach();
+  return true;
+}
+
+bool locationAdd(urs_wearable::LocationAdd::Request& req, urs_wearable::LocationAdd::Response& res)
+{
+  res.location_id = g_kb.location_table_.insert(req.pose);
+  return true;
+}
+
+bool locationRemove(urs_wearable::LocationRemove::Request& req, urs_wearable::LocationRemove::Response& res)
+{
+  // TODO: Remove all predicates that have the removed location id
   return true;
 }
 
@@ -152,14 +167,18 @@ int main(int argc, char **argv)
   g_kb.upsertPredicates(initial_state);
 
   // Advertise services
-  ros::ServiceServer set_goals_service = nh.advertiseService("/urs_wearable/set_goal", setGoal);
+  ros::ServiceServer set_goal_service = nh.advertiseService("/urs_wearable/set_goal", setGoal);
+  ros::ServiceServer location_add_service = nh.advertiseService("/urs_wearable/location_add", locationAdd);
+  ros::ServiceServer location_remove_service = nh.advertiseService("/urs_wearable/location_remove", locationRemove);
 
   ROS_INFO("Waiting for connections from wearable devices...");
 
   ros::spin();
 
   // Clean up
-  set_goals_service.shutdown();
+  set_goal_service.shutdown();
+  location_add_service.shutdown();
+  location_remove_service.shutdown();
 
   for (int i = 0; i < N_UAV; i++)
   {
