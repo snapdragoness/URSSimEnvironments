@@ -76,10 +76,14 @@ void advertiseServiceCallback(std::shared_ptr<WsClient::Connection> /*connection
       if (m.second == i)
       {
         std::string plan_step = std::regex_replace(m.first, std::regex("cpa_"), "");
-        rapidjson::Value str_val;
-        str_val.SetString(plan_step.c_str(), plan_step.length(), allocator);
 
-        plan.PushBack(str_val, allocator);
+        // fluent API
+        plan.PushBack(rapidjson::Value().SetString(plan_step.c_str(), plan_step.length(), allocator), allocator);
+
+//        // Normal
+//        rapidjson::Value str_val;
+//        str_val.SetString(plan_step.c_str(), plan_step.length(), allocator);
+//        plan.PushBack(str_val, allocator);
         break;
       }
     }
