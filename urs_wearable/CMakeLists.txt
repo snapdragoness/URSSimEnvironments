@@ -169,6 +169,7 @@ add_executable(action_server src/action_server.cpp src/navigator.cpp)
 add_executable(exec_monitor src/exec_monitor.cpp)
 add_executable(fake_wearable src/fake_wearable.cpp)
 add_executable(keyboard_teleop src/keyboard_teleop.cpp)
+add_executable(try_hector src/try_hector.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -188,6 +189,7 @@ target_link_libraries(keyboard_teleop controller navigator ${catkin_LIBRARIES})
 target_link_libraries(action_server controller navigator ${catkin_LIBRARIES})
 target_link_libraries(exec_monitor controller knowledge_base navigator ${catkin_LIBRARIES})
 target_link_libraries(fake_wearable ${catkin_LIBRARIES})
+target_link_libraries(try_hector ${catkin_LIBRARIES})
 
 ###########################
 ## Add external planners ##
