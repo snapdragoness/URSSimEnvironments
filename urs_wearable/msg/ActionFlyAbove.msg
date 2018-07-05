@@ -1,0 +1,5 @@
+string NAME=fly_above
+
+ObjectDroneID drone_id
+ObjectLocationID location_id_from
+ObjectLocationID location_id_to

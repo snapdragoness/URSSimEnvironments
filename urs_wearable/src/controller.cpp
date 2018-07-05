@@ -1,62 +1,78 @@
 #define ENABLE_MOTORS_SERVICE "/enable_motors"
 
-#include "tf/transform_datatypes.h"
+#include <tf/transform_datatypes.h>
 
 #include "urs_wearable/controller.h"
 
+Controller::Controller()
+{
+  has_set_ns_ = false;
+
+  pid_.p = 0.5;  // default: 0.5
+  pid_.i = 0.0;
+  pid_.d = 0.0;
+
+  error_.position.x = error_.position.y = error_.position.z = error_.orientation.z = 0.0;
+  integral_.position.x = integral_.position.y = integral_.position.z = integral_.orientation.z = 0.0;
+}
+
 Controller::~Controller()
 {
-  poseSub.shutdown();
-
-  cmdPub.shutdown();
-  posePubThread.interrupt();
+  pose_sub_.shutdown();
+  cmd_pub_.shutdown();
 }
 
-Controller::Controller(const std::string& ns)
+bool Controller::setNamespace(const std::string& ns)
 {
-  this->ns = ns;
-
-  // set PID values
-  pid.p = 0.5;  // default: 0.5
-  pid.i = 0.0;
-  pid.d = 0.0;
-
-  error.position.x = error.position.y = error.position.z = error.orientation.z = 0.0;
-  integral.position.x = integral.position.y = integral.position.z = integral.orientation.z = 0.0;
-}
-
-void Controller::start(double height)
-{
-  // create a service client
-  ros::ServiceClient serviceClient = nh->serviceClient<hector_uav_msgs::EnableMotors>(ns + ENABLE_MOTORS_SERVICE);
-  hector_uav_msgs::EnableMotors enable_motors_srv;
-  enable_motors_srv.request.enable = true;
-
-  if (serviceClient.call(enable_motors_srv))
+  if (!has_set_ns_)
   {
-    ROS_INFO("%s - %s", nh->resolveName(ns + ENABLE_MOTORS_SERVICE).c_str(),
-             enable_motors_srv.response.success ? "successful" : "failed");
+    ns_ = ns;
 
-    // get initial position
-    geometry_msgs::PoseStamped::ConstPtr msg = ros::topic::waitForMessage<geometry_msgs::PoseStamped>(ns + "/ground_truth_to_tf/pose");
+    // Enable motors
+    ros::NodeHandle nh;
+    ros::ServiceClient enable_motors_client = nh.serviceClient<hector_uav_msgs::EnableMotors>(ns_ + ENABLE_MOTORS_SERVICE);
+    hector_uav_msgs::EnableMotors enable_motors_srv;
+    enable_motors_srv.request.enable = true;
 
-    // start at 1 meter above its starting point while preserve the orientation
-    dest.position.x = msg->pose.position.x;
-    dest.position.y = msg->pose.position.y;
-    dest.position.z = msg->pose.position.z + height;
-    dest.orientation.z = Controller::quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
+    if (enable_motors_client.call(enable_motors_srv))
+    {
+      if (enable_motors_srv.response.success)
+      {
+        ROS_INFO("%s - success", nh.resolveName(ns_ + ENABLE_MOTORS_SERVICE).c_str());
 
-    poseSub = nh->subscribe(ns + "/ground_truth_to_tf/pose", 1, &Controller::controller, this);
-    cmdPub = nh->advertise<geometry_msgs::Twist>(ns + "/cmd_vel", 1, false);
+        // get the initial position
+        geometry_msgs::PoseStamped::ConstPtr msg = ros::topic::waitForMessage<geometry_msgs::PoseStamped>(ns_ + "/ground_truth_to_tf/pose");
 
-    posePubThread = boost::thread(&Controller::_posePub, this, 10);
+        {
+          std::lock_guard<std::mutex> lock(dest_mutex_);
+          dest.position.x = msg->pose.position.x;
+          dest.position.y = msg->pose.position.y;
+          dest.position.z = msg->pose.position.z;
+          dest.orientation.z = Controller::quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
+        }
 
-    controllerSetDest = nh->advertiseService(ns + "/set_dest", &Controller::setDest, this);
+        cmd_pub_ = nh.advertise<geometry_msgs::Twist>(ns_ + "/cmd_vel", 1, false);
+        pose_sub_ = nh.subscribe(ns_ + "/ground_truth_to_tf/pose", 1, &Controller::controller, this);
+
+        set_dest_service_ = nh.advertiseService(ns_ + "/set_dest", &Controller::setDest, this);
+
+        std::thread pose_euler_publish_thread(&Controller::poseEulerPublish, this, 10);
+        pose_euler_publish_thread.detach();
+
+        return true;
+      }
+      else
+      {
+        ROS_ERROR("%s - failed", nh.resolveName(ns_ + ENABLE_MOTORS_SERVICE).c_str());
+      }
+    }
+    else
+    {
+      ROS_ERROR("Error in calling %s", nh.resolveName(ns_ + ENABLE_MOTORS_SERVICE).c_str());
+    }
   }
-  else
-  {
-    ROS_ERROR("Failed to call %s", nh->resolveName(ns + ENABLE_MOTORS_SERVICE).c_str());
-  }
+
+  return false;
 }
 
 void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
@@ -76,46 +92,47 @@ void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
     yaw += 2 * M_PI;
   }
 
-  mut_pose.lock();
-  pose.position.x = msg->pose.position.x;
-  pose.position.y = msg->pose.position.y;
-  pose.position.z = msg->pose.position.z;
-  pose.orientation.z = yaw;
-//  pose.pitch = pitch;
-  mut_pose.unlock();
-
-  prevError.position.x = error.position.x;
-  prevError.position.y = error.position.y;
-  prevError.position.z = error.position.z;
-  prevError.orientation.z = error.orientation.z;
-
-  mut_dest.lock();
-  error.position.x = dest.position.x - msg->pose.position.x;
-  error.position.y = dest.position.y - msg->pose.position.y;
-  error.position.z = dest.position.z - msg->pose.position.z;
-  error.orientation.z = dest.orientation.z - yaw;
-  mut_dest.unlock();
-
-  if (error.orientation.z < -M_PI) {
-    error.orientation.z += M_PI + M_PI;
-  } else if (error.orientation.z > M_PI) {
-    error.orientation.z -= M_PI + M_PI;
+  {
+    std::lock_guard<std::mutex> lock(pose_mutex_);
+    pose.position.x = msg->pose.position.x;
+    pose.position.y = msg->pose.position.y;
+    pose.position.z = msg->pose.position.z;
+    pose.orientation.z = yaw;
   }
 
-  proportional.position.x = pid.p * error.position.x;
-  proportional.position.y = pid.p * error.position.y;
-  proportional.position.z = pid.p * error.position.z;
-  integral.position.x += pid.i * error.position.x;
-  integral.position.y += pid.i * error.position.y;
-  integral.position.z += pid.i * error.position.z;
-  derivation.position.x = pid.d * (error.position.x - prevError.position.x);
-  derivation.position.y = pid.d * (error.position.y - prevError.position.y);
-  derivation.position.z = pid.d * (error.position.z - prevError.position.z);
+  prev_error_.position.x = error_.position.x;
+  prev_error_.position.y = error_.position.y;
+  prev_error_.position.z = error_.position.z;
+  prev_error_.orientation.z = error_.orientation.z;
+
+  {
+    std::lock_guard<std::mutex> lock(dest_mutex_);
+    error_.position.x = dest.position.x - msg->pose.position.x;
+    error_.position.y = dest.position.y - msg->pose.position.y;
+    error_.position.z = dest.position.z - msg->pose.position.z;
+    error_.orientation.z = dest.orientation.z - yaw;
+  }
+
+  if (error_.orientation.z < -M_PI) {
+    error_.orientation.z += M_PI + M_PI;
+  } else if (error_.orientation.z > M_PI) {
+    error_.orientation.z -= M_PI + M_PI;
+  }
+
+  proportional_.position.x = pid_.p * error_.position.x;
+  proportional_.position.y = pid_.p * error_.position.y;
+  proportional_.position.z = pid_.p * error_.position.z;
+  integral_.position.x += pid_.i * error_.position.x;
+  integral_.position.y += pid_.i * error_.position.y;
+  integral_.position.z += pid_.i * error_.position.z;
+  derivation_.position.x = pid_.d * (error_.position.x - prev_error_.position.x);
+  derivation_.position.y = pid_.d * (error_.position.y - prev_error_.position.y);
+  derivation_.position.z = pid_.d * (error_.position.z - prev_error_.position.z);
 
   double x, y, z;
-  x = proportional.position.x + integral.position.x + derivation.position.x;
-  y = proportional.position.y + integral.position.y + derivation.position.y;
-  z = proportional.position.z + integral.position.z + derivation.position.z;
+  x = proportional_.position.x + integral_.position.x + derivation_.position.x;
+  y = proportional_.position.y + integral_.position.y + derivation_.position.y;
+  z = proportional_.position.z + integral_.position.z + derivation_.position.z;
 
   double rx, ry;
   rx = x * std::cos(-1 * yaw) - y * std::sin(-1 * yaw);
@@ -124,37 +141,32 @@ void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
   cmd.linear.x = rx;
   cmd.linear.y = ry;
   cmd.linear.z = z;
-  cmd.angular.z = 2.0 * error.orientation.z;
+  cmd.angular.z = 2.0 * error_.orientation.z;
 
-  cmdPub.publish(cmd);
+  cmd_pub_.publish(cmd);
 }
 
-void Controller::_posePub(ros::Rate rate)
+void Controller::poseEulerPublish(ros::Rate rate)
 {
-  ros::Publisher posePub = nh->advertise<urs_wearable::PoseEuler>(ns + "/urs_wearable/pose", 10, false);
+  ros::NodeHandle nh;
+  ros::Publisher posePub = nh.advertise<urs_wearable::PoseEuler>(ns_ + "/urs_wearable/pose_euler", 10, false);
 
   while (ros::ok())
   {
-    try
-    {
-      urs_wearable::PoseEuler pose;
+    urs_wearable::PoseEuler pose;
 
-      mut_pose.lock();
+    {
+      std::lock_guard<std::mutex> lock(pose_mutex_);
       pose.position.x = this->pose.position.x;
       pose.position.y = this->pose.position.y;
       pose.position.z = this->pose.position.z;
       pose.orientation.z = this->pose.orientation.z;
-      mut_pose.unlock();
-
-      posePub.publish(pose);
-
-      ros::spinOnce();
-      rate.sleep();
     }
-    catch (boost::thread_interrupted&)
-    {
-      break;
-    }
+
+    posePub.publish(pose);
+
+    ros::spinOnce();
+    rate.sleep();
   }
 
   /* clean up the publisher */
@@ -163,23 +175,21 @@ void Controller::_posePub(ros::Rate rate)
 
 urs_wearable::PoseEuler Controller::getPose()
 {
-  mut_pose.lock();
+  std::lock_guard<std::mutex> lock(pose_mutex_);
   urs_wearable::PoseEuler pose = this->pose;
-  mut_pose.unlock();
   return pose;
 }
 
 urs_wearable::PoseEuler Controller::getDest()
 {
-  mut_dest.lock();
+  std::lock_guard<std::mutex> lock(dest_mutex_);
   urs_wearable::PoseEuler dest = this->dest;
-  mut_dest.unlock();
   return dest;
 }
 
 void Controller::setDest(const urs_wearable::PoseEuler& dest, bool set_orientation)
 {
-  mut_dest.lock();
+  std::lock_guard<std::mutex> lock(dest_mutex_);
   this->dest.position.x = dest.position.x;
   this->dest.position.y = dest.position.y;
   this->dest.position.z = dest.position.z;
@@ -187,26 +197,19 @@ void Controller::setDest(const urs_wearable::PoseEuler& dest, bool set_orientati
   {
     this->dest.orientation.z = dest.orientation.z;
   }
-  mut_dest.unlock();
 }
 
-bool Controller::setDest(urs_wearable::ControllerSetDest::Request& req, urs_wearable::ControllerSetDest::Response& res)
+bool Controller::setDest(urs_wearable::SetDest::Request& req, urs_wearable::SetDest::Response& res)
 {
-  mut_dest.lock();
-  this->dest.position.x = req.dest.pose.position.x;
-  this->dest.position.y = req.dest.pose.position.y;
-  this->dest.position.z = req.dest.pose.position.z;
-  if (req.dest.set_orientation)
+  std::lock_guard<std::mutex> lock(dest_mutex_);
+  this->dest.position.x = req.dest.position.x;
+  this->dest.position.y = req.dest.position.y;
+  this->dest.position.z = req.dest.position.z;
+  if (req.set_orientation)
   {
-    this->dest.orientation.z = req.dest.pose.orientation.z;
+    this->dest.orientation.z = req.dest.orientation.z;
   }
-  mut_dest.unlock();
   return true;
-}
-
-void Controller::setNamespace(const std::string& ns)
-{
-  this->ns = ns;
 }
 
 double Controller::quaternionToYaw(const geometry_msgs::QuaternionConstPtr& q)

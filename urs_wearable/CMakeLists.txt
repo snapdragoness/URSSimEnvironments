@@ -18,6 +18,9 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
 )
 
+# Add Libcuckoo for concurrent hash table
+add_subdirectory("../libcuckoo" libcuckoo)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -52,21 +55,38 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Generate messages in the 'msg' folder
 add_message_files(FILES
-  ActionGoto.msg
   Action.msg
-  DestEuler.msg
+  ActionActiveRegionInsert.msg
+  ActionActiveRegionUpdate.msg
+  ActionFlyAbove.msg
+  ActionFlyTo.msg
+  ActionKeyAdd.msg
+  ActionKeyPick.msg
+  ActionTakeOff.msg
+  Feedback.msg
+  Location.msg
+  ObjectDroneID.msg
+  ObjectKeyID.msg
+  ObjectLocationID.msg
   PoseEuler.msg
-  PredicateAt.msg
-  Region.msg
+  Predicate.msg
+  PredicateActiveRegion.msg
+  PredicateDroneAbove.msg
+  PredicateDroneAt.msg
+  PredicateKeyAt.msg
+  PredicateKeyPicked.msg
+  PredicateTookOff.msg
   State.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(FILES
-  ControllerSetDest.srv
   GetPlan.srv
-  SetActiveRegion.srv
+  GetState.srv
+  LocationAdd.srv
+  LocationRemove.srv
   SetDest.srv
+  SetGoal.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -124,11 +144,13 @@ catkin_package(
 # include_directories(include)
 include_directories(
   include
+  ../libcuckoo
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 add_library(controller src/controller.cpp)
+add_library(knowledge_base src/knowledge_base.cpp)
 add_library(navigator src/navigator.cpp)
 
 ## Add cmake target dependencies of the library
@@ -136,6 +158,7 @@ add_library(navigator src/navigator.cpp)
 ## either from message generation or dynamic reconfigure
 #add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(controller ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+add_dependencies(knowledge_base ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(navigator ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
@@ -163,18 +186,22 @@ add_dependencies(fake_wearable ${PROJECT_NAME}_generate_messages_cpp ${catkin_EX
 ## Specify libraries to link a library or executable target against
 target_link_libraries(keyboard_teleop controller navigator ${catkin_LIBRARIES})
 target_link_libraries(action_server controller navigator ${catkin_LIBRARIES})
-target_link_libraries(exec_monitor controller navigator ${catkin_LIBRARIES})
-target_link_libraries(fake_wearable controller navigator ${catkin_LIBRARIES})
+target_link_libraries(exec_monitor controller knowledge_base navigator ${catkin_LIBRARIES})
+target_link_libraries(fake_wearable ${catkin_LIBRARIES})
 
 ###########################
 ## Add external planners ##
 ###########################
 
+## Update: It turns out the planners do not need to include header files generated from ROS.
+## So, just add_subdirectory() is fine.
+add_subdirectory(cpa)
+
 ## Using add_subdirectory() takes care of rebuilding when there has been a change.
 ## But there is no way to specify dependency, as a result it got built before its required headers are generated.
 ## To get over this, EXCLUDE_FROM_ALL is added so that it will not get built.
 ## You will need to manually remove EXCLUDE_FROM_ALL and catkin_make after the headers have been generated.
-add_subdirectory(cpa EXCLUDE_FROM_ALL)
+#add_subdirectory(cpa)# EXCLUDE_FROM_ALL)
 
 ## Using ExternalProject_Add() only builds once. It does not rebuild when there has been a change.
 #include(ExternalProject)

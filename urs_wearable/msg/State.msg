@@ -1,1 +1,2 @@
-PredicateAt[] at
+Predicate[] predicates
+Location[] locations

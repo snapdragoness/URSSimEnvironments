@@ -1,16 +1,14 @@
-#include "urs_wearable/ActionsAction.h"
-
-#include "urs_wearable/PoseEuler.h"
-
-#include "urs_wearable/ControllerSetDest.h"
-
-#include "urs_wearable/navigator.h"
+#include <chrono>
+#include <mutex>
+#include <thread>
 
 #include <ros/ros.h>
 #include <actionlib/server/simple_action_server.h>
 
-#include <chrono>
-#include <thread>
+#include "urs_wearable/navigator.h"
+#include "urs_wearable/ActionsAction.h"
+#include "urs_wearable/PoseEuler.h"
+#include "urs_wearable/SetDest.h"
 
 class Actions
 {
@@ -22,9 +20,9 @@ class Actions
   urs_wearable::ActionsFeedback feedback;
   urs_wearable::ActionsResult result;
 
-  ros::Subscriber poseSub;
-  urs_wearable::PoseEuler pose;
-  boost::mutex mut_pose;
+  ros::Subscriber pose_sub_;
+  urs_wearable::PoseEuler pose_;
+  std::mutex pose_mutex_;
 
 public:
   Actions(std::string name) :
@@ -44,7 +42,7 @@ public:
 //    as.registerPreemptCallback(boost::bind(&Actions::preemptCB, this));
 
     // Subscribe to the data topic of interest
-    poseSub = nh.subscribe(ns + "/urs_wearable/pose", 10, &Actions::poseCB, this);
+    pose_sub_ = nh.subscribe(ns + "/urs_wearable/pose_euler", 10, &Actions::poseCB, this);
 
     as.start();
     ROS_INFO("%s: started", action_name.c_str());
@@ -52,7 +50,7 @@ public:
 
   ~Actions()
   {
-    poseSub.shutdown();
+    pose_sub_.shutdown();
 
     ROS_INFO("%s: destroyed", action_name.c_str());
   }
@@ -63,12 +61,12 @@ public:
     if (!as.isActive())
       return;
 
-    mut_pose.lock();
-    this->pose.position.x = pose->position.x;
-    this->pose.position.y = pose->position.y;
-    this->pose.position.z = pose->position.z;
-    this->pose.orientation.z = pose->orientation.z;
-    mut_pose.unlock();
+    std::lock_guard<std::mutex> lock(pose_mutex_);
+//    pose_ = pose;
+//    pose_.position.x = pose->position.x;
+//    pose_.position.y = pose->position.y;
+//    pose_.position.z = pose->position.z;
+//    pose_.orientation.z = pose->orientation.z;
   }
 
   void executeCB(const urs_wearable::ActionsGoalConstPtr &goal)
@@ -83,13 +81,13 @@ public:
 
   void actionGoto(const urs_wearable::ActionsGoalConstPtr &goal)
   {
-    urs_wearable::ControllerSetDest controllerSetDest;
-    controllerSetDest.request.dest.pose.position.x = goal->pose.position.x;
-    controllerSetDest.request.dest.pose.position.y = goal->pose.position.y;
-    controllerSetDest.request.dest.pose.position.z = goal->pose.position.z;
-    controllerSetDest.request.dest.pose.orientation.z = goal->pose.orientation.z;
+    urs_wearable::SetDest set_dest_srv;
+    set_dest_srv.request.dest.position.x = goal->pose.position.x;
+    set_dest_srv.request.dest.position.y = goal->pose.position.y;
+    set_dest_srv.request.dest.position.z = goal->pose.position.z;
+    set_dest_srv.request.dest.orientation.z = goal->pose.orientation.z;
 
-    if (ros::service::call(ns + "/set_dest", controllerSetDest))
+    if (ros::service::call(ns + "/set_dest", set_dest_srv))
     {
       ROS_INFO("%s: actionGoto set_dest OK", action_name.c_str());
     }

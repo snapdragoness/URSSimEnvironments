@@ -1,162 +1,109 @@
-#include "urs_wearable/controller.h"
-#include "urs_wearable/navigator.h"
-#include "urs_wearable/pool.h"
-
-#include "urs_wearable/PoseEuler.h"
-#include "urs_wearable/Region.h"
-
-#include "urs_wearable/GetPlan.h"
-#include "urs_wearable/SetActiveRegion.h"
-#include "urs_wearable/SetDest.h"
-
-#include "urs_wearable/ActionsAction.h"
-
-#include <ros/ros.h>
-#include <actionlib/client/service_client.h>
-
 #include <chrono>
 #include <thread>
 
+#include <actionlib/client/service_client.h>
+#include "libcuckoo/cuckoohash_map.hh"
+#include <ros/ros.h>
+
+#include "urs_wearable/controller.h"
+#include "urs_wearable/knowledge_base.h"
+#include "urs_wearable/navigator.h"
+#include "urs_wearable/Action.h"
+#include "urs_wearable/ActionsAction.h"
+#include "urs_wearable/Feedback.h"
+#include "urs_wearable/PoseEuler.h"
+#include "urs_wearable/SetGoal.h"
+
 const unsigned int N_UAV = 4;
-const unsigned int WP_POOL_SIZE = 100;
 const std::string PLANNER_SERVICE_NAME = "/cpa/get_plan";
 
-urs_wearable::Region activeRegion;
-Pool<urs_wearable::DestEuler, WP_POOL_SIZE> wp_pool;
+actionlib::SimpleActionClient<urs_wearable::ActionsAction>* g_action_client[N_UAV];
+Controller g_controller[N_UAV];
+//Navigator navigator[N_UAV];
 
-Controller controller[N_UAV];
-Navigator navigator[N_UAV];
-actionlib::SimpleActionClient<urs_wearable::ActionsAction>* action_client[N_UAV];
+KnowledgeBase g_kb("urs_problem", "urs", PLANNER_SERVICE_NAME);
 
-void initPlanningRequest(std::vector<int>&, urs_wearable::GetPlan::Request&);
-void requestPlanAndExecute(urs_wearable::GetPlan&);
-
-bool setDest(urs_wearable::SetDest::Request &req, urs_wearable::SetDest::Response &res)
+void executor(urs_wearable::SetGoal::Request req)
 {
-  std::vector<int> allocatedWpList;
-
-  // Construct planning request
-  urs_wearable::GetPlan getPlanSrv;
-  initPlanningRequest(allocatedWpList, getPlanSrv.request);
-
-  for (int i = 0; i < req.dest.size(); i++)
+  if (req.feedback_topic_name.empty())
   {
-    int wpId = wp_pool.newId(allocatedWpList);
-    while (wpId == -1)
-    {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      wpId = wp_pool.newId(allocatedWpList);
-    }
-
-    // Check that the requested dest is within active region
-    if (req.dest[i].pose.position.x >= activeRegion.x0
-        && req.dest[i].pose.position.x <= activeRegion.x1
-        && req.dest[i].pose.position.y >= activeRegion.y0
-        && req.dest[i].pose.position.y <= activeRegion.y1
-        && req.dest[i].pose.position.z <= activeRegion.z)
-    {
-      wp_pool.data[wpId].pose.position.x = req.dest[i].pose.position.x;
-      wp_pool.data[wpId].pose.position.y = req.dest[i].pose.position.y;
-      wp_pool.data[wpId].pose.position.z = req.dest[i].pose.position.z;
-      wp_pool.data[wpId].pose.orientation.z = req.dest[i].pose.orientation.z;
-      wp_pool.data[wpId].set_orientation = req.dest[i].set_orientation;
-
-      urs_wearable::PredicateAt predicateAt;
-      predicateAt.uav_id = req.uav_id[i];
-      predicateAt.wp_id = wpId;
-      getPlanSrv.request.goal_state.at.push_back(predicateAt);
-    }
-    else
-    {
-      return false;
-    }
+    req.feedback_topic_name = "/urs_wearable/feedback_dump";
   }
 
-  requestPlanAndExecute(getPlanSrv);
-  wp_pool.retrieveId(allocatedWpList);
+  KnowledgeBase::executor_id_type executor_id = g_kb.registerExecutor();
 
-  return true;
-}
+  ros::NodeHandle nh;
+  ros::Publisher feedback_pub = nh.advertise<urs_wearable::Feedback>(req.feedback_topic_name, 10);
+  urs_wearable::Feedback feedback;
 
-bool setActiveRegion(urs_wearable::SetActiveRegion::Request &req, urs_wearable::SetActiveRegion::Response &res)
-{
-  activeRegion.x0 = req.active_region.x0;
-  activeRegion.x1 = req.active_region.x1;
-  activeRegion.y0 = req.active_region.y0;
-  activeRegion.y1 = req.active_region.y1;
-  activeRegion.z = req.active_region.z;
+  feedback.executor_id = executor_id;
+  feedback.status = urs_wearable::Feedback::STATUS_PENDING;
+  feedback_pub.publish(feedback);
 
-  return true;
-}
+  std::vector<std::string> plan;
+  g_kb.getPlan(executor_id, req.goal, plan);
 
-void initPlanningRequest(std::vector<int>& allocatedWpList, urs_wearable::GetPlan::Request& request)
-{
-  for (unsigned int i = 0; i < N_UAV; i++)
+  if (!plan.empty())
   {
-    int wpId = wp_pool.newId(allocatedWpList);
-    while (wpId == -1)
+    std::vector<urs_wearable::Action> actions = g_kb.parsePlan(plan);
+
+    for (const auto& action : actions)
     {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      wpId = wp_pool.newId(allocatedWpList);
-    }
-
-    wp_pool.data[wpId].pose = controller[i].getPose();
-    wp_pool.data[wpId].set_orientation = false;
-
-    urs_wearable::PredicateAt predicateAt;
-    predicateAt.uav_id = i;
-    predicateAt.wp_id = wpId;
-    request.initial_state.at.push_back(predicateAt);
-  }
-}
-
-void requestPlanAndExecute(urs_wearable::GetPlan& getPlanSrv)
-{
-  if (ros::service::call(PLANNER_SERVICE_NAME, getPlanSrv))
-  {
-    ROS_INFO("Call %s successfully", PLANNER_SERVICE_NAME.c_str());
-
-    std::vector<urs_wearable::Action>& actions = getPlanSrv.response.actions;
-    for (int i = 0; i < actions.size(); i++)
-    {
-      switch (actions[i].action_type)
+      switch (action.type)
       {
-        case 0: // goto
-        {
-          int wpId = actions[i].action_goto.wp_id;
-          urs_wearable::ActionsGoal goal;
-
-          goal.action_type = 0;
-          goal.pose.position.x = wp_pool.data[wpId].pose.position.x;
-          goal.pose.position.y = wp_pool.data[wpId].pose.position.y;
-          goal.pose.position.z = wp_pool.data[wpId].pose.position.z;
-          goal.pose.orientation.z = wp_pool.data[wpId].pose.orientation.z;
-          goal.set_orientation = wp_pool.data[wpId].set_orientation;
-
-          actionlib::SimpleActionClient<urs_wearable::ActionsAction>& ac = *action_client[actions[i].action_goto.uav_id];
-
-          ac.sendGoal(goal);
-
-          bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
-          if (finished_before_timeout)
-          {
-            actionlib::SimpleClientGoalState state = ac.getState();
-            ROS_INFO("Action finished: %s",state.toString().c_str());
-          }
-          else
-          {
-            ROS_INFO("Action did not finish before the time out.");
-          }
-
+        case urs_wearable::Action::TYPE_ACTIVE_REGION_INSERT:
           break;
-        }
+
+        case urs_wearable::Action::TYPE_ACTIVE_REGION_UPDATE:
+          break;
+
+        case urs_wearable::Action::TYPE_FLY_ABOVE:
+          break;
+
+        case urs_wearable::Action::TYPE_FLY_TO:
+          break;
+
+        case urs_wearable::Action::TYPE_KEY_ADD:
+          break;
+
+        case urs_wearable::Action::TYPE_KEY_PICK:
+          break;
+
+        case urs_wearable::Action::TYPE_TAKE_OFF:
+          {
+//            urs_wearable::ActionsGoal goal;
+//            goal.action_type = urs_wearable::Action::TYPE_TAKE_OFF;
+//
+//            auto& ac = *g_action_client[action.action_take_off.drone_id.value];
+//            ac.sendGoal(goal);
+//
+//            bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
+//            if (finished_before_timeout)
+//            {
+//              actionlib::SimpleClientGoalState state = ac.getState();
+//              ROS_INFO("Action finished: %s",state.toString().c_str());
+//            }
+//            else
+//            {
+//              ROS_INFO("Action did not finish before the time out.");
+//            }
+
+            // Upsert action effects
+          }
+          break;
       }
     }
   }
-  else
-  {
-    ROS_INFO("Call %s failed", PLANNER_SERVICE_NAME.c_str());
-  }
+
+  g_kb.unregisterExecutor(executor_id);
+  feedback_pub.shutdown();
+}
+
+bool setGoal(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::Response& res)
+{
+  std::thread thread_executor(executor, req);
+  thread_executor.detach();
+  return true;
 }
 
 int main(int argc, char **argv)
@@ -168,43 +115,54 @@ int main(int argc, char **argv)
   if (N_UAV == 0)
   {
     ROS_ERROR("No UAV to control");
-    exit(EXIT_FAILURE);
+    exit(EXIT_SUCCESS);
   }
 
-  // Set active region
-  activeRegion.x0 = -50;
-  activeRegion.y0 = -50;
-  activeRegion.x1 = 50;
-  activeRegion.y1 = 50;
-  activeRegion.z = 20;
-
-  // Start controllers, navigators, and action clients
+  // Initialize controllers, navigators, and action clients
   for (unsigned int i = 0; i < N_UAV; i++)
   {
-    controller[i].init();
-    controller[i].setNamespace("/uav" + std::to_string(i));
-    controller[i].start();
+    if (!g_controller[i].setNamespace("/uav" + std::to_string(i)))
+    {
+      ROS_ERROR("Error in setting up controller %u", i);
+      exit(EXIT_FAILURE);
+    }
 
-    navigator[i].init();
-    navigator[i].setNamespace("/uav" + std::to_string(i));
+//    navigator[i].init();
+//    navigator[i].setNamespace("/uav" + std::to_string(i));
 
-    action_client[i] = new (actionlib::SimpleActionClient<urs_wearable::ActionsAction>) ("/uav" + std::to_string(i) + "/action_server");
-    action_client[i]->waitForServer();
+    g_action_client[i] = new (actionlib::SimpleActionClient<urs_wearable::ActionsAction>) ("/uav" + std::to_string(i) + "/action_server");
+    g_action_client[i]->waitForServer();
   }
 
+  // Set KB state publisher
+  ros::Publisher state_pub = nh.advertise<urs_wearable::State>("/urs_wearable/state", 100);
+  g_kb.setStatePub(&state_pub);
+
+  // Set initial state
+  std::vector<urs_wearable::Predicate> initial_state;
+  urs_wearable::Predicate pred;
+  pred.type = urs_wearable::Predicate::TYPE_TOOK_OFF;
+  pred.predicate_took_off.truth_value = false;
+
+  for (unsigned int i = 0; i < N_UAV; i++)
+  {
+    pred.predicate_took_off.drone_id.value = i;
+    initial_state.push_back(pred);
+  }
+  g_kb.upsertPredicates(initial_state);
+
   // Advertise services
-  ros::ServiceServer set_dest_service = nh.advertiseService("/urs_wearable/set_dest", setDest);
-  ros::ServiceServer set_active_region_service = nh.advertiseService("/urs_wearable/set_active_region", setActiveRegion);
+  ros::ServiceServer set_goals_service = nh.advertiseService("/urs_wearable/set_goal", setGoal);
 
   ROS_INFO("Waiting for connections from wearable devices...");
 
   ros::spin();
 
   // Clean up
-  set_dest_service.shutdown();
+  set_goals_service.shutdown();
 
   for (int i = 0; i < N_UAV; i++)
   {
-    delete action_client[i];
+    delete g_action_client[i];
   }
 }

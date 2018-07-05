@@ -1,4 +1,3 @@
-State initial_state
-State goal_state
+string problem_def
 ---
-Action[] actions
+string[] plan

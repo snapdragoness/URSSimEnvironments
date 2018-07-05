@@ -1,0 +1,4 @@
+string NAME=active_region_insert
+
+ObjectLocationID location_id_sw
+ObjectLocationID location_id_ne

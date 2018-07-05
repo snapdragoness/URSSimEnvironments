@@ -1,16 +1,14 @@
 // This program is to substitute a wearable device to test the execution monitor
 
-#include "colormod.h"
-
-#include "urs_wearable/SetDest.h"
+#include <chrono>
+#include <thread>
 
 #include <ros/ros.h>
 
-#include <cstdlib>
-#include <ctime>
+#include "colormod.h"
+#include "urs_wearable/SetGoal.h"
 
-#include <chrono>
-#include <thread>
+const std::string SET_GOAL_SERVICE_NAME = "/urs_wearable/set_goal";
 
 int main(int argc, char **argv)
 {
@@ -18,23 +16,24 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "fake_wearable");
   ros::NodeHandle nh;
 
-  urs_wearable::DestEuler dest;
-  dest.pose.position.x = 0;
-  dest.pose.position.y = 0;
-  dest.pose.position.z = 5;
-  dest.set_orientation = false;
+  urs_wearable::SetGoal set_goal_srv;
 
-  urs_wearable::SetDest setDest;
-  setDest.request.uav_id.push_back(0);
-  setDest.request.dest.push_back(dest);
+  urs_wearable::Predicate pred;
+  pred.type = urs_wearable::Predicate::TYPE_TOOK_OFF;
+  pred.predicate_took_off.truth_value = true;
+  pred.predicate_took_off.drone_id.value = 0;
+  set_goal_srv.request.goal.push_back(pred);
 
-  if (ros::service::call("/urs_wearable/set_dest", setDest))
+  pred.predicate_took_off.drone_id.value = 1;
+  set_goal_srv.request.goal.push_back(pred);
+
+  if (ros::service::call(SET_GOAL_SERVICE_NAME, set_goal_srv))
   {
-    std::cout << "Call /urs_wearable/set_dest successfully" << std::endl;
+    ROS_INFO("Call %s successfully", SET_GOAL_SERVICE_NAME.c_str());
   }
   else
   {
-    std::cout << "Call /urs_wearable/set_dest failed" << std::endl;
+    ROS_INFO("Call %s failed", SET_GOAL_SERVICE_NAME.c_str());
   }
 
   return 0;

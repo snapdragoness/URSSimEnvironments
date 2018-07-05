@@ -1,10 +1,8 @@
 #ifndef URS_WEARABLE_INCLUDE_URS_WEARABLE_CONTROLLER_H_
 #define URS_WEARABLE_INCLUDE_URS_WEARABLE_CONTROLLER_H_
 
-#include "urs_wearable/PoseEuler.h"
-
-#include "urs_wearable/ControllerSetDest.h"
-#include "urs_wearable/SetDest.h"
+#include <mutex>
+#include <thread>
 
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -13,7 +11,8 @@
 #include <hector_uav_msgs/EnableMotors.h>
 #include <sensor_msgs/Image.h>
 
-#include <boost/thread.hpp>
+#include "urs_wearable/PoseEuler.h"
+#include "urs_wearable/SetDest.h"
 
 typedef struct PID
 {
@@ -21,60 +20,45 @@ typedef struct PID
 } PID;
 
 class Controller {
-  ros::NodeHandlePtr nh;
-  std::string ns;         // namespace of the UAV
+  std::string ns_;
+  bool has_set_ns_;
 
   // read about adjusting PID coefficients at https://oscarliang.com/quadcopter-pid-explained-tuning/
   // {0.5, 0.0, 0.0} for perfect environment
   // {0.5, 0.0002, 0.00005} for imperfect environment
-  PID pid;
-  urs_wearable::PoseEuler error;
-  urs_wearable::PoseEuler prevError;
-  urs_wearable::PoseEuler proportional;
-  urs_wearable::PoseEuler integral;
-  urs_wearable::PoseEuler derivation;
+  PID pid_;
+  urs_wearable::PoseEuler error_;
+  urs_wearable::PoseEuler prev_error_;
+  urs_wearable::PoseEuler proportional_;
+  urs_wearable::PoseEuler integral_;
+  urs_wearable::PoseEuler derivation_;
 
   urs_wearable::PoseEuler pose;   // position of the UAV from ground truth
   urs_wearable::PoseEuler dest;   // desired destination of the UAV
 
-  ros::Subscriber poseSub;        // subscriber of the UAV's ground truth
-  ros::Subscriber depthImageSub;  // subscriber of the UAV's depth image
+  ros::Publisher cmd_pub_;
+  ros::Subscriber pose_sub_;      // a subscriber of the UAV's ground truth
+  ros::ServiceServer set_dest_service_;
+
   geometry_msgs::Twist cmd;       // a twist message to be sent to /cmd_vel
 
-  ros::ServiceServer controllerSetDest;
-
-  boost::thread commanderThread;
-  boost::thread posePubThread;
-
-  boost::mutex mut_dest;
-  boost::mutex mut_pose;
+  std::mutex dest_mutex_;
+  std::mutex pose_mutex_;
 
   void controller(const geometry_msgs::PoseStampedConstPtr& msg);
-
-  // methods with an underscore in front are supposed to be created as threads
-  void _posePub(ros::Rate rate);
-
-  ros::Publisher cmdPub;
+  void poseEulerPublish(ros::Rate rate);
 
 public:
-  Controller(const std::string& ns);
-  Controller() : Controller("") {}
+  Controller();
   ~Controller();
 
-  // important methods
-  void init() {
-    nh = boost::make_shared<ros::NodeHandle>();
-  }
-  void start(double height = 5.0);
+  bool setNamespace(const std::string&);
 
-  // auxiliary methods
   urs_wearable::PoseEuler getPose();
   urs_wearable::PoseEuler getDest();
-  void setDest(const urs_wearable::PoseEuler& dest, bool rotate);
-  bool setDest(urs_wearable::ControllerSetDest::Request& req, urs_wearable::ControllerSetDest::Response& res);
-  void setNamespace(const std::string& ns);
+  void setDest(const urs_wearable::PoseEuler&, bool);
+  bool setDest(urs_wearable::SetDest::Request&, urs_wearable::SetDest::Response&);
 
-  // static methods
   static double quaternionToYaw(const geometry_msgs::QuaternionConstPtr&);
 };
 

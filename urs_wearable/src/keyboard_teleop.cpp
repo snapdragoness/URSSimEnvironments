@@ -41,9 +41,7 @@ int main(int argc, char **argv)
 
   for (unsigned int i = 0; i < nUAV; i++)
   {
-    controller[i].init();
     controller[i].setNamespace("/uav" + std::to_string(i));
-    controller[i].start();
 
     navigator[i].init();
     navigator[i].setNamespace("/uav" + std::to_string(i));
