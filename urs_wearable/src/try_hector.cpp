@@ -10,6 +10,13 @@ typedef actionlib::SimpleActionClient<hector_uav_msgs::LandingAction> LandingCli
 typedef actionlib::SimpleActionClient<hector_uav_msgs::TakeoffAction> TakeoffClient;
 typedef actionlib::SimpleActionClient<hector_uav_msgs::PoseAction> PoseClient;
 
+// Search for "action/pose" to discover landing_action.cpp, pose_action.cpp, and takeoff_action.cpp
+
+// hector_quatrotor_controller will ignore command, and give the warning
+// "Pose commands must be given in the world frame, ignoring command"
+// if use_ground_truth_for_control in hector_quadrotor/hector_quadrotor_gazebo/spawn_quadrotor.launch is set to true (which is the default)
+// But if it is set to false, the drone will launch to space.
+
 int main(int argc, char **argv)
 {
   // Initialize ROS and sets up a node
@@ -39,7 +46,9 @@ int main(int argc, char **argv)
   boost::shared_ptr<PoseClient> pose_client = boost::shared_ptr<PoseClient>(new PoseClient(nh, "action/pose"));
   std::cout << "Wait for action/pose server - " << pose_client->waitForServer(ros::Duration(5.0)) << std::endl;
   hector_uav_msgs::PoseGoal pose_goal;
-  pose_goal.target_pose.pose.position.z = 5.0;
+  pose_goal.target_pose.pose.position.x = 0.0;
+  pose_goal.target_pose.pose.position.y = 0.0;
+  pose_goal.target_pose.pose.position.z = 2.0;
   pose_client->sendGoal(pose_goal);
 
   if (pose_client->waitForResult(ros::Duration(5.0)))
