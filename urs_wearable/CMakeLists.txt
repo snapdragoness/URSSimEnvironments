@@ -165,7 +165,7 @@ add_dependencies(navigator ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORT
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/urs_wearable_node.cpp)
-add_executable(action_server src/action_server.cpp src/navigator.cpp)
+add_executable(drone_action src/drone_action.cpp src/navigator.cpp)
 add_executable(exec_monitor src/exec_monitor.cpp)
 add_executable(fake_wearable src/fake_wearable.cpp)
 add_executable(keyboard_teleop src/keyboard_teleop.cpp)
@@ -180,15 +180,15 @@ add_executable(try_hector src/try_hector.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(action_server ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+add_dependencies(drone_action ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(exec_monitor ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(fake_wearable ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(keyboard_teleop controller navigator ${catkin_LIBRARIES})
-target_link_libraries(action_server controller navigator ${catkin_LIBRARIES})
+target_link_libraries(drone_action controller navigator ${catkin_LIBRARIES})
 target_link_libraries(exec_monitor controller knowledge_base navigator ${catkin_LIBRARIES})
 target_link_libraries(fake_wearable ${catkin_LIBRARIES})
+target_link_libraries(keyboard_teleop controller navigator ${catkin_LIBRARIES})
 target_link_libraries(try_hector ${catkin_LIBRARIES})
 
 ###########################

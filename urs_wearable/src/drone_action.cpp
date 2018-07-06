@@ -1,6 +1,4 @@
-#include <chrono>
 #include <mutex>
-#include <thread>
 
 #include <actionlib/server/simple_action_server.h>
 #include <ros/ros.h>
@@ -10,14 +8,12 @@
 #include "urs_wearable/PoseEuler.h"
 #include "urs_wearable/SetDest.h"
 
-class Actions
+class DroneActionServer
 {
-  ros::NodeHandle nh_;
-  ros::NodeHandle private_nh_;
-  std::string ns_;
-
   actionlib::SimpleActionServer<urs_wearable::DroneAction> as_;
-  std::string as_name_;
+  std::string ns_;
+  std::string name_;
+
   urs_wearable::DroneFeedback feedback_;
   urs_wearable::DroneResult result_;
 
@@ -25,34 +21,25 @@ class Actions
   urs_wearable::PoseEuler pose_;
   std::mutex pose_mutex_;
 
-public:
-  Actions(const std::string& name) :
-    as_(nh_, name, boost::bind(&Actions::executeCb, this, _1), false), as_name_(name), private_nh_("~")
-  {
-    if (private_nh_.getParam("ns", ns_))
-    {
-      ROS_INFO("%s: namespace = %s", as_name_.c_str(), ns_.c_str());
-    }
-    else
-    {
-      ROS_ERROR("%s: failed to get namespace", as_name_.c_str());
-    }
+  double frequency_;
 
-//    // Register the goal and feeback callbacks
-//    as.registerGoalCallback(boost::bind(&Actions::goalCB, this));
-//    as.registerPreemptCallback(boost::bind(&Actions::preemptCB, this));
+public:
+  DroneActionServer(ros::NodeHandle& nh, const std::string& ns, const std::string& name) :
+    as_(nh, name, boost::bind(&DroneActionServer::droneActionCb, this, _1), false), ns_(ns), name_(name)
+  {
+    frequency_ = 10.0;
 
     // Subscribe to the data topic of interest
-    pose_sub_ = nh_.subscribe(ns_ + "/urs_wearable/pose_euler", 10, &Actions::poseCb, this);
+    pose_sub_ = nh.subscribe(ns_ + "/urs_wearable/pose_euler", 10, &DroneActionServer::poseCb, this);
 
     as_.start();
-    ROS_INFO("%s: started", as_name_.c_str());
+    ROS_INFO("Server %s started", name_.c_str());
   }
 
-  ~Actions()
+  ~DroneActionServer()
   {
     pose_sub_.shutdown();
-    ROS_INFO("%s: destroyed", as_name_.c_str());
+    ROS_INFO("Server %s destroyed", name_.c_str());
   }
 
   void poseCb(const urs_wearable::PoseEulerConstPtr& pose)
@@ -65,7 +52,7 @@ public:
     pose_ = *pose;
   }
 
-  void executeCb(const urs_wearable::DroneGoalConstPtr &goal)
+  void droneActionCb(const urs_wearable::DroneGoalConstPtr &goal)
   {
     switch (goal->action_type)
     {
@@ -83,8 +70,9 @@ public:
 
     if (ros::service::call(ns_ + "/set_dest", set_dest_srv))
     {
-      ROS_INFO("%s: actionGoto set_dest OK", as_name_.c_str());
+      ROS_INFO("%s: actionGoto set_dest OK", name_.c_str());
 
+      ros::Rate r(frequency_);
       while (ros::ok() && as_.isActive())
       {
         {
@@ -97,12 +85,13 @@ public:
           }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        ros::spinOnce();
+        r.sleep();
       }
     }
     else
     {
-      ROS_ERROR("%s: actionGoto set_dest FAILED", as_name_.c_str());
+      ROS_ERROR("%s: actionGoto set_dest FAILED", name_.c_str());
     }
 
     as_.setAborted();
@@ -111,9 +100,17 @@ public:
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "action_server");
+  ros::init(argc, argv, "drone_action_server");
+  ros::NodeHandle nh;
+  std::string ns;
 
-  Actions actions(ros::this_node::getName());
+  if (!ros::param::get("~ns", ns))
+  {
+    ROS_ERROR("Failed to get a namespace for drone_action");
+    return EXIT_FAILURE;
+  }
+
+  DroneActionServer drone_action_server(nh, ns, ns + "/action/drone");
   ros::spin();
 
   return 0;

@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+
+<!-- Run drone_action node for every drone we have -->
+
+<launch>
+  <node name="drone_action" pkg="urs_wearable" ns="uav0" type="drone_action" respawn="true" output="screen">
+    <param name="ns" value="/uav0" type="str" />
+  </node>
+
+  <node name="drone_action" pkg="urs_wearable" ns="uav1" type="drone_action" respawn="true" output="screen">
+    <param name="ns" value="/uav1" type="str" />
+  </node>
+
+  <node name="drone_action" pkg="urs_wearable" ns="uav2" type="drone_action" respawn="true" output="screen">
+    <param name="ns" value="/uav2" type="str" />
+  </node>
+
+  <node name="drone_action" pkg="urs_wearable" ns="uav3" type="drone_action" respawn="true" output="screen">
+    <param name="ns" value="/uav3" type="str" />
+  </node>
+</launch>

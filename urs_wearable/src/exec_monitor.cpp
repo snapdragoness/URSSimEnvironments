@@ -121,7 +121,7 @@ void executor(urs_wearable::SetGoal::Request req)
           goal.pose.position.z += 2.0;
 
           actionlib::SimpleActionClient<urs_wearable::DroneAction> ac(
-              "/uav" + std::to_string(action.action_take_off.drone_id.value) + "/action_server", true);
+              "/uav" + std::to_string(action.action_take_off.drone_id.value) + "/action/drone", true);
           ac.waitForServer();
           ac.sendGoal(goal);
 

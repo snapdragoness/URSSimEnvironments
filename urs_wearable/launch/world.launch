@@ -8,7 +8,7 @@
 
   <include file="$(find urs_wearable)/launch/spawn_quadrotors.launch" />
 
-  <include file="$(find urs_wearable)/launch/action_server.launch" />
+  <include file="$(find urs_wearable)/launch/drone_action.launch" />
 
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
     <arg name="port" value="9090"/>
