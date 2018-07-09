@@ -1,5 +1,7 @@
 # Goal Definition
-uint8 TYPE_GOTO=0
+uint8 TYPE_LANDING=0
+uint8 TYPE_POSE=1
+uint8 TYPE_TAKEOFF=2
 
 uint8 action_type
 

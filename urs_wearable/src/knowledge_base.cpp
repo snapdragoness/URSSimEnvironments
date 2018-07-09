@@ -10,6 +10,7 @@
 
 void KnowledgeBase::publish()
 {
+  std::lock_guard<std::mutex> lock(state_pub_mutex_);
   if (state_pub_)
   {
     urs_wearable::State state;
@@ -45,6 +46,7 @@ void KnowledgeBase::publish()
 
     // Publish
     state_pub_->publish(state);
+    ros::spinOnce();
   }
 }
 
@@ -109,16 +111,21 @@ void KnowledgeBase::getPlan(executor_id_type executor_id, const std::vector<urs_
   }
 }
 
-void KnowledgeBase::getPlanIfPlanHasChanged(executor_id_type executor_id, std::vector<std::string>& plan)
+bool KnowledgeBase::getPlanIfPlanHasChanged(executor_id_type executor_id, std::vector<std::string>& plan)
 {
-  executor_map_.update_fn(executor_id, [&plan](struct Executor& executor)
+  bool ret(false);
+
+  executor_map_.update_fn(executor_id, [&plan, &ret](struct Executor& executor)
   {
+    ret = executor.plan_has_changed;
     if (executor.plan_has_changed)
     {
       plan = executor.plan;
       executor.plan_has_changed = false;
     }
   });
+
+  return ret;
 }
 
 /***************************************************************************************************/
@@ -129,11 +136,6 @@ void KnowledgeBase::getPlanIfPlanHasChanged(executor_id_type executor_id, std::v
 // - predicate
 void KnowledgeBase::upsertPredicates(const std::vector<urs_wearable::Predicate>& new_preds)
 {
-  if (new_preds.size() == 0)
-  {
-    return;
-  }
-
   updating_instances_++;
 
   // Verdict: if + update_fn is faster than upsert especially when there are a large number of objects
@@ -743,13 +745,7 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
     }
 
     urs_wearable::Action action;
-    if (tokens[0] == urs_wearable::ActionActiveRegionInsert::NAME)
-    {
-      action.type = urs_wearable::Action::TYPE_ACTIVE_REGION_INSERT;
-      action.action_active_region_insert.location_id_sw.value = std::stoi(tokens[1].erase(0, urs_wearable::ObjectLocationID::TYPE.size()));
-      action.action_active_region_insert.location_id_ne.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocationID::TYPE.size()));
-    }
-    else if (tokens[0] == urs_wearable::ActionActiveRegionUpdate::NAME)
+    if (tokens[0] == urs_wearable::ActionActiveRegionUpdate::NAME)
     {
       action.type = urs_wearable::Action::TYPE_ACTIVE_REGION_UPDATE;
       action.action_active_region_update.location_id_sw_old.value = std::stoi(tokens[1].erase(0, urs_wearable::ObjectLocationID::TYPE.size()));
@@ -784,6 +780,11 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
       action.action_key_pick.drone_location_id.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocationID::TYPE.size()));
       action.action_key_pick.key_id.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectKeyID::TYPE.size()));
       action.action_key_pick.key_location_id.value = std::stoi(tokens[4].erase(0, urs_wearable::ObjectLocationID::TYPE.size()));
+    }
+    else if (tokens[0] == urs_wearable::ActionLand::NAME)
+    {
+      action.type = urs_wearable::Action::TYPE_LAND;
+      action.action_land.drone_id.value = std::stoi(tokens[1].erase(0, urs_wearable::ObjectDroneID::TYPE.size()));
     }
     else if (tokens[0] == urs_wearable::ActionTakeOff::NAME)
     {

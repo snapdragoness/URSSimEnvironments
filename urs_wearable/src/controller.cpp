@@ -1,4 +1,4 @@
-#define ENABLE_MOTORS_SERVICE "/enable_motors"
+#include <thread>
 
 #include <tf/transform_datatypes.h>
 
@@ -22,54 +22,22 @@ Controller::~Controller()
   cmd_pub_.shutdown();
 }
 
-bool Controller::setNamespace(const std::string& ns)
+bool Controller::setNamespace(ros::NodeHandle& nh, const std::string& ns)
 {
   if (!has_set_ns_)
   {
     ns_ = ns;
+    has_set_ns_ = true;
 
-    // Enable motors
-    ros::NodeHandle nh;
-    ros::ServiceClient enable_motors_client = nh.serviceClient<hector_uav_msgs::EnableMotors>(ns_ + ENABLE_MOTORS_SERVICE);
-    hector_uav_msgs::EnableMotors enable_motors_srv;
-    enable_motors_srv.request.enable = true;
+    cmd_pub_ = nh.advertise<geometry_msgs::Twist>(ns_ + "/cmd_vel", 10, false);
+    pose_sub_ = nh.subscribe(ns_ + "/ground_truth_to_tf/pose", 10, &Controller::controller, this);
 
-    if (enable_motors_client.call(enable_motors_srv))
-    {
-      if (enable_motors_srv.response.success)
-      {
-        ROS_INFO("%s - success", nh.resolveName(ns_ + ENABLE_MOTORS_SERVICE).c_str());
+    set_dest_service_ = nh.advertiseService(ns_ + "/set_dest", &Controller::setDest, this);
 
-        // get the initial position
-        geometry_msgs::PoseStamped::ConstPtr msg = ros::topic::waitForMessage<geometry_msgs::PoseStamped>(ns_ + "/ground_truth_to_tf/pose");
+    std::thread pose_euler_publish_thread(&Controller::poseEulerPublish, this, std::ref(nh), 10);
+    pose_euler_publish_thread.detach();
 
-        {
-          std::lock_guard<std::mutex> lock(dest_mutex_);
-          dest.position.x = msg->pose.position.x;
-          dest.position.y = msg->pose.position.y;
-          dest.position.z = msg->pose.position.z;
-          dest.orientation.z = Controller::quaternionToYaw(boost::make_shared<geometry_msgs::Quaternion>(msg->pose.orientation));
-        }
-
-        cmd_pub_ = nh.advertise<geometry_msgs::Twist>(ns_ + "/cmd_vel", 1, false);
-        pose_sub_ = nh.subscribe(ns_ + "/ground_truth_to_tf/pose", 1, &Controller::controller, this);
-
-        set_dest_service_ = nh.advertiseService(ns_ + "/set_dest", &Controller::setDest, this);
-
-        std::thread pose_euler_publish_thread(&Controller::poseEulerPublish, this, 10);
-        pose_euler_publish_thread.detach();
-
-        return true;
-      }
-      else
-      {
-        ROS_ERROR("%s - failed", nh.resolveName(ns_ + ENABLE_MOTORS_SERVICE).c_str());
-      }
-    }
-    else
-    {
-      ROS_ERROR("Error in calling %s", nh.resolveName(ns_ + ENABLE_MOTORS_SERVICE).c_str());
-    }
+    return true;
   }
 
   return false;
@@ -144,12 +112,12 @@ void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
   cmd.angular.z = 2.0 * error_.orientation.z;
 
   cmd_pub_.publish(cmd);
+  ros::spinOnce();
 }
 
-void Controller::poseEulerPublish(ros::Rate rate)
+void Controller::poseEulerPublish(ros::NodeHandle& nh, ros::Rate rate)
 {
-  ros::NodeHandle nh;
-  ros::Publisher posePub = nh.advertise<urs_wearable::PoseEuler>(ns_ + "/urs_wearable/pose_euler", 10, false);
+  ros::Publisher pose_pub = nh.advertise<urs_wearable::PoseEuler>(ns_ + "/urs_wearable/pose_euler", 10, false);
 
   while (ros::ok())
   {
@@ -163,14 +131,14 @@ void Controller::poseEulerPublish(ros::Rate rate)
       pose.orientation.z = this->pose.orientation.z;
     }
 
-    posePub.publish(pose);
+    pose_pub.publish(pose);
 
     ros::spinOnce();
     rate.sleep();
   }
 
   /* clean up the publisher */
-  posePub.shutdown();
+  pose_pub.shutdown();
 }
 
 urs_wearable::PoseEuler Controller::getPose()

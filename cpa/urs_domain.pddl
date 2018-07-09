@@ -2,7 +2,7 @@
 ; Problem definition's :init must have 'and'
 ; All :types must be in problem defintion's :objects
 (define (domain urs)
-  (:requirements :typing :equality)
+  (:requirements :typing)
   (:types drone_id key_id location_id)
   (:predicates
     (active_region ?loc_id_sw - location_id ?loc_id_ne - location_id)
@@ -12,14 +12,9 @@
     (key_picked ?key_id - key_id ?drone_id - drone_id)
     (took_off ?drone_id - drone_id)
   )
-  (:action active_region_insert
-    :parameters (?loc_id_sw ?loc_id_ne - location_id)
-    :precondition (not (= ?loc_id_sw ?loc_id_ne))
-    :effect (and (active_region ?loc_id_sw ?loc_id_ne))
-  )
   (:action active_region_update
     :parameters (?loc_id_sw_old ?loc_id_ne_old ?loc_id_sw_new ?loc_id_ne_new - location_id)
-    :precondition (and (active_region ?loc_id_sw_old ?loc_id_ne_old) (not (= ?loc_id_sw_new ?loc_id_ne_new)))
+    :precondition (active_region ?loc_id_sw_old ?loc_id_ne_old)
     :effect (and (not (active_region ?loc_id_sw_old ?loc_id_ne_old)) (active_region ?loc_id_sw_new ?loc_id_ne_new))
   )
   (:action fly_above
@@ -47,6 +42,11 @@
       (drone_above ?drone_id ?key_loc_id)
       (key_picked ?key_id ?drone_id)
     )
+  )
+  (:action land
+    :parameters (?drone_id - drone_id)
+    :precondition (took_off ?drone_id)
+    :effect (and (not (took_off ?drone_id)))
   )
   (:action take_off
     :parameters (?drone_id - drone_id)

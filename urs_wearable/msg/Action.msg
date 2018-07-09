@@ -1,16 +1,16 @@
-uint8 TYPE_ACTIVE_REGION_INSERT=0
-uint8 TYPE_ACTIVE_REGION_UPDATE=1
-uint8 TYPE_FLY_ABOVE=2
-uint8 TYPE_FLY_TO=3
-uint8 TYPE_KEY_ADD=4
-uint8 TYPE_KEY_PICK=5
+uint8 TYPE_ACTIVE_REGION_UPDATE=0
+uint8 TYPE_FLY_ABOVE=1
+uint8 TYPE_FLY_TO=2
+uint8 TYPE_KEY_ADD=3
+uint8 TYPE_KEY_PICK=4
+uint8 TYPE_LAND=5
 uint8 TYPE_TAKE_OFF=6
 
 uint8 type
-ActionActiveRegionInsert action_active_region_insert
 ActionActiveRegionUpdate action_active_region_update
 ActionFlyAbove action_fly_above
 ActionFlyTo action_fly_to
 ActionKeyAdd action_key_add
 ActionKeyPick action_key_pick
+ActionLand action_land
 ActionTakeOff action_take_off

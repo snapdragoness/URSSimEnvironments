@@ -2,7 +2,6 @@
 #define URS_WEARABLE_INCLUDE_URS_WEARABLE_CONTROLLER_H_
 
 #include <mutex>
-#include <thread>
 
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -46,13 +45,13 @@ class Controller {
   std::mutex pose_mutex_;
 
   void controller(const geometry_msgs::PoseStampedConstPtr& msg);
-  void poseEulerPublish(ros::Rate rate);
+  void poseEulerPublish(ros::NodeHandle&, ros::Rate rate);
 
 public:
   Controller();
   ~Controller();
 
-  bool setNamespace(const std::string&);
+  bool setNamespace(ros::NodeHandle&, const std::string&);
 
   urs_wearable::PoseEuler getPose();
   urs_wearable::PoseEuler getDest();

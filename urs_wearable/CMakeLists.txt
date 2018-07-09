@@ -56,12 +56,12 @@ add_subdirectory("../libcuckoo" libcuckoo)
 ## Generate messages in the 'msg' folder
 add_message_files(FILES
   Action.msg
-  ActionActiveRegionInsert.msg
   ActionActiveRegionUpdate.msg
   ActionFlyAbove.msg
   ActionFlyTo.msg
   ActionKeyAdd.msg
   ActionKeyPick.msg
+  ActionLand.msg
   ActionTakeOff.msg
   Feedback.msg
   Location.msg

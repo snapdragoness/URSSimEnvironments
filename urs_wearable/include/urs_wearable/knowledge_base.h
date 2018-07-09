@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <mutex>
 #include <vector>
 
 #include "libcuckoo/cuckoohash_map.hh"
@@ -65,7 +66,7 @@ public:
 
   // getPlan can only be called once from the same executor, the subsequent calls will return an empty plan
   void getPlan(executor_id_type, const std::vector<urs_wearable::Predicate>&, std::vector<std::string>&);
-  void getPlanIfPlanHasChanged(executor_id_type, std::vector<std::string>&);
+  bool getPlanIfPlanHasChanged(executor_id_type, std::vector<std::string>&);
 
   // Throw std::invalid_argument if there is an unrecognized action
   std::vector<urs_wearable::Action> parsePlan(const std::vector<std::string>&);
@@ -96,6 +97,7 @@ private:
   const std::string PLANNER_SERVICE_NAME;
 
   ros::Publisher* state_pub_;
+  std::mutex state_pub_mutex_;
 
   void replan();
 
