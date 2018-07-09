@@ -1,4 +1,4 @@
-// This program is to substitute a wearable device to test the execution monitor
+// This program is used to substitute a wearable device for testing
 
 #include <chrono>
 #include <thread>
