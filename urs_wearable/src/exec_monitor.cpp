@@ -28,6 +28,57 @@ Controller g_controller[N_UAV];
 
 KnowledgeBase g_kb("urs_problem", "urs", PLANNER_SERVICE_NAME);
 
+bool isWithinActiveRegion(urs_wearable::PoseEuler& pose, const LocationTable::location_id_type location_id, std::string& feedback_message)
+{
+  std::vector<urs_wearable::Predicate> active_region_preds = g_kb.getPredicateList(urs_wearable::Predicate::TYPE_ACTIVE_REGION);
+
+  // Check the validity of predicate active_region
+  if (active_region_preds.size() == 0)
+  {
+    feedback_message = "Predicate active_region is not in the knowledge base";
+    return false;
+  }
+  if (active_region_preds.size() > 1)
+  {
+    feedback_message = "There cannot be more than one active_region predicate";
+    return false;
+  }
+
+  // Get poses of action region
+  urs_wearable::Predicate pred_active_region = active_region_preds.back();
+  urs_wearable::PoseEuler pose_active_region_sw;
+  if (!g_kb.location_table_.map_.find(pred_active_region.predicate_active_region.location_id_sw.value, pose_active_region_sw))
+  {
+    feedback_message = "Cannot find location id " + std::to_string(pred_active_region.predicate_active_region.location_id_sw.value) + " in the location table";
+    return false;
+  }
+
+  urs_wearable::PoseEuler pose_active_region_ne;
+  if (!g_kb.location_table_.map_.find(pred_active_region.predicate_active_region.location_id_ne.value, pose_active_region_ne))
+  {
+    feedback_message = "Cannot find location id " + std::to_string(pred_active_region.predicate_active_region.location_id_ne.value) + " in the location table";
+    return false;
+  }
+
+  // Get the pose to fly to
+  if (!g_kb.location_table_.map_.find(location_id, pose))
+  {
+    feedback_message = "Cannot find location id " + std::to_string(location_id) + " in the location table";
+    return false;
+  }
+
+  // Check that the pose to fly to is within active region
+  if (pose.position.x < pose_active_region_sw.position.x || pose.position.x > pose_active_region_ne.position.x
+      || pose.position.y < pose_active_region_sw.position.y || pose.position.y > pose_active_region_ne.position.y
+      || pose.position.z < pose_active_region_sw.position.z || pose.position.z > pose_active_region_ne.position.z)
+  {
+    feedback_message = "The pose to fly above is outside of active region";
+    return false;
+  }
+
+  return true;
+}
+
 void executor(urs_wearable::SetGoal::Request req)
 {
   if (req.feedback_topic_name.empty())
@@ -134,81 +185,13 @@ void executor(urs_wearable::SetGoal::Request req)
 
         case urs_wearable::Action::TYPE_FLY_ABOVE:
         {
-          std::vector<urs_wearable::Predicate> active_region_preds = g_kb.getPredicateList(urs_wearable::Predicate::TYPE_ACTIVE_REGION);
-
-          // Check the validity of predicate active_region
-          if (active_region_preds.size() == 0)
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Predicate active_region is not in the knowledge base";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-          else if (active_region_preds.size() > 1)
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "There cannot be more than one active_region predicate";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-
-          // Get poses of action region
-          urs_wearable::Predicate pred_active_region = active_region_preds.back();
-          urs_wearable::PoseEuler pose_active_region_sw;
-          urs_wearable::PoseEuler pose_active_region_ne;
-          if (!g_kb.location_table_.map_.find(pred_active_region.predicate_active_region.location_id_sw.value, pose_active_region_sw))
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Cannot find location id " + std::to_string(pred_active_region.predicate_active_region.location_id_sw.value) + " in the location table";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-          if (!g_kb.location_table_.map_.find(pred_active_region.predicate_active_region.location_id_ne.value, pose_active_region_ne))
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Cannot find location id " + std::to_string(pred_active_region.predicate_active_region.location_id_ne.value) + " in the location table";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-
           // Get the pose to fly to
           urs_wearable::PoseEuler pose_to;
           LocationTable::location_id_type location_id_to = actions_it->action_fly_above.location_id_to.value;
-          if (!g_kb.location_table_.map_.find(location_id_to, pose_to))
+
+          if (!isWithinActiveRegion(pose_to, location_id_to, feedback.message))
           {
             feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Cannot find location id " + std::to_string(location_id_to) + " in the location table";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-
-          // Check that the pose to fly above is within active region
-          if (pose_to.position.x < pose_active_region_sw.position.x || pose_to.position.x > pose_active_region_ne.position.x
-              || pose_to.position.y < pose_active_region_sw.position.y || pose_to.position.y > pose_active_region_ne.position.y
-              || pose_to.position.z < pose_active_region_sw.position.z || pose_to.position.z > pose_active_region_ne.position.z)
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "The pose to fly above is outside of active region";
             feedback_pub.publish(feedback);
             ros::spinOnce();
 
@@ -251,81 +234,13 @@ void executor(urs_wearable::SetGoal::Request req)
 
         case urs_wearable::Action::TYPE_FLY_TO:
         {
-          std::vector<urs_wearable::Predicate> active_region_preds = g_kb.getPredicateList(urs_wearable::Predicate::TYPE_ACTIVE_REGION);
-
-          // Check the validity of predicate active_region
-          if (active_region_preds.size() == 0)
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Predicate active_region is not in the knowledge base";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-          else if (active_region_preds.size() > 1)
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "There cannot be more than one active_region predicate";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-
-          // Get poses of action region
-          urs_wearable::Predicate pred_active_region = active_region_preds.back();
-          urs_wearable::PoseEuler pose_active_region_sw;
-          urs_wearable::PoseEuler pose_active_region_ne;
-          if (!g_kb.location_table_.map_.find(pred_active_region.predicate_active_region.location_id_sw.value, pose_active_region_sw))
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Cannot find location id " + std::to_string(pred_active_region.predicate_active_region.location_id_sw.value) + " in the location table";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-          if (!g_kb.location_table_.map_.find(pred_active_region.predicate_active_region.location_id_ne.value, pose_active_region_ne))
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Cannot find location id " + std::to_string(pred_active_region.predicate_active_region.location_id_ne.value) + " in the location table";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-
           // Get the pose to fly to
           urs_wearable::PoseEuler pose_to;
           LocationTable::location_id_type location_id_to = actions_it->action_fly_to.location_id_to.value;
-          if (!g_kb.location_table_.map_.find(location_id_to, pose_to))
+
+          if (!isWithinActiveRegion(pose_to, location_id_to, feedback.message))
           {
             feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Cannot find location id " + std::to_string(location_id_to) + " in the location table";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-
-          // Check that the pose to fly to is within active region
-          if (pose_to.position.x < pose_active_region_sw.position.x || pose_to.position.x > pose_active_region_ne.position.x
-              || pose_to.position.y < pose_active_region_sw.position.y || pose_to.position.y > pose_active_region_ne.position.y
-              || pose_to.position.z < pose_active_region_sw.position.z || pose_to.position.z > pose_active_region_ne.position.z)
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "The pose to fly to is outside of active region";
             feedback_pub.publish(feedback);
             ros::spinOnce();
 
@@ -376,81 +291,13 @@ void executor(urs_wearable::SetGoal::Request req)
 
         case urs_wearable::Action::TYPE_KEY_PICK:
         {
-          std::vector<urs_wearable::Predicate> active_region_preds = g_kb.getPredicateList(urs_wearable::Predicate::TYPE_ACTIVE_REGION);
-
-          // Check the validity of predicate active_region
-          if (active_region_preds.size() == 0)
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Predicate active_region is not in the knowledge base";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-          else if (active_region_preds.size() > 1)
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "There cannot be more than one active_region predicate";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-
-          // Get poses of action region
-          urs_wearable::Predicate pred_active_region = active_region_preds.back();
-          urs_wearable::PoseEuler pose_active_region_sw;
-          urs_wearable::PoseEuler pose_active_region_ne;
-          if (!g_kb.location_table_.map_.find(pred_active_region.predicate_active_region.location_id_sw.value, pose_active_region_sw))
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Cannot find location id " + std::to_string(pred_active_region.predicate_active_region.location_id_sw.value) + " in the location table";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-          if (!g_kb.location_table_.map_.find(pred_active_region.predicate_active_region.location_id_ne.value, pose_active_region_ne))
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Cannot find location id " + std::to_string(pred_active_region.predicate_active_region.location_id_ne.value) + " in the location table";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-
           // Get the pose to fly to
           urs_wearable::PoseEuler pose_to;
           LocationTable::location_id_type key_location_id = actions_it->action_key_pick.key_location_id.value;
-          if (!g_kb.location_table_.map_.find(key_location_id, pose_to))
+
+          if (!isWithinActiveRegion(pose_to, key_location_id, feedback.message))
           {
             feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Cannot find location id " + std::to_string(key_location_id) + " in the location table";
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-
-            g_kb.unregisterExecutor(executor_id);
-            feedback_pub.shutdown();
-            return;
-          }
-
-          // Check that the pose to fly above is within active region
-          if (pose_to.position.x < pose_active_region_sw.position.x || pose_to.position.x > pose_active_region_ne.position.x
-              || pose_to.position.y < pose_active_region_sw.position.y || pose_to.position.y > pose_active_region_ne.position.y
-              || pose_to.position.z < pose_active_region_sw.position.z || pose_to.position.z > pose_active_region_ne.position.z)
-          {
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "The pose to fly above is outside of active region";
             feedback_pub.publish(feedback);
             ros::spinOnce();
 
