@@ -1,3 +1,3 @@
-string TYPE=location_id
+string TYPE=loc_id
 
 uint8 value
