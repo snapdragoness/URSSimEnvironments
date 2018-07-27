@@ -74,7 +74,7 @@ void KnowledgeBase::replan()
     executor_map_.update_fn(id, [this](struct Executor& executor)
     {
       urs_wearable::GetPlan get_plan_srv;
-      get_plan_srv.request.problem_def = getProblemDef(executor.goal);
+      get_plan_srv.request.problem_def = getProblemDef(excludeAlreadySatisfiedGoals(executor.goal));
 
       if (ros::service::call(PLANNER_SERVICE_NAME, get_plan_srv))
       {
@@ -95,7 +95,7 @@ void KnowledgeBase::replan()
 void KnowledgeBase::getPlan(executor_id_type executor_id, const std::vector<urs_wearable::Predicate>& goal, std::vector<std::string>& plan)
 {
   urs_wearable::GetPlan get_plan_srv;
-  get_plan_srv.request.problem_def = getProblemDef(goal);
+  get_plan_srv.request.problem_def = getProblemDef(excludeAlreadySatisfiedGoals(goal));
 
   if (ros::service::call(PLANNER_SERVICE_NAME, get_plan_srv))
   {
@@ -131,6 +131,155 @@ bool KnowledgeBase::getPlanIfPlanHasChanged(executor_id_type executor_id, std::v
 /***************************************************************************************************/
 /**** The methods below need modifications if predicates, objects, or actions have been changed ****/
 /***************************************************************************************************/
+
+// This method needs to be modified if there is a change in
+// - predicate
+std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals(const std::vector<urs_wearable::Predicate>& goal)
+{
+  std::vector<urs_wearable::Predicate> goal_excluded(goal);
+  std::vector<urs_wearable::Predicate>::iterator goal_excluded_it = goal_excluded.begin();
+  while (goal_excluded_it != goal_excluded.end())
+  {
+    bool matched = false;
+    switch (goal_excluded_it->type)
+    {
+      case urs_wearable::Predicate::TYPE_ACTIVE_REGION:
+      {
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_ACTIVE_REGION, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          for (const auto& cur_pred : cur_preds)
+          {
+            if (cur_pred.predicate_active_region.location_id_sw.value == goal_excluded_it->predicate_active_region.location_id_sw.value
+                && cur_pred.predicate_active_region.location_id_ne.value == goal_excluded_it->predicate_active_region.location_id_ne.value
+                && cur_pred.predicate_active_region.truth_value == goal_excluded_it->predicate_active_region.truth_value)
+            {
+              matched = true;
+              break;
+            }
+          }
+        });
+      }
+      break;
+
+      case urs_wearable::Predicate::TYPE_DRONE_ABOVE:
+      {
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_DRONE_ABOVE, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          for (const auto& cur_pred : cur_preds)
+          {
+            if (cur_pred.predicate_drone_above.drone_id.value == goal_excluded_it->predicate_drone_above.drone_id.value
+                && cur_pred.predicate_drone_above.location_id.value == goal_excluded_it->predicate_drone_above.location_id.value
+                && cur_pred.predicate_drone_above.truth_value == goal_excluded_it->predicate_drone_above.truth_value)
+            {
+              matched = true;
+              break;
+            }
+          }
+        });
+      }
+      break;
+
+      case urs_wearable::Predicate::TYPE_DRONE_AT:
+      {
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_DRONE_AT, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          for (const auto& cur_pred : cur_preds)
+          {
+            if (cur_pred.predicate_drone_at.drone_id.value == goal_excluded_it->predicate_drone_at.drone_id.value
+                && cur_pred.predicate_drone_at.location_id.value == goal_excluded_it->predicate_drone_at.location_id.value
+                && cur_pred.predicate_drone_at.truth_value == goal_excluded_it->predicate_drone_at.truth_value)
+            {
+              matched = true;
+              break;
+            }
+          }
+        });
+      }
+      break;
+
+      case urs_wearable::Predicate::TYPE_KEY_AT:
+      {
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_KEY_AT, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          for (const auto& cur_pred : cur_preds)
+          {
+            if (cur_pred.predicate_key_at.key_id.value == goal_excluded_it->predicate_key_at.key_id.value
+                && cur_pred.predicate_key_at.location_id.value == goal_excluded_it->predicate_key_at.location_id.value
+                && cur_pred.predicate_key_at.truth_value == goal_excluded_it->predicate_key_at.truth_value)
+            {
+              matched = true;
+              break;
+            }
+          }
+        });
+      }
+      break;
+
+      case urs_wearable::Predicate::TYPE_KEY_PICKED:
+      {
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_KEY_PICKED, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          for (const auto& cur_pred : cur_preds)
+          {
+            if (cur_pred.predicate_key_picked.key_id.value == goal_excluded_it->predicate_key_picked.key_id.value
+                && cur_pred.predicate_key_picked.truth_value == goal_excluded_it->predicate_key_picked.truth_value)
+            {
+              matched = true;
+              break;
+            }
+          }
+        });
+      }
+      break;
+
+      case urs_wearable::Predicate::TYPE_KEY_WITH:
+      {
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_KEY_WITH, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          for (const auto& cur_pred : cur_preds)
+          {
+            if (cur_pred.predicate_key_with.key_id.value == goal_excluded_it->predicate_key_with.key_id.value
+                && cur_pred.predicate_key_with.drone_id.value == goal_excluded_it->predicate_key_with.drone_id.value
+                && cur_pred.predicate_key_with.truth_value == goal_excluded_it->predicate_key_with.truth_value)
+            {
+              matched = true;
+              break;
+            }
+          }
+        });
+      }
+      break;
+
+      case urs_wearable::Predicate::TYPE_TOOK_OFF:
+      {
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_TOOK_OFF, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          for (const auto& cur_pred : cur_preds)
+          {
+            if (cur_pred.predicate_took_off.drone_id.value == goal_excluded_it->predicate_took_off.drone_id.value
+                && cur_pred.predicate_took_off.truth_value == goal_excluded_it->predicate_took_off.truth_value)
+            {
+              matched = true;
+              break;
+            }
+          }
+        });
+      }
+      break;
+    }
+
+    if (matched)
+    {
+      goal_excluded.erase(goal_excluded_it);
+    }
+    else
+    {
+      goal_excluded_it++;
+    }
+  }
+
+  return goal_excluded;
+}
 
 // This method needs to be modified if there is a change in
 // - predicate

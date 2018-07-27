@@ -92,6 +92,7 @@ void executor(urs_wearable::SetGoal::Request req)
   ros::Publisher feedback_pub = nh.advertise<urs_wearable::Feedback>(req.feedback_topic_name, 10);
   urs_wearable::Feedback feedback;
 
+  ROS_INFO("Executor %u: PENDING", executor_id);
   feedback.executor_id = executor_id;
   feedback.status = urs_wearable::Feedback::STATUS_PENDING;
   feedback_pub.publish(feedback);
@@ -115,15 +116,16 @@ void executor(urs_wearable::SetGoal::Request req)
 
       std::vector<urs_wearable::Predicate> effects;
 
-      feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
-      feedback.current_action = *actions_it;
-      feedback_pub.publish(feedback);
-      ros::spinOnce();
-
       switch (actions_it->type)
       {
         case urs_wearable::Action::TYPE_ACTIVE_REGION_UPDATE:
         {
+          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionActiveRegionUpdate::NAME.c_str());
+          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
+          feedback.current_action = *actions_it;
+          feedback_pub.publish(feedback);
+          ros::spinOnce();
+
           // Check the validity of location_id_sw_new and location_id_ne_new
           urs_wearable::PoseEuler pose_sw_new;
           urs_wearable::PoseEuler pose_ne_new;
@@ -132,6 +134,7 @@ void executor(urs_wearable::SetGoal::Request req)
 
           if (!g_kb.location_table_.map_.find(location_id_sw_new, pose_sw_new))
           {
+            ROS_WARN("Executor %u: ABORTED", executor_id);
             feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
             feedback.message = "Cannot find location id " + std::to_string(location_id_sw_new) + " in the location table";
             feedback_pub.publish(feedback);
@@ -144,6 +147,7 @@ void executor(urs_wearable::SetGoal::Request req)
 
           if (!g_kb.location_table_.map_.find(location_id_ne_new, pose_ne_new))
           {
+            ROS_WARN("Executor %u: ABORTED", executor_id);
             feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
             feedback.message = "Cannot find location id " + std::to_string(location_id_ne_new) + " in the location table";
             feedback_pub.publish(feedback);
@@ -158,6 +162,7 @@ void executor(urs_wearable::SetGoal::Request req)
               || pose_sw_new.position.y > pose_ne_new.position.y
               || pose_sw_new.position.z > pose_ne_new.position.z)
           {
+            ROS_WARN("Executor %u: ABORTED", executor_id);
             feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
             feedback.message = "The new position of location_id_sw is not in the south-west of the new position of location_id_ne";
             feedback_pub.publish(feedback);
@@ -185,12 +190,19 @@ void executor(urs_wearable::SetGoal::Request req)
 
         case urs_wearable::Action::TYPE_FLY_ABOVE:
         {
+          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionFlyAbove::NAME.c_str());
+          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
+          feedback.current_action = *actions_it;
+          feedback_pub.publish(feedback);
+          ros::spinOnce();
+
           // Get the pose to fly to
           urs_wearable::PoseEuler pose_to;
           LocationTable::location_id_type location_id_to = actions_it->action_fly_above.location_id_to.value;
 
           if (!isWithinActiveRegion(pose_to, location_id_to, feedback.message))
           {
+            ROS_WARN("Executor %u: ABORTED", executor_id);
             feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
             feedback_pub.publish(feedback);
             ros::spinOnce();
@@ -234,12 +246,19 @@ void executor(urs_wearable::SetGoal::Request req)
 
         case urs_wearable::Action::TYPE_FLY_TO:
         {
+          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionFlyTo::NAME.c_str());
+          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
+          feedback.current_action = *actions_it;
+          feedback_pub.publish(feedback);
+          ros::spinOnce();
+
           // Get the pose to fly to
           urs_wearable::PoseEuler pose_to;
           LocationTable::location_id_type location_id_to = actions_it->action_fly_to.location_id_to.value;
 
           if (!isWithinActiveRegion(pose_to, location_id_to, feedback.message))
           {
+            ROS_WARN("Executor %u: ABORTED", executor_id);
             feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
             feedback_pub.publish(feedback);
             ros::spinOnce();
@@ -279,6 +298,12 @@ void executor(urs_wearable::SetGoal::Request req)
 
         case urs_wearable::Action::TYPE_KEY_ADD:
         {
+          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionKeyAdd::NAME.c_str());
+          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
+          feedback.current_action = *actions_it;
+          feedback_pub.publish(feedback);
+          ros::spinOnce();
+
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
           effect.type = urs_wearable::Predicate::TYPE_KEY_AT;
@@ -296,12 +321,19 @@ void executor(urs_wearable::SetGoal::Request req)
 
         case urs_wearable::Action::TYPE_KEY_PICK:
         {
+          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionKeyPick::NAME.c_str());
+          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
+          feedback.current_action = *actions_it;
+          feedback_pub.publish(feedback);
+          ros::spinOnce();
+
           // Get the pose to fly to
           urs_wearable::PoseEuler pose_to;
           LocationTable::location_id_type key_location_id = actions_it->action_key_pick.key_location_id.value;
 
           if (!isWithinActiveRegion(pose_to, key_location_id, feedback.message))
           {
+            ROS_WARN("Executor %u: ABORTED", executor_id);
             feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
             feedback_pub.publish(feedback);
             ros::spinOnce();
@@ -356,6 +388,12 @@ void executor(urs_wearable::SetGoal::Request req)
 
         case urs_wearable::Action::TYPE_LAND:
         {
+          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionLand::NAME.c_str());
+          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
+          feedback.current_action = *actions_it;
+          feedback_pub.publish(feedback);
+          ros::spinOnce();
+
           require_drone_action = true;
           drone_id = actions_it->action_land.drone_id.value;
           goal.action_type = urs_wearable::DroneGoal::TYPE_LANDING;
@@ -371,6 +409,12 @@ void executor(urs_wearable::SetGoal::Request req)
 
         case urs_wearable::Action::TYPE_TAKE_OFF:
         {
+          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionTakeOff::NAME.c_str());
+          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
+          feedback.current_action = *actions_it;
+          feedback_pub.publish(feedback);
+          ros::spinOnce();
+
           require_drone_action = true;
           drone_id = actions_it->action_take_off.drone_id.value;
           goal.action_type = urs_wearable::DroneGoal::TYPE_TAKEOFF;
@@ -412,29 +456,47 @@ void executor(urs_wearable::SetGoal::Request req)
 
         if (has_new_plan)
         {
+          ROS_INFO("Executor %u: REPLANNED", executor_id);
           feedback.status = urs_wearable::Feedback::STATUS_REPLANNED;
           feedback_pub.publish(feedback);
           ros::spinOnce();
 
           ac.cancelGoal();
+          ROS_INFO("Executor %u: Drone action finished with state: %s", executor_id, ac.getState().toString().c_str());
+
+          if (new_plan.empty())
+          {
+            if (g_kb.excludeAlreadySatisfiedGoals(req.goal).empty())
+            {
+              ROS_WARN("Executor %u: SUCCEEDED", executor_id);
+              feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
+              feedback_pub.publish(feedback);
+              ros::spinOnce();
+            }
+            else
+            {
+              ROS_WARN("Executor %u: PREEMPTED", executor_id);
+              feedback.status = urs_wearable::Feedback::STATUS_PREEMPTED;
+              feedback_pub.publish(feedback);
+              ros::spinOnce();
+            }
+            g_kb.unregisterExecutor(executor_id);
+            feedback_pub.shutdown();
+            return;
+          }
 
           plan = new_plan;
           plan_it = plan.begin();
           actions = g_kb.parsePlan(new_plan);
           actions_it = actions.begin();
 
-          ROS_INFO("Executor %u: the plan has been re-planned", executor_id);
           continue;
         }
 
-        if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+        ROS_INFO("Executor %u: Drone action finished with state: %s", executor_id, ac.getState().toString().c_str());
+        if (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
         {
-          ROS_INFO("Executor %u: action finished with state: %s", executor_id, ac.getState().toString().c_str());
-        }
-        else
-        {
-          ROS_WARN("Executor %u: action finished with state: %s", executor_id, ac.getState().toString().c_str());
-
+          ROS_WARN("Executor %u: PREEMPTED", executor_id);
           feedback.status = urs_wearable::Feedback::STATUS_PREEMPTED;
           feedback_pub.publish(feedback);
           ros::spinOnce();
@@ -453,16 +515,37 @@ void executor(urs_wearable::SetGoal::Request req)
       {
         if (!std::equal(plan_it, plan.end(), new_plan.begin()))
         {
+          ROS_INFO("Executor %u: REPLANNED", executor_id);
           feedback.status = urs_wearable::Feedback::STATUS_REPLANNED;
           feedback_pub.publish(feedback);
           ros::spinOnce();
+
+          if (new_plan.empty())
+          {
+            if (g_kb.excludeAlreadySatisfiedGoals(req.goal).empty())
+            {
+              ROS_WARN("Executor %u: SUCCEEDED", executor_id);
+              feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
+              feedback_pub.publish(feedback);
+              ros::spinOnce();
+            }
+            else
+            {
+              ROS_WARN("Executor %u: PREEMPTED", executor_id);
+              feedback.status = urs_wearable::Feedback::STATUS_PREEMPTED;
+              feedback_pub.publish(feedback);
+              ros::spinOnce();
+            }
+            g_kb.unregisterExecutor(executor_id);
+            feedback_pub.shutdown();
+            return;
+          }
 
           plan = new_plan;
           plan_it = plan.begin();
           actions = g_kb.parsePlan(new_plan);
           actions_it = actions.begin();
 
-          ROS_INFO("Executor %u: the plan has been re-planned", executor_id);
           continue;
         }
       }
@@ -477,12 +560,21 @@ void executor(urs_wearable::SetGoal::Request req)
       ++actions_it;
     }
 
+    ROS_WARN("Executor %u: SUCCEEDED", executor_id);
+    feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
+    feedback_pub.publish(feedback);
+    ros::spinOnce();
+  }
+  else if (g_kb.excludeAlreadySatisfiedGoals(req.goal).empty())
+  {
+    ROS_WARN("Executor %u: SUCCEEDED", executor_id);
     feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
     feedback_pub.publish(feedback);
     ros::spinOnce();
   }
   else
   {
+    ROS_WARN("Executor %u: REJECTED", executor_id);
     feedback.status = urs_wearable::Feedback::STATUS_REJECTED;
     feedback_pub.publish(feedback);
     ros::spinOnce();

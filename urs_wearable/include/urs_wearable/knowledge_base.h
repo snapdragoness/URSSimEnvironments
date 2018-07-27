@@ -64,6 +64,8 @@ public:
     return v;
   }
 
+  std::vector<urs_wearable::Predicate> excludeAlreadySatisfiedGoals(const std::vector<urs_wearable::Predicate>&);
+
   // getPlan can only be called once from the same executor, the subsequent calls will return an empty plan
   void getPlan(executor_id_type, const std::vector<urs_wearable::Predicate>&, std::vector<std::string>&);
   bool getPlanIfPlanHasChanged(executor_id_type, std::vector<std::string>&);

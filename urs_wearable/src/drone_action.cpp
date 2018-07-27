@@ -32,7 +32,7 @@ public:
   DroneActionServer(ros::NodeHandle& nh, const std::string& ns, const std::string& name) :
     as_(nh, name, boost::bind(&DroneActionServer::droneActionCb, this, _1), false), ns_(ns), name_(name)
   {
-    dist_tolerance_ = 0.1;
+    dist_tolerance_ = 0.5;
     frequency_ = 10.0;
     landing_height_ = 0.3;
     takeoff_height_ = 2.0;
