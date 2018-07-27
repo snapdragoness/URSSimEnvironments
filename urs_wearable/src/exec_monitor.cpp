@@ -286,6 +286,11 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_key_at.location_id.value = actions_it->action_key_add.location_id.value;
           effect.predicate_key_at.truth_value = true;
           effects.push_back(effect);
+
+          effect.type = urs_wearable::Predicate::TYPE_KEY_PICKED;
+          effect.predicate_key_picked.key_id.value = actions_it->action_key_add.key_id.value;
+          effect.predicate_key_picked.truth_value = false;
+          effects.push_back(effect);
         }
           break;
 
@@ -330,12 +335,6 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_drone_at.truth_value = false;
           effects.push_back(effect);
 
-          effect.type = urs_wearable::Predicate::TYPE_KEY_AT;
-          effect.predicate_key_at.key_id.value = actions_it->action_key_pick.key_id.value;
-          effect.predicate_key_at.location_id.value = actions_it->action_key_pick.key_location_id.value;
-          effect.predicate_key_at.truth_value = false;
-          effects.push_back(effect);
-
           effect.type = urs_wearable::Predicate::TYPE_DRONE_ABOVE;
           effect.predicate_drone_above.drone_id.value = drone_id;
           effect.predicate_drone_above.location_id.value = key_location_id;
@@ -344,8 +343,13 @@ void executor(urs_wearable::SetGoal::Request req)
 
           effect.type = urs_wearable::Predicate::TYPE_KEY_PICKED;
           effect.predicate_key_picked.key_id.value = actions_it->action_key_pick.key_id.value;
-          effect.predicate_key_picked.drone_id.value = drone_id;
           effect.predicate_key_picked.truth_value = true;
+          effects.push_back(effect);
+
+          effect.type = urs_wearable::Predicate::TYPE_KEY_WITH;
+          effect.predicate_key_with.key_id.value = actions_it->action_key_pick.key_id.value;
+          effect.predicate_key_with.drone_id.value = drone_id;
+          effect.predicate_key_with.truth_value = true;
           effects.push_back(effect);
         }
           break;

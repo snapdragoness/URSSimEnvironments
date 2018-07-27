@@ -3,7 +3,8 @@ uint8 TYPE_DRONE_ABOVE=1
 uint8 TYPE_DRONE_AT=2
 uint8 TYPE_KEY_AT=3
 uint8 TYPE_KEY_PICKED=4
-uint8 TYPE_TOOK_OFF=5
+uint8 TYPE_KEY_WITH=5
+uint8 TYPE_TOOK_OFF=6
 
 uint8 type
 PredicateActiveRegion predicate_active_region
@@ -11,4 +12,5 @@ PredicateDroneAbove predicate_drone_above
 PredicateDroneAt predicate_drone_at
 PredicateKeyAt predicate_key_at
 PredicateKeyPicked predicate_key_picked
+PredicateKeyWith predicate_key_with
 PredicateTookOff predicate_took_off

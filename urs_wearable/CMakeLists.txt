@@ -75,6 +75,7 @@ add_message_files(FILES
   PredicateDroneAt.msg
   PredicateKeyAt.msg
   PredicateKeyPicked.msg
+  PredicateKeyWith.msg
   PredicateTookOff.msg
   State.msg
 )

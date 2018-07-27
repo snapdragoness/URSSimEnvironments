@@ -9,7 +9,8 @@
     (drone_above ?drone_id - drone_id ?loc_id - loc_id)
     (drone_at ?drone_id - drone_id ?loc_id - loc_id)
     (key_at ?key_id - key_id ?loc_id - loc_id)
-    (key_picked ?key_id - key_id ?drone_id - drone_id)
+    (key_picked ?key_id - key_id)
+    (key_with ?key_id - key_id ?drone_id - drone_id)
     (took_off ?drone_id - drone_id)
   )
   (:action active_region_update
@@ -30,17 +31,17 @@
   (:action key_add
     :parameters (?key_id - key_id ?loc_id - loc_id)
     :precondition (not (key_at ?key_id ?loc_id))
-    :effect (and (key_at ?key_id ?loc_id))
+    :effect (and (key_at ?key_id ?loc_id) (not (key_picked ?key_id)))
   )
   (:action key_pick
-    :parameters (?drone_id - drone_id ?drone_loc_id - loc_id ?key_id - key_id ?key_loc_id - loc_id)
-    :precondition (and (key_at ?key_id ?key_loc_id) (or (drone_above ?drone_id ?drone_loc_id) (drone_at ?drone_id ?drone_loc_id)))
+    :parameters (?drone_id - drone_id ?key_id - key_id ?drone_loc_id ?key_loc_id - loc_id)
+    :precondition (and (not (key_picked ?key_id)) (key_at ?key_id ?key_loc_id) (took_off ?drone_id) (or (drone_above ?drone_id ?drone_loc_id) (drone_at ?drone_id ?drone_loc_id)))
     :effect (and
       (not (drone_above ?drone_id ?drone_loc_id))
       (not (drone_at ?drone_id ?drone_loc_id))
-      (not (key_at ?key_id ?key_loc_id))
       (drone_above ?drone_id ?key_loc_id)
-      (key_picked ?key_id ?drone_id)
+      (key_picked ?key_id)
+      (key_with ?key_id ?drone_id)
     )
   )
   (:action land
