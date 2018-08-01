@@ -8,6 +8,8 @@
     (active_region ?loc_id_sw - loc_id ?loc_id_ne - loc_id)
     (drone_above ?drone_id - drone_id ?loc_id - loc_id)
     (drone_at ?drone_id - drone_id ?loc_id - loc_id)
+    (is_location ?loc_id - loc_id)
+    (is_occupied ?loc_id - loc_id)
     (key_at ?key_id - key_id ?loc_id - loc_id)
     (key_picked ?key_id - key_id)
     (key_with ?key_id - key_id ?drone_id - drone_id)
@@ -18,15 +20,40 @@
     :precondition (active_region ?loc_id_sw_old ?loc_id_ne_old)
     :effect (and (not (active_region ?loc_id_sw_old ?loc_id_ne_old)) (active_region ?loc_id_sw_new ?loc_id_ne_new))
   )
+  (:action add_location
+    :parameters (?loc_id - loc_id)
+    :precondition (and (not (is_location ?loc_id)))
+    :effect (and (is_location ?loc_id) (not (is_occupied ?loc_id)))
+  )
   (:action fly_above
     :parameters (?drone_id - drone_id ?loc_id_from ?loc_id_to - loc_id)
-    :precondition (and (took_off ?drone_id) (or (drone_above ?drone_id ?loc_id_from) (drone_at ?drone_id ?loc_id_from)))
-    :effect (and (not (drone_above ?drone_id ?loc_id_from)) (not (drone_at ?drone_id ?loc_id_from)) (drone_above ?drone_id ?loc_id_to))
+    :precondition (and
+      (or (drone_above ?drone_id ?loc_id_from) (drone_at ?drone_id ?loc_id_from))
+      (not (is_occupied ?loc_id_to))
+      (took_off ?drone_id)
+    )
+    :effect (and
+      (not (drone_above ?drone_id ?loc_id_from))
+      (not (drone_at ?drone_id ?loc_id_from))
+      (drone_above ?drone_id ?loc_id_to)
+      (not (is_occupied ?loc_id_from))
+      (is_occupied ?loc_id_to)
+    )
   )
   (:action fly_to
     :parameters (?drone_id - drone_id ?loc_id_from ?loc_id_to - loc_id)
-    :precondition (and (took_off ?drone_id) (or (drone_above ?drone_id ?loc_id_from) (drone_at ?drone_id ?loc_id_from)))
-    :effect (and (not (drone_above ?drone_id ?loc_id_from)) (not (drone_at ?drone_id ?loc_id_from)) (drone_at ?drone_id ?loc_id_to))
+    :precondition (and
+      (or (drone_above ?drone_id ?loc_id_from) (drone_at ?drone_id ?loc_id_from))
+      (not (is_occupied ?loc_id_to))
+      (took_off ?drone_id)
+    )
+    :effect (and
+      (not (drone_above ?drone_id ?loc_id_from))
+      (not (drone_at ?drone_id ?loc_id_from))
+      (drone_at ?drone_id ?loc_id_to)
+      (not (is_occupied ?loc_id_from))
+      (is_occupied ?loc_id_to)
+    )
   )
   (:action key_add
     :parameters (?key_id - key_id ?loc_id - loc_id)

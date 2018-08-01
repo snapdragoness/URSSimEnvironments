@@ -57,6 +57,7 @@ add_subdirectory("../libcuckoo" libcuckoo)
 add_message_files(FILES
   Action.msg
   ActionActiveRegionUpdate.msg
+  ActionAddLocation.msg
   ActionFlyAbove.msg
   ActionFlyTo.msg
   ActionKeyAdd.msg
@@ -73,6 +74,8 @@ add_message_files(FILES
   PredicateActiveRegion.msg
   PredicateDroneAbove.msg
   PredicateDroneAt.msg
+  PredicateIsLocation.msg
+  PredicateIsOccupied.msg
   PredicateKeyAt.msg
   PredicateKeyPicked.msg
   PredicateKeyWith.msg

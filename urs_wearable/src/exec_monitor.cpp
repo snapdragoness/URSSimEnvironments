@@ -186,7 +186,29 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_active_region.truth_value = true;
           effects.push_back(effect);
         }
-          break;
+        break;
+
+        case urs_wearable::Action::TYPE_ADD_LOCATION:
+        {
+          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionAddLocation::NAME.c_str());
+          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
+          feedback.current_action = *actions_it;
+          feedback_pub.publish(feedback);
+          ros::spinOnce();
+
+          // Add the effects of the action to the list
+          urs_wearable::Predicate effect;
+          effect.type = urs_wearable::Predicate::TYPE_IS_LOCATION;
+          effect.predicate_is_location.location_id.value = actions_it->action_add_location.location_id.value;
+          effect.predicate_is_location.truth_value = true;
+          effects.push_back(effect);
+
+          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
+          effect.predicate_is_occupied.location_id.value = actions_it->action_add_location.location_id.value;
+          effect.predicate_is_occupied.truth_value = false;
+          effects.push_back(effect);
+        }
+        break;
 
         case urs_wearable::Action::TYPE_FLY_ABOVE:
         {
@@ -241,8 +263,18 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_drone_above.location_id.value = location_id_to;
           effect.predicate_drone_above.truth_value = true;
           effects.push_back(effect);
+
+          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
+          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_above.location_id_from.value;
+          effect.predicate_is_occupied.truth_value = false;
+          effects.push_back(effect);
+
+          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
+          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_above.location_id_to.value;
+          effect.predicate_is_occupied.truth_value = true;
+          effects.push_back(effect);
         }
-          break;
+        break;
 
         case urs_wearable::Action::TYPE_FLY_TO:
         {
@@ -293,8 +325,18 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_drone_at.location_id.value = location_id_to;
           effect.predicate_drone_at.truth_value = true;
           effects.push_back(effect);
+
+          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
+          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_to.location_id_from.value;
+          effect.predicate_is_occupied.truth_value = false;
+          effects.push_back(effect);
+
+          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
+          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_to.location_id_to.value;
+          effect.predicate_is_occupied.truth_value = true;
+          effects.push_back(effect);
         }
-          break;
+        break;
 
         case urs_wearable::Action::TYPE_KEY_ADD:
         {
@@ -317,7 +359,7 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_key_picked.truth_value = false;
           effects.push_back(effect);
         }
-          break;
+        break;
 
         case urs_wearable::Action::TYPE_KEY_PICK:
         {
@@ -384,7 +426,7 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_key_with.truth_value = true;
           effects.push_back(effect);
         }
-          break;
+        break;
 
         case urs_wearable::Action::TYPE_LAND:
         {
@@ -405,7 +447,7 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_took_off.truth_value = false;
           effects.push_back(effect);
         }
-          break;
+        break;
 
         case urs_wearable::Action::TYPE_TAKE_OFF:
         {
@@ -426,7 +468,15 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_took_off.truth_value = true;
           effects.push_back(effect);
         }
-          break;
+        break;
+
+        default:
+        {
+          ROS_ERROR("Executor %u: Unrecognized action", executor_id);
+          g_kb.unregisterExecutor(executor_id);
+          feedback_pub.shutdown();
+          return;
+        }
       }
 
       if (require_drone_action)
@@ -444,13 +494,11 @@ void executor(urs_wearable::SetGoal::Request req)
           state = ac.getState().state_;
 
           // Check if plan has changed
-          if (g_kb.getPlanIfPlanHasChanged(executor_id, new_plan))
+          if (g_kb.getPlanIfPlanHasChanged(executor_id, new_plan)
+             && (new_plan.empty() || !std::equal(plan_it, plan.end(), new_plan.begin())))
           {
-            if (!std::equal(plan_it, plan.end(), new_plan.begin()))
-            {
-              has_new_plan = true;
-              break;
-            }
+            has_new_plan = true;
+            break;
           }
         } while (state == actionlib::SimpleClientGoalState::PENDING || state == actionlib::SimpleClientGoalState::ACTIVE);
 
@@ -505,15 +553,14 @@ void executor(urs_wearable::SetGoal::Request req)
           feedback_pub.shutdown();
           return;
         }
-
       }
-
-      // Don't update/insert the effects of the action if the plan has changed
-      // This check is for those actions that don't require drone action
-      std::vector<std::string> new_plan;
-      if (g_kb.getPlanIfPlanHasChanged(executor_id, new_plan))
+      else
       {
-        if (!std::equal(plan_it, plan.end(), new_plan.begin()))
+        // Don't update/insert the effects of the action if the plan has changed
+        // This check is for those actions that don't require drone action
+        std::vector<std::string> new_plan;
+        if (g_kb.getPlanIfPlanHasChanged(executor_id, new_plan)
+            && (new_plan.empty() || !std::equal(plan_it, plan.end(), new_plan.begin())))
         {
           ROS_INFO("Executor %u: REPLANNED", executor_id);
           feedback.status = urs_wearable::Feedback::STATUS_REPLANNED;
@@ -655,22 +702,42 @@ int main(int argc, char **argv)
   pred_active_region.predicate_active_region.truth_value = true;
   initial_state.push_back(pred_active_region);
 
-  urs_wearable::Predicate pred_took_off;
-  pred_took_off.type = urs_wearable::Predicate::TYPE_TOOK_OFF;
-  pred_took_off.predicate_took_off.truth_value = false;
+  urs_wearable::Predicate pred_is_location;
+  pred_is_location.type = urs_wearable::Predicate::TYPE_IS_LOCATION;
+  pred_is_location.predicate_is_location.truth_value = true;
+
+  urs_wearable::Predicate pred_is_occupied;
+  pred_is_occupied.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
+  pred_is_occupied.predicate_is_occupied.truth_value = true;
+
+  for (unsigned int i = 0; i < 6; i++)
+  {
+    pred_is_location.predicate_is_location.location_id.value = i;
+    initial_state.push_back(pred_is_location);
+
+    if (i >= 2)
+    {
+      pred_is_occupied.predicate_is_occupied.location_id.value = i;
+      initial_state.push_back(pred_is_occupied);
+    }
+  }
 
   urs_wearable::Predicate pred_drone_at;
   pred_drone_at.type = urs_wearable::Predicate::TYPE_DRONE_AT;
   pred_drone_at.predicate_drone_at.truth_value = true;
 
+  urs_wearable::Predicate pred_took_off;
+  pred_took_off.type = urs_wearable::Predicate::TYPE_TOOK_OFF;
+  pred_took_off.predicate_took_off.truth_value = false;
+
   for (unsigned int i = 0; i < N_UAV; i++)
   {
-    pred_took_off.predicate_took_off.drone_id.value = i;
-    initial_state.push_back(pred_took_off);
-
     pred_drone_at.predicate_drone_at.drone_id.value = i;
     pred_drone_at.predicate_drone_at.location_id.value = g_kb.location_table_.insert(g_controller[i].getPose());
     initial_state.push_back(pred_drone_at);
+
+    pred_took_off.predicate_took_off.drone_id.value = i;
+    initial_state.push_back(pred_took_off);
   }
   g_kb.upsertPredicates(initial_state);
 
