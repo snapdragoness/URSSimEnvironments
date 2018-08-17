@@ -742,7 +742,7 @@ int main(int argc, char **argv)
   g_kb.upsertPredicates(initial_state);
 
   // Advertise services
-  ros::ServiceServer get_state_service = nh.advertiseService("/urs_wearable/get_statel", getState);
+  ros::ServiceServer get_state_service = nh.advertiseService("/urs_wearable/get_state", getState);
   ros::ServiceServer location_add_service = nh.advertiseService("/urs_wearable/location_add", locationAdd);
   ros::ServiceServer location_remove_service = nh.advertiseService("/urs_wearable/location_remove", locationRemove);
   ros::ServiceServer set_goal_service = nh.advertiseService("/urs_wearable/set_goal", setGoal);
