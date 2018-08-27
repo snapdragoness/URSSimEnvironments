@@ -1,8 +1,10 @@
 <?xml version="1.0"?>
 
 <launch>
+  <arg name="world" default="$(find urs_wearable)/worlds/empty.world"/>
+
   <include file="$(find hector_gazebo_worlds)/launch/start.launch">
-    <arg name="world" value="$(find urs_wearable)/worlds/nmsu.world" />
+    <arg name="world" value="$(arg world)" />
     <arg name="gui" value="true" />
   </include>
 

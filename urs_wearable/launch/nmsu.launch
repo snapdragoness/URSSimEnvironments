@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+
+<launch>
+  <include file="$(find urs_wearable)/launch/world.launch">
+    <arg name="world" value="$(find urs_wearable)/worlds/nmsu.world" />
+  </include>
+</launch>
