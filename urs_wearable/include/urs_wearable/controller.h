@@ -1,6 +1,7 @@
 #ifndef URS_WEARABLE_INCLUDE_URS_WEARABLE_CONTROLLER_H_
 #define URS_WEARABLE_INCLUDE_URS_WEARABLE_CONTROLLER_H_
 
+#include <atomic>
 #include <mutex>
 
 #include <ros/ros.h>
@@ -12,6 +13,7 @@
 
 #include "urs_wearable/PoseEuler.h"
 #include "urs_wearable/SetDest.h"
+#include "urs_wearable/SetAltitude.h"
 
 typedef struct PID
 {
@@ -32,12 +34,13 @@ class Controller {
   urs_wearable::PoseEuler integral_;
   urs_wearable::PoseEuler derivation_;
 
-  urs_wearable::PoseEuler pose;   // position of the UAV from ground truth
-  urs_wearable::PoseEuler dest;   // desired destination of the UAV
+  urs_wearable::PoseEuler pose_;   // position of the UAV from ground truth
+  urs_wearable::PoseEuler dest_;   // desired destination of the UAV
 
   ros::Publisher cmd_pub_;
   ros::Subscriber pose_sub_;      // a subscriber of the UAV's ground truth
   ros::ServiceServer set_dest_service_;
+  ros::ServiceServer set_altitude_service_;
 
   geometry_msgs::Twist cmd;       // a twist message to be sent to /cmd_vel
 
@@ -46,6 +49,11 @@ class Controller {
 
   void controller(const geometry_msgs::PoseStampedConstPtr& msg);
   void poseEulerPublish(ros::NodeHandle&, ros::Rate rate);
+
+  ros::Subscriber depthImageSub;
+  void readDepthImage(const sensor_msgs::Image::ConstPtr&);
+  void avoidObstacle();
+  std::atomic<bool> avoidingObstacle{false};
 
 public:
   Controller();
@@ -57,6 +65,8 @@ public:
   urs_wearable::PoseEuler getDest();
   void setDest(const urs_wearable::PoseEuler&, bool);
   bool setDest(urs_wearable::SetDest::Request&, urs_wearable::SetDest::Response&);
+  void setAltitude(const double);
+  bool setAltitude(urs_wearable::SetAltitude::Request&, urs_wearable::SetAltitude::Response&);
 
   static double quaternionToYaw(const geometry_msgs::QuaternionConstPtr&);
 };

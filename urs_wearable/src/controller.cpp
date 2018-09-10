@@ -20,6 +20,9 @@ Controller::~Controller()
 {
   pose_sub_.shutdown();
   cmd_pub_.shutdown();
+
+  set_dest_service_.shutdown();
+  set_altitude_service_.shutdown();
 }
 
 bool Controller::setNamespace(ros::NodeHandle& nh, const std::string& ns)
@@ -31,17 +34,72 @@ bool Controller::setNamespace(ros::NodeHandle& nh, const std::string& ns)
 
     cmd_pub_ = nh.advertise<geometry_msgs::Twist>(ns_ + "/cmd_vel", 10, false);
     pose_sub_ = nh.subscribe(ns_ + "/ground_truth_to_tf/pose", 10, &Controller::controller, this);
+//    depthImageSub = nh.subscribe(ns + "/camera/depth/image_raw", 10, &Controller::readDepthImage, this);
 
     set_dest_service_ = nh.advertiseService(ns_ + "/set_dest", &Controller::setDest, this);
+    set_altitude_service_ = nh.advertiseService(ns_ + "/set_altitude", &Controller::setAltitude, this);
 
     std::thread pose_euler_publish_thread(&Controller::poseEulerPublish, this, std::ref(nh), 10);
     pose_euler_publish_thread.detach();
+
+    geometry_msgs::PoseStamped::ConstPtr msg = ros::topic::waitForMessage<geometry_msgs::PoseStamped>(ns_ + "/ground_truth_to_tf/pose");
+    std::lock_guard<std::mutex> lock(dest_mutex_);
+    dest_.position = msg->pose.position;
 
     return true;
   }
 
   return false;
 }
+
+////std::atomic<bool> hasObstacle{false};
+//void Controller::readDepthImage(const sensor_msgs::Image::ConstPtr& msg)
+//{
+//  if (!msg->encoding.compare("32FC1"))
+//  {
+//    /* https://answers.ros.org/question/246066/how-can-i-get-object-distance-using-cameradepthimage_raw
+//     * depth_array[0], depth_array[1], ..., depth_aray[image.height * image.width - 1] */
+////    mut_depthImage.lock();
+//    const float* depthImageArray = reinterpret_cast<const float *>(&(msg->data[0]));
+//
+////    bool obstructed = false;
+//    for (int i = 0; i < 120; i++)
+//    {
+//      float depth = depthImageArray[640 * (i + 0) + 320];
+//      if (!std::isnan(depth) && depth < 9.0)
+//      {
+////        obstructed = true;
+//        std::cout << "obstructed at row = " << (i + 0) << ", depth = " << depth << std::endl;
+//        break;
+//      }
+//    }
+//
+//    if (!std::isnan(depthImageArray[320]))
+//    {
+////      obstructed = true;
+//      avoidObstacle();
+//    }
+////    hasObstacle = obstructed;
+//
+////    mut_depthImage.unlock();
+//
+//    // TODO: check obstacle
+//  }
+//  else
+//  {
+//    ROS_ERROR("Image data encoding not supported");
+//  }
+//}
+//
+//void Controller::avoidObstacle()
+//{
+//  if (!avoidingObstacle)
+//  {
+//    avoidingObstacle = true;
+//
+//    avoidingObstacle = false;
+//  }
+//}
 
 void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
 {
@@ -62,10 +120,10 @@ void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
 
   {
     std::lock_guard<std::mutex> lock(pose_mutex_);
-    pose.position.x = msg->pose.position.x;
-    pose.position.y = msg->pose.position.y;
-    pose.position.z = msg->pose.position.z;
-    pose.orientation.z = yaw;
+    pose_.position.x = msg->pose.position.x;
+    pose_.position.y = msg->pose.position.y;
+    pose_.position.z = msg->pose.position.z;
+    pose_.orientation.z = yaw;
   }
 
   prev_error_.position.x = error_.position.x;
@@ -75,10 +133,10 @@ void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
 
   {
     std::lock_guard<std::mutex> lock(dest_mutex_);
-    error_.position.x = dest.position.x - msg->pose.position.x;
-    error_.position.y = dest.position.y - msg->pose.position.y;
-    error_.position.z = dest.position.z - msg->pose.position.z;
-    error_.orientation.z = dest.orientation.z - yaw;
+    error_.position.x = dest_.position.x - msg->pose.position.x;
+    error_.position.y = dest_.position.y - msg->pose.position.y;
+    error_.position.z = dest_.position.z - msg->pose.position.z;
+    error_.orientation.z = dest_.orientation.z - yaw;
   }
 
   if (error_.orientation.z < -M_PI) {
@@ -125,10 +183,10 @@ void Controller::poseEulerPublish(ros::NodeHandle& nh, ros::Rate rate)
 
     {
       std::lock_guard<std::mutex> lock(pose_mutex_);
-      pose.position.x = this->pose.position.x;
-      pose.position.y = this->pose.position.y;
-      pose.position.z = this->pose.position.z;
-      pose.orientation.z = this->pose.orientation.z;
+      pose.position.x = this->pose_.position.x;
+      pose.position.y = this->pose_.position.y;
+      pose.position.z = this->pose_.position.z;
+      pose.orientation.z = this->pose_.orientation.z;
     }
 
     pose_pub.publish(pose);
@@ -144,39 +202,44 @@ void Controller::poseEulerPublish(ros::NodeHandle& nh, ros::Rate rate)
 urs_wearable::PoseEuler Controller::getPose()
 {
   std::lock_guard<std::mutex> lock(pose_mutex_);
-  urs_wearable::PoseEuler pose = this->pose;
+  urs_wearable::PoseEuler pose = this->pose_;
   return pose;
 }
 
 urs_wearable::PoseEuler Controller::getDest()
 {
   std::lock_guard<std::mutex> lock(dest_mutex_);
-  urs_wearable::PoseEuler dest = this->dest;
+  urs_wearable::PoseEuler dest = this->dest_;
   return dest;
 }
 
 void Controller::setDest(const urs_wearable::PoseEuler& dest, bool set_orientation)
 {
   std::lock_guard<std::mutex> lock(dest_mutex_);
-  this->dest.position.x = dest.position.x;
-  this->dest.position.y = dest.position.y;
-  this->dest.position.z = dest.position.z;
+  this->dest_.position.x = dest.position.x;
+  this->dest_.position.y = dest.position.y;
+  this->dest_.position.z = dest.position.z;
   if (set_orientation)
   {
-    this->dest.orientation.z = dest.orientation.z;
+    this->dest_.orientation.z = dest.orientation.z;
   }
 }
 
 bool Controller::setDest(urs_wearable::SetDest::Request& req, urs_wearable::SetDest::Response& res)
 {
+  setDest(req.dest, req.set_orientation);
+  return true;
+}
+
+void Controller::setAltitude(double z)
+{
   std::lock_guard<std::mutex> lock(dest_mutex_);
-  this->dest.position.x = req.dest.position.x;
-  this->dest.position.y = req.dest.position.y;
-  this->dest.position.z = req.dest.position.z;
-  if (req.set_orientation)
-  {
-    this->dest.orientation.z = req.dest.orientation.z;
-  }
+  this->dest_.position.z = z;
+}
+
+bool Controller::setAltitude(urs_wearable::SetAltitude::Request& req, urs_wearable::SetAltitude::Response& res)
+{
+  setAltitude(req.z);
   return true;
 }
 

@@ -1,16 +1,13 @@
-#include "urs_wearable/controller.h"
-#include "urs_wearable/navigator.h"
-
-#include "urs_wearable/PoseEuler.h"
-
-#include <ros/ros.h>
-
 #include <boost/tokenizer.hpp>
-
 #include <iostream>
 #include <string>
 #include <vector>
 #include <termios.h>
+
+#include <ros/ros.h>
+#include <hector_uav_msgs/EnableMotors.h>
+
+#include "urs_wearable/controller.h"
 
 void initTermios(int echo);
 void resetTermios(void);
@@ -37,14 +34,30 @@ int main(int argc, char **argv)
   }
 
   Controller controller[nUAV];
-  Navigator navigator[nUAV];
 
   for (unsigned int i = 0; i < nUAV; i++)
   {
-    controller[i].setNamespace(nh, "/uav" + std::to_string(i));
+    if (!controller[i].setNamespace(nh, "/uav" + std::to_string(i)))
+    {
+      ROS_ERROR("Error in setting up controller %u", i);
+      exit(EXIT_FAILURE);
+    }
+  }
 
-    navigator[i].init();
-    navigator[i].setNamespace("/uav" + std::to_string(i));
+  for (unsigned int i = 0; i < nUAV; i++)
+  {
+    // Set altitude
+    controller[i].setAltitude(2.0);
+
+    // Enable motors
+    ros::ServiceClient enable_motors_client = nh.serviceClient<hector_uav_msgs::EnableMotors>("/uav" + std::to_string(i) + "/enable_motors");
+    hector_uav_msgs::EnableMotors enable_motors_srv;
+    enable_motors_srv.request.enable = true;
+
+    if (!enable_motors_client.call(enable_motors_srv) || !enable_motors_srv.response.success)
+    {
+      ROS_ERROR("Cannot enable the motor of UAV%u", i);
+    }
   }
 
   std::cout << "Total number of UAVs: " << nUAV
@@ -179,7 +192,7 @@ int main(int argc, char **argv)
                 targetPose.position.y = std::stod(tokens[3]);
                 targetPose.position.z = std::stod(tokens[4]);
 
-                navigator[uavID].navigate(controller[uavID], targetPose, false);
+                controller[uavID].setDest(targetPose, false);
               }
             }
             else if (tokens.size() == 3 && !tokens[0].compare("rotate"))
@@ -198,7 +211,7 @@ int main(int argc, char **argv)
               int uavID = std::stoi(tokens[1]);
               if (uavID >= 0 && uavID < nUAV)
               {
-                navigator[uavID].cancel();;
+//                controller[uavID].cancel();
               }
             }
             else if (tokens.size() == 1)

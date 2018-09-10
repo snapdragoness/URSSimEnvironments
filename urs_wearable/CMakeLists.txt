@@ -89,6 +89,7 @@ add_service_files(FILES
   GetState.srv
   LocationAdd.srv
   LocationRemove.srv
+  SetAltitude.srv
   SetDest.srv
   SetGoal.srv
 )
