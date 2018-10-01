@@ -13,7 +13,7 @@ const std::string SET_GOAL_SERVICE_NAME = "/urs_wearable/set_goal";
 int main(int argc, char **argv)
 {
   // Initialize ROS and sets up a node
-  ros::init(argc, argv, "fake_wearable");
+  ros::init(argc, argv, "fake_wearable_2");
   ros::NodeHandle nh;
 
   urs_wearable::SetGoal set_goal_srv;

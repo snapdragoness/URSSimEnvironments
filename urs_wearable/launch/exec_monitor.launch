@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+
+<launch>
+  <param name="planner_command" value="timeout 10 $(find urs_wearable)/../FF-v2.3/ff" type="str" />
+  <param name="domain_file" value="$(find urs_wearable)/../FF-v2.3/urs_d.pddl" type="str" />
+  <param name="problem_path" value="$(find urs_wearable)/../FF-v2.3/" type="str" />
+  
+  <node pkg="urs_wearable" type="exec_monitor" name="exec_monitor" output="screen" />
+</launch>

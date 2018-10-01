@@ -10,12 +10,10 @@
 
   <include file="$(find urs_wearable)/launch/spawn_quadrotors.launch" />
 
-  <include file="$(find urs_wearable)/launch/drone_action.launch" />
-
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
     <arg name="port" value="9090"/>
   </include>
 
   <!-- Start rviz visualization with preset config -->
-  <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find urs_wearable)/rviz_cfg/four_quadrotors.rviz" /> -->
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find urs_wearable)/rviz_cfg/four_quadrotors.rviz" />
 </launch>

@@ -11,7 +11,6 @@
 class DroneActionServer
 {
   actionlib::SimpleActionServer<urs_wearable::DroneAction> as_;
-  std::string ns_;
   std::string name_;
 
   urs_wearable::DroneFeedback feedback_;
@@ -29,16 +28,16 @@ class DroneActionServer
   double takeoff_height_;
 
 public:
-  DroneActionServer(ros::NodeHandle& nh, const std::string& ns, const std::string& name) :
-    as_(nh, name, boost::bind(&DroneActionServer::droneActionCb, this, _1), false), ns_(ns), name_(name)
+  DroneActionServer(ros::NodeHandle& nh, const std::string& name) :
+    as_(nh, name, boost::bind(&DroneActionServer::droneActionCb, this, _1), false), name_(name)
   {
     dist_tolerance_ = 0.5;
     frequency_ = 10.0;
     landing_height_ = 0.3;
     takeoff_height_ = 2.0;
 
-    enable_motors_client_ = nh.serviceClient<hector_uav_msgs::EnableMotors>(ns_ + "/enable_motors");
-    pose_sub_ = nh.subscribe(ns_ + "/urs_wearable/pose_euler", 10, &DroneActionServer::poseCb, this);
+    enable_motors_client_ = nh.serviceClient<hector_uav_msgs::EnableMotors>("enable_motors");
+    pose_sub_ = nh.subscribe("urs_wearable/pose_euler", 10, &DroneActionServer::poseCb, this);
 
     as_.start();
     ROS_INFO("Server %s started", name_.c_str());
@@ -82,7 +81,7 @@ public:
     set_dest_srv.request.dest.position.z = landing_height_;
     set_dest_srv.request.set_orientation = false;
 
-    if (ros::service::call(ns_ + "/set_dest", set_dest_srv))
+    if (ros::service::call("set_dest", set_dest_srv))
     {
       ros::Rate rate(frequency_);
       while (ros::ok() && as_.isActive())
@@ -97,7 +96,7 @@ public:
               set_dest_srv.request.dest = pose_;
             }
             set_dest_srv.request.set_orientation = false;
-            ros::service::call(ns_ + "/set_dest", set_dest_srv);
+            ros::service::call("set_dest", set_dest_srv);
           }
 
           as_.setPreempted();
@@ -144,7 +143,7 @@ public:
     set_dest_srv.request.dest = goal->pose;
     set_dest_srv.request.set_orientation = goal->set_orientation;
 
-    if (ros::service::call(ns_ + "/set_dest", set_dest_srv))
+    if (ros::service::call("set_dest", set_dest_srv))
     {
       ros::Rate rate(frequency_);
       while (ros::ok() && as_.isActive())
@@ -159,7 +158,7 @@ public:
               set_dest_srv.request.dest = pose_;
             }
             set_dest_srv.request.set_orientation = false;
-            ros::service::call(ns_ + "/set_dest", set_dest_srv);
+            ros::service::call("set_dest", set_dest_srv);
           }
 
           as_.setPreempted();
@@ -214,17 +213,10 @@ public:
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "drone_action_server");
+  ros::init(argc, argv, "drone_action");
   ros::NodeHandle nh;
-  std::string ns;
 
-  if (!ros::param::get("~ns", ns))
-  {
-    ROS_ERROR("Failed to get a namespace for drone_action");
-    return EXIT_FAILURE;
-  }
-
-  DroneActionServer drone_action_server(nh, ns, ns + "/action/drone");
+  DroneActionServer drone_action_server(nh, "action/drone");
   ros::spin();
 
   return 0;

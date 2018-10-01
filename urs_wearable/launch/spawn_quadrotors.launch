@@ -12,6 +12,8 @@
       <arg name="y" value="5.0" />
       <!-- <arg name="Y" value="3.1415926536" /> -->
     </include>
+
+    <node pkg="urs_wearable" type="drone_action" name="drone_action" output="screen" />
   </group>
 
   <group ns="uav1">
@@ -23,6 +25,8 @@
       <arg name="y" value="5.0" />
       <!-- <arg name="Y" value="1.5707963268" /> -->
     </include>
+
+    <node pkg="urs_wearable" type="drone_action" name="drone_action" output="screen" />
   </group>
   
   <group ns="uav2">
@@ -33,6 +37,8 @@
       <arg name="x" value="5.0" />
       <arg name="y" value="-5.0" />
     </include>
+
+    <node pkg="urs_wearable" type="drone_action" name="drone_action" output="screen" />
   </group>
   
   <group ns="uav3">
@@ -44,5 +50,7 @@
       <arg name="y" value="-5.0" />
       <!-- <arg name="Y" value="-1.5707963268" /> -->
     </include>
+
+    <node pkg="urs_wearable" type="drone_action" name="drone_action" output="screen" />
   </group>
 </launch>

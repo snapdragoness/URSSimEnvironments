@@ -188,27 +188,27 @@ void executor(urs_wearable::SetGoal::Request req)
         }
         break;
 
-        case urs_wearable::Action::TYPE_ADD_LOCATION:
-        {
-          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionAddLocation::NAME.c_str());
-          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
-          feedback.current_action = *actions_it;
-          feedback_pub.publish(feedback);
-          ros::spinOnce();
-
-          // Add the effects of the action to the list
-          urs_wearable::Predicate effect;
-          effect.type = urs_wearable::Predicate::TYPE_IS_LOCATION;
-          effect.predicate_is_location.location_id.value = actions_it->action_add_location.location_id.value;
-          effect.predicate_is_location.truth_value = true;
-          effects.push_back(effect);
-
-          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
-          effect.predicate_is_occupied.location_id.value = actions_it->action_add_location.location_id.value;
-          effect.predicate_is_occupied.truth_value = false;
-          effects.push_back(effect);
-        }
-        break;
+//        case urs_wearable::Action::TYPE_ADD_LOCATION:
+//        {
+//          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionAddLocation::NAME.c_str());
+//          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
+//          feedback.current_action = *actions_it;
+//          feedback_pub.publish(feedback);
+//          ros::spinOnce();
+//
+//          // Add the effects of the action to the list
+//          urs_wearable::Predicate effect;
+//          effect.type = urs_wearable::Predicate::TYPE_IS_LOCATION;
+//          effect.predicate_is_location.location_id.value = actions_it->action_add_location.location_id.value;
+//          effect.predicate_is_location.truth_value = true;
+//          effects.push_back(effect);
+//
+//          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
+//          effect.predicate_is_occupied.location_id.value = actions_it->action_add_location.location_id.value;
+//          effect.predicate_is_occupied.truth_value = false;
+//          effects.push_back(effect);
+//        }
+//        break;
 
         case urs_wearable::Action::TYPE_FLY_ABOVE:
         {
@@ -264,15 +264,15 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_drone_above.truth_value = true;
           effects.push_back(effect);
 
-          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
-          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_above.location_id_from.value;
-          effect.predicate_is_occupied.truth_value = false;
-          effects.push_back(effect);
-
-          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
-          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_above.location_id_to.value;
-          effect.predicate_is_occupied.truth_value = true;
-          effects.push_back(effect);
+//          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
+//          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_above.location_id_from.value;
+//          effect.predicate_is_occupied.truth_value = false;
+//          effects.push_back(effect);
+//
+//          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
+//          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_above.location_id_to.value;
+//          effect.predicate_is_occupied.truth_value = true;
+//          effects.push_back(effect);
         }
         break;
 
@@ -326,15 +326,15 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_drone_at.truth_value = true;
           effects.push_back(effect);
 
-          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
-          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_to.location_id_from.value;
-          effect.predicate_is_occupied.truth_value = false;
-          effects.push_back(effect);
-
-          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
-          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_to.location_id_to.value;
-          effect.predicate_is_occupied.truth_value = true;
-          effects.push_back(effect);
+//          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
+//          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_to.location_id_from.value;
+//          effect.predicate_is_occupied.truth_value = false;
+//          effects.push_back(effect);
+//
+//          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
+//          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_to.location_id_to.value;
+//          effect.predicate_is_occupied.truth_value = true;
+//          effects.push_back(effect);
         }
         break;
 
@@ -348,11 +348,11 @@ void executor(urs_wearable::SetGoal::Request req)
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
-          effect.type = urs_wearable::Predicate::TYPE_KEY_AT;
-          effect.predicate_key_at.key_id.value = actions_it->action_key_add.key_id.value;
-          effect.predicate_key_at.location_id.value = actions_it->action_key_add.location_id.value;
-          effect.predicate_key_at.truth_value = true;
-          effects.push_back(effect);
+//          effect.type = urs_wearable::Predicate::TYPE_KEY_AT;
+//          effect.predicate_key_at.key_id.value = actions_it->action_key_add.key_id.value;
+//          effect.predicate_key_at.location_id.value = actions_it->action_key_add.location_id.value;
+//          effect.predicate_key_at.truth_value = true;
+//          effects.push_back(effect);
 
           effect.type = urs_wearable::Predicate::TYPE_KEY_PICKED;
           effect.predicate_key_picked.key_id.value = actions_it->action_key_add.key_id.value;
@@ -637,13 +637,13 @@ bool getState(urs_wearable::GetState::Request& req, urs_wearable::GetState::Resp
   return true;
 }
 
-bool locationAdd(urs_wearable::LocationAdd::Request& req, urs_wearable::LocationAdd::Response& res)
+bool addLocation(urs_wearable::LocationAdd::Request& req, urs_wearable::LocationAdd::Response& res)
 {
   res.location_id = g_kb.location_table_.insert(req.pose);
   return true;
 }
 
-bool locationRemove(urs_wearable::LocationRemove::Request& req, urs_wearable::LocationRemove::Response& res)
+bool removeLocation(urs_wearable::LocationRemove::Request& req, urs_wearable::LocationRemove::Response& res)
 {
   // TODO: Remove all predicates that have the removed location id
   return true;
@@ -662,6 +662,11 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "exec_monitor");
   ros::NodeHandle nh;
 
+//  std::string planner_command;
+//  nh.param<std::string>("planner_command", planner_command, "No planner");
+//  std::cout << "planner_command: " << planner_command << std::endl;
+//  system(planner_command.c_str());
+
   if (N_UAV == 0)
   {
     ROS_ERROR("No UAV to control");
@@ -676,9 +681,6 @@ int main(int argc, char **argv)
       ROS_ERROR("Error in setting up controller %u", i);
       exit(EXIT_FAILURE);
     }
-
-//    navigator[i].init();
-//    navigator[i].setNamespace("/uav" + std::to_string(i));
   }
 
   // Set KB state publisher
@@ -702,25 +704,25 @@ int main(int argc, char **argv)
   pred_active_region.predicate_active_region.truth_value = true;
   initial_state.push_back(pred_active_region);
 
-  urs_wearable::Predicate pred_is_location;
-  pred_is_location.type = urs_wearable::Predicate::TYPE_IS_LOCATION;
-  pred_is_location.predicate_is_location.truth_value = true;
-
-  urs_wearable::Predicate pred_is_occupied;
-  pred_is_occupied.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
-  pred_is_occupied.predicate_is_occupied.truth_value = true;
-
-  for (unsigned int i = 0; i < 6; i++)
-  {
-    pred_is_location.predicate_is_location.location_id.value = i;
-    initial_state.push_back(pred_is_location);
-
-    if (i >= 2)
-    {
-      pred_is_occupied.predicate_is_occupied.location_id.value = i;
-      initial_state.push_back(pred_is_occupied);
-    }
-  }
+//  urs_wearable::Predicate pred_is_location;
+//  pred_is_location.type = urs_wearable::Predicate::TYPE_IS_LOCATION;
+//  pred_is_location.predicate_is_location.truth_value = true;
+//
+//  urs_wearable::Predicate pred_is_occupied;
+//  pred_is_occupied.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
+//  pred_is_occupied.predicate_is_occupied.truth_value = true;
+//
+//  for (unsigned int i = 0; i < 6; i++)
+//  {
+//    pred_is_location.predicate_is_location.location_id.value = i;
+//    initial_state.push_back(pred_is_location);
+//
+//    if (i >= 2)
+//    {
+//      pred_is_occupied.predicate_is_occupied.location_id.value = i;
+//      initial_state.push_back(pred_is_occupied);
+//    }
+//  }
 
   urs_wearable::Predicate pred_drone_at;
   pred_drone_at.type = urs_wearable::Predicate::TYPE_DRONE_AT;
@@ -743,8 +745,8 @@ int main(int argc, char **argv)
 
   // Advertise services
   ros::ServiceServer get_state_service = nh.advertiseService("/urs_wearable/get_state", getState);
-  ros::ServiceServer location_add_service = nh.advertiseService("/urs_wearable/location_add", locationAdd);
-  ros::ServiceServer location_remove_service = nh.advertiseService("/urs_wearable/location_remove", locationRemove);
+  ros::ServiceServer add_location_service = nh.advertiseService("/urs_wearable/add_location", addLocation);
+  ros::ServiceServer remove_location_service = nh.advertiseService("/urs_wearable/remove_location", removeLocation);
   ros::ServiceServer set_goal_service = nh.advertiseService("/urs_wearable/set_goal", setGoal);
 
   ROS_INFO("Waiting for connections from wearable devices...");
@@ -753,7 +755,7 @@ int main(int argc, char **argv)
 
   // Clean up
   get_state_service.shutdown();
-  location_add_service.shutdown();
-  location_remove_service.shutdown();
+  add_location_service.shutdown();
+  remove_location_service.shutdown();
   set_goal_service.shutdown();
 }

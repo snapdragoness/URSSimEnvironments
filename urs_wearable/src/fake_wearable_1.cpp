@@ -1,4 +1,4 @@
-// This program is used to substitute a wearable device for testing
+ // This program is used to substitute a wearable device for testing
 
 #include <chrono>
 #include <thread>
@@ -15,7 +15,7 @@ const std::string SET_GOAL_SERVICE_NAME = "/urs_wearable/set_goal";
 int main(int argc, char **argv)
 {
   // Initialize ROS and sets up a node
-  ros::init(argc, argv, "fake_wearable");
+  ros::init(argc, argv, "fake_wearable_1");
   ros::NodeHandle nh;
 
   LocationTable::location_id_type location_id_sw, location_id_ne;
@@ -27,7 +27,7 @@ int main(int argc, char **argv)
   pose_ne.position.y = 20;
   pose_ne.position.z = 20;
 
-  ros::ServiceClient location_add_client = nh.serviceClient<urs_wearable::LocationAdd>("/urs_wearable/location_add");
+  ros::ServiceClient location_add_client = nh.serviceClient<urs_wearable::LocationAdd>("/urs_wearable/add_location");
   urs_wearable::LocationAdd location_add_srv;
 
   location_add_srv.request.pose = pose_sw;
@@ -50,6 +50,21 @@ int main(int argc, char **argv)
     ROS_ERROR("Call /urs_wearable/location_add error");
   }
 
+  LocationTable::location_id_type loc_id;
+  urs_wearable::PoseEuler pose;
+  pose.position.x = -10;
+  pose.position.y = 5;
+  pose.position.z = 2;
+  location_add_srv.request.pose = pose;
+  if (location_add_client.call(location_add_srv))
+  {
+    loc_id = location_add_srv.response.location_id;
+  }
+  else
+  {
+    ROS_ERROR("Call /urs_wearable/location_add error");
+  }
+
   urs_wearable::SetGoal set_goal_srv;
   urs_wearable::Predicate pred;
   pred.type = urs_wearable::Predicate::TYPE_ACTIVE_REGION;
@@ -65,6 +80,12 @@ int main(int argc, char **argv)
 
   pred.predicate_took_off.drone_id.value = 1;
   pred.predicate_took_off.truth_value = true;
+  set_goal_srv.request.goal.push_back(pred);
+
+  pred.type = urs_wearable::Predicate::TYPE_DRONE_AT;
+  pred.predicate_drone_at.drone_id.value = 0;
+  pred.predicate_drone_at.location_id.value = loc_id;
+  pred.predicate_drone_at.truth_value = true;
   set_goal_srv.request.goal.push_back(pred);
 
   if (ros::service::call(SET_GOAL_SERVICE_NAME, set_goal_srv))

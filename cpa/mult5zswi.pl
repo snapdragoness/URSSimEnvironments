@@ -17,7 +17,7 @@
 :- dynamic dumpo_stats/3.
 :- dynamic duals/2.
 
-
+:- style_check(-singleton).
 
 option([  no_duals ]).      %%do all simplifications
 

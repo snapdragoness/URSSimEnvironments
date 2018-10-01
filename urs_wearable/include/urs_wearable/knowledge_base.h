@@ -104,6 +104,10 @@ private:
   void replan();
 
   std::string getProblemDef(const std::vector<urs_wearable::Predicate>&);
+
+  static std::atomic<unsigned int> executorReplanID;
+  static std::string exec(const char*);
+  static std::vector<std::string> parseFF(std::string);
 };
 
 #endif /* URS_WEARABLE_INCLUDE_URS_WEARABLE_KNOWLEDGE_BASE_H_ */

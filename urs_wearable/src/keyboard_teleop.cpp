@@ -47,7 +47,7 @@ int main(int argc, char **argv)
   for (unsigned int i = 0; i < nUAV; i++)
   {
     // Set altitude
-    controller[i].setAltitude(2.0);
+    controller[i].setAltitude(4.0);
 
     // Enable motors
     ros::ServiceClient enable_motors_client = nh.serviceClient<hector_uav_msgs::EnableMotors>("/uav" + std::to_string(i) + "/enable_motors");
@@ -132,6 +132,10 @@ int main(int argc, char **argv)
         rotateStep -= 0.1;
         std::cout << "rotate step = " << std::setprecision(1) << std::fixed << rotateStep << std::endl;
         break;
+      case 'x':
+      case 'X':
+        controller[activeID].printImage();
+        break;
       case ':':
         std::cout << ": ";
         std::string keyboardInput;
@@ -192,7 +196,8 @@ int main(int argc, char **argv)
                 targetPose.position.y = std::stod(tokens[3]);
                 targetPose.position.z = std::stod(tokens[4]);
 
-                controller[uavID].setDest(targetPose, false);
+//                controller[uavID].setDest(targetPose, false);
+                controller[uavID].navigate(targetPose, false);
               }
             }
             else if (tokens.size() == 3 && !tokens[0].compare("rotate"))
