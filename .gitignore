@@ -1,8 +1,5 @@
-/multimaster_fkie
-/mastering_ros
-/hector_navigation
-
-/CMakeLists.txt
+/archive/
+/hector_navigation/
 
 urs_wearable/include/*.pb.*
 urs_wearable/models/*/*.blend?*

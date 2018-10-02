@@ -1,8 +1,0 @@
-syntax = "proto2";
-
-package pb_urs;
-
-message At {
-  required int32 uav_id = 1;
-  required int32 wp_id = 2;
-}
