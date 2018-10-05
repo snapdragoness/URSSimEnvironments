@@ -60,5 +60,5 @@ int main(int argc, char **argv)
     ROS_INFO("Pose action did not finish before the time out");
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }

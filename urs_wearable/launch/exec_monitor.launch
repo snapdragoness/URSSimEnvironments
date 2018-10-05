@@ -1,6 +1,12 @@
 <?xml version="1.0"?>
 
 <launch>
+  <arg name="n_uav" default="4" />
+  <arg name="uav_ns" default="/uav" />
+
+  <param name="n_uav" value="$(arg n_uav)" type="int" />
+  <param name="uav_ns" value="$(arg uav_ns)" type="str" />
+
   <param name="planner_command" value="timeout 10 $(find urs_wearable)/../FF-v2.3/ff" type="str" />
   <param name="domain_file" value="$(find urs_wearable)/../FF-v2.3/urs_d.pddl" type="str" />
   <param name="problem_path" value="$(find urs_wearable)/../FF-v2.3/" type="str" />

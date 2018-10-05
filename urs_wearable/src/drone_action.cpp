@@ -2,11 +2,12 @@
 
 #include <actionlib/server/simple_action_server.h>
 #include <ros/ros.h>
+#include <hector_uav_msgs/EnableMotors.h>
+#include <urs_wearable/DroneAction.h>
+#include <urs_wearable/PoseEuler.h>
+#include <urs_wearable/SetDest.h>
 
-#include "urs_wearable/navigator.h"
-#include "urs_wearable/DroneAction.h"
-#include "urs_wearable/PoseEuler.h"
-#include "urs_wearable/SetDest.h"
+#include "urs_wearable/common.h"
 
 class DroneActionServer
 {
@@ -40,13 +41,11 @@ public:
     pose_sub_ = nh.subscribe("urs_wearable/pose_euler", 10, &DroneActionServer::poseCb, this);
 
     as_.start();
-    ROS_INFO("Server %s started", name_.c_str());
   }
 
   ~DroneActionServer()
   {
     pose_sub_.shutdown();
-    ROS_INFO("Server %s destroyed", name_.c_str());
   }
 
   void poseCb(const urs_wearable::PoseEulerConstPtr& pose)
@@ -106,7 +105,7 @@ public:
         {
           std::lock_guard<std::mutex> lock(pose_mutex_);
 
-          if (Navigator::getDistance(pose_, set_dest_srv.request.dest) < dist_tolerance_)
+          if (pointDistance3D(pose_.position, set_dest_srv.request.dest.position) < dist_tolerance_)
           {
             break;
           }
@@ -118,7 +117,7 @@ public:
     }
     else
     {
-      ROS_WARN("%s: actionLanding called set_dest failed", name_.c_str());
+      ROS_WARN("%s: actionLanding called %s failed", name_.c_str(), ros::names::resolve("set_dest").c_str());
       as_.setAborted();
       return;
     }
@@ -168,7 +167,7 @@ public:
         {
           std::lock_guard<std::mutex> lock(pose_mutex_);
 
-          if (Navigator::getDistance(pose_, set_dest_srv.request.dest) < dist_tolerance_)
+          if (pointDistance2D(pose_.position, set_dest_srv.request.dest.position) < dist_tolerance_)
           {
             as_.setSucceeded();
             return;
@@ -181,7 +180,7 @@ public:
     }
     else
     {
-      ROS_WARN("%s: actionPose called set_dest failed", name_.c_str());
+      ROS_WARN("%s: actionPose called %s failed", name_.c_str(), ros::names::resolve("set_dest").c_str());
     }
 
     as_.setAborted();
@@ -217,7 +216,8 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
 
   DroneActionServer drone_action_server(nh, "action/drone");
+
   ros::spin();
 
-  return 0;
+  return EXIT_SUCCESS;
 }

@@ -2,73 +2,56 @@
 
 #include <tf/transform_datatypes.h>
 
+#include "urs_wearable/common.h"
 #include "urs_wearable/controller.h"
 
 Controller::Controller()
 {
-  has_set_ns_ = false;
-
-  pid_ = pid_default_ = {0.2, 0.0, 0.0};
-  pid_slow_ = {0.1, 0.0, 0.0};
+  pid_ = pid_default_ ;
 
   error_.position.x = error_.position.y = error_.position.z = error_.orientation.z = 0.0;
   integral_.position.x = integral_.position.y = integral_.position.z = integral_.orientation.z = 0.0;
 
-  depth_image_array_ = NULL;
+  geometry_msgs::PoseStamped::ConstPtr msg = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("ground_truth_to_tf/pose");
+  dest_.position = msg->pose.position;
+
+  ros::NodeHandle nh;
+  cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd_vel", 10, false);
+
+  pose_sub_ = nh.subscribe("ground_truth_to_tf/pose", 1, &Controller::pidControl, this);
+  depth_image_sub_ = nh.subscribe("camera/depth/image_raw", 1, &Controller::readDepthImage, this);
+  sonar_height_sub_ = nh.subscribe<sensor_msgs::Range>("sonar_height", 1, &Controller::readSonarHeight, this);
+  sonar_upward_sub_ = nh.subscribe<sensor_msgs::Range>("sonar_upward", 1, &Controller::readSonarUpward, this);
+
+  get_dest_service_ = nh.advertiseService("get_dest", &Controller::getDestService, this);
+  get_pose_service_ = nh.advertiseService("get_pose", &Controller::getPoseService, this);
+  set_dest_service_ = nh.advertiseService("set_dest", &Controller::setDest, this);
+  set_altitude_service_ = nh.advertiseService("set_altitude", &Controller::setAltitude, this);
+
+  std::thread pose_euler_publish_thread(&Controller::poseEulerPublish, this);
+  pose_euler_publish_thread.detach();
 }
 
 Controller::~Controller()
 {
-  pose_sub_.shutdown();
   cmd_pub_.shutdown();
   depth_image_sub_.shutdown();
+  pose_sub_.shutdown();
   sonar_height_sub_.shutdown();
   sonar_upward_sub_.shutdown();
 
+  get_dest_service_.shutdown();
   set_dest_service_.shutdown();
   set_altitude_service_.shutdown();
 }
 
-bool Controller::setNamespace(ros::NodeHandle& nh, const std::string& ns)
-{
-  if (!has_set_ns_)
-  {
-    ns_ = ns;
-    has_set_ns_ = true;
-
-    cmd_pub_ = nh.advertise<geometry_msgs::Twist>(ns_ + "/cmd_vel", 10, false);
-    pose_sub_ = nh.subscribe(ns_ + "/ground_truth_to_tf/pose", 10, &Controller::controller, this);
-    depth_image_sub_ = nh.subscribe(ns + "/camera/depth/image_raw", 1, &Controller::readDepthImage, this);
-    sonar_height_sub_ = nh.subscribe<sensor_msgs::Range>(ns + "/sonar_height", 1, &Controller::readSonarHeight, this);
-    sonar_upward_sub_ = nh.subscribe<sensor_msgs::Range>(ns + "/sonar_upward", 1, &Controller::readSonarUpward, this);
-
-    set_dest_service_ = nh.advertiseService(ns_ + "/set_dest", &Controller::setDest, this);
-    set_altitude_service_ = nh.advertiseService(ns_ + "/set_altitude", &Controller::setAltitude, this);
-
-    std::thread pose_euler_publish_thread(&Controller::poseEulerPublish, this, std::ref(nh), 10);
-    pose_euler_publish_thread.detach();
-
-    geometry_msgs::PoseStamped::ConstPtr msg = ros::topic::waitForMessage<geometry_msgs::PoseStamped>(ns_ + "/ground_truth_to_tf/pose");
-    std::lock_guard<std::mutex> lock(dest_mutex_);
-    dest_.position = msg->pose.position;
-
-    return true;
-  }
-
-  return false;
-}
-
 void Controller::readDepthImage(const sensor_msgs::Image::ConstPtr& msg)
 {
+  /* https://answers.ros.org/question/246066/how-can-i-get-object-distance-using-cameradepthimage_raw
+   * depth_array[0], depth_array[1], ..., depth_aray[image.height * image.width - 1] */
   if (is_moving_ && msg->encoding.compare("32FC1") == 0)
   {
-    /* https://answers.ros.org/question/246066/how-can-i-get-object-distance-using-cameradepthimage_raw
-     * depth_array[0], depth_array[1], ..., depth_aray[image.height * image.width - 1] */
-//    mut_depthImage.lock();
-//    const float* depthImageArray = reinterpret_cast<const float*>(&(msg->data[0]));
-
-    std::lock_guard<std::mutex> lock(depth_image_array_mutex_);
-    depth_image_array_ = reinterpret_cast<const float*>(&(msg->data[0]));
+    const float* depth_image_array = reinterpret_cast<const float*>(&(msg->data[0]));
 
     if (getPose().position.z > 1.0)
     {
@@ -77,19 +60,15 @@ void Controller::readDepthImage(const sensor_msgs::Image::ConstPtr& msg)
         for (int j = 280; j < 360; j++)
         {
           int index = i * 640 + j;
-          float depth = depth_image_array_[i * 640 + j];
+          float depth = depth_image_array[i * 640 + j];
 
           if (!std::isnan(depth) &&
-              !std::isnan(depth_image_array_[index - 1]) &&
-              !std::isnan(depth_image_array_[index + 1]) &&
-              !std::isnan(depth_image_array_[index - 640]) &&
-              !std::isnan(depth_image_array_[index + 640]))
+              !std::isnan(depth_image_array[index - 1]) &&
+              !std::isnan(depth_image_array[index + 1]) &&
+              !std::isnan(depth_image_array[index - 640]) &&
+              !std::isnan(depth_image_array[index + 640]))
           {
-            urs_wearable::PoseEuler pose = getPose();
-            urs_wearable::PoseEuler dest = getDest();
-
-            if (std::sqrt((pose.position.x - dest.position.x) * (pose.position.x - dest.position.x)
-                          + (pose.position.y - dest.position.y) * (pose.position.y - dest.position.y)) > depth)
+            if (pointDistance2D(getPose().position, getDest().position) > depth)
             {
               avoidObstacle();
               return;
@@ -98,14 +77,12 @@ void Controller::readDepthImage(const sensor_msgs::Image::ConstPtr& msg)
         }
       }
     }
-
-    // TODO: check obstacle
   }
 }
 
 void Controller::avoidObstacle()
 {
-  ROS_WARN("%s: avoiding obstacle", ros::this_node::getName().c_str());
+  ros_warn("Avoiding obstacle");
 
   urs_wearable::PoseEuler original_dest = this->getDest();
 
@@ -119,20 +96,7 @@ void Controller::avoidObstacle()
   this->setDest(original_dest, false);
 }
 
-void Controller::printImage()
-{
-  std::lock_guard<std::mutex> lock(depth_image_array_mutex_);
-  for (int i = 0; i < 480; i++)
-  {
-    for (int j = 0; j < 640; j++)
-    {
-      std::cout << depth_image_array_[640 * i + j] << " ";
-    }
-    std::cout << std::endl;
-  }
-}
-
-void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
+void Controller::pidControl(const geometry_msgs::PoseStampedConstPtr& msg)
 {
   /* https://answers.ros.org/question/11545/plotprint-rpy-from-quaternion */
   // The incoming geometry_msgs::Quaternion is transformed to a tf::Quaterion
@@ -169,10 +133,7 @@ void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
     error_.position.z = dest_.position.z - msg->pose.position.z;
     error_.orientation.z = dest_.orientation.z - yaw;
 
-    if (std::sqrt(
-      (msg->pose.position.x - dest_.position.x) * (msg->pose.position.x - dest_.position.x)
-      + (msg->pose.position.y - dest_.position.y) * (msg->pose.position.y - dest_.position.y)
-      + (msg->pose.position.z - dest_.position.z) * (msg->pose.position.z - dest_.position.z)) < max_position_error_)
+    if (pointDistance3D(msg->pose.position, dest_.position) < max_position_error_)
     {
       is_moving_ = false;
       setSpeed(pid_default_);
@@ -207,6 +168,7 @@ void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
   rx = x * std::cos(-1 * yaw) - y * std::sin(-1 * yaw);
   ry = x * std::sin(-1 * yaw) + y * std::cos(-1 * yaw);
 
+  geometry_msgs::Twist cmd;
   cmd.linear.x = rx;
   cmd.linear.y = ry;
   cmd.linear.z = z;
@@ -215,10 +177,12 @@ void Controller::controller(const geometry_msgs::PoseStampedConstPtr& msg)
   cmd_pub_.publish(cmd);
 }
 
-void Controller::poseEulerPublish(ros::NodeHandle& nh, ros::Rate rate)
+void Controller::poseEulerPublish()
 {
-  ros::Publisher pose_pub = nh.advertise<urs_wearable::PoseEuler>(ns_ + "/urs_wearable/pose_euler", 10, false);
+  ros::NodeHandle nh;
+  ros::Publisher pose_pub = nh.advertise<urs_wearable::PoseEuler>("urs_wearable/pose_euler", 1, false);
 
+  ros::Rate rate(10.0);
   while (ros::ok())
   {
     urs_wearable::PoseEuler pose;
@@ -269,16 +233,28 @@ void Controller::setDest(const urs_wearable::PoseEuler& dest, bool set_orientati
   is_moving_ = true;
 }
 
-bool Controller::setDest(urs_wearable::SetDest::Request& req, urs_wearable::SetDest::Response& res)
-{
-  setDest(req.dest, req.set_orientation);
-  return true;
-}
-
 void Controller::setAltitude(double z)
 {
   std::lock_guard<std::mutex> lock(dest_mutex_);
   this->dest_.position.z = z;
+}
+
+bool Controller::getPoseService(urs_wearable::GetPose::Request& req, urs_wearable::GetPose::Response& res)
+{
+  res.pose = getPose();
+  return true;
+}
+
+bool Controller::getDestService(urs_wearable::GetDest::Request& req, urs_wearable::GetDest::Response& res)
+{
+  res.dest = getDest();
+  return true;
+}
+
+bool Controller::setDest(urs_wearable::SetDest::Request& req, urs_wearable::SetDest::Response& res)
+{
+  setDest(req.dest, req.set_orientation);
+  return true;
 }
 
 bool Controller::setAltitude(urs_wearable::SetAltitude::Request& req, urs_wearable::SetAltitude::Response& res)
@@ -308,7 +284,7 @@ void Controller::navigate(const urs_wearable::PoseEuler& dest, bool set_orientat
     do
     {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    } while (getYawDiff(this->getPose().orientation.z, yaw_to_dest) > max_orientation_error_ * M_PI / 180.0);
+    } while (yawDiff(this->getPose().orientation.z, yaw_to_dest) > max_orientation_error_ * M_PI / 180.0);
   }
 
   this->setDest(dest, set_orientation);
@@ -318,7 +294,7 @@ void Controller::stop()
 {
   urs_wearable::PoseEuler pose = getPose();
   setDest(pose, false);
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  ros::Duration(1.0).sleep(); // Sleep for 1 second
 }
 
 void Controller::setSpeed(const PID& pid)
@@ -329,89 +305,32 @@ void Controller::setSpeed(const PID& pid)
 
 void Controller::readSonarHeight(const sensor_msgs::RangeConstPtr& msg)
 {
-  std::lock_guard<std::mutex> lock(sonar_height_mutex_);
   sonar_height_range_ = msg->range;
+  // TODO: Check for collision
 }
 
 void Controller::readSonarUpward(const sensor_msgs::RangeConstPtr& msg)
 {
-  std::lock_guard<std::mutex> lock(sonar_upward_mutex_);
   sonar_upward_range_ = msg->range;
+  // TODO: Check for collision
 }
 
-double Controller::getDistance(const urs_wearable::PoseEuler& from, const urs_wearable::PoseEuler& to)
+int main(int argc, char** argv)
 {
-  return std::sqrt(
-      (to.position.x - from.position.x) * (to.position.x - from.position.x)
-      + (to.position.y - from.position.y) * (to.position.y - from.position.y)
-      + (to.position.z - from.position.z) * (to.position.z - from.position.z));
+  ros::init(argc, argv, "controller");
+  ros::NodeHandle nh;
+
+  // Make sure internal controller of hector_quadrotor is running
+  if (!ros::service::waitForService("controller/attitude/yawrate/set_parameters", 60000) ||
+      !ros::service::waitForService("controller/position/z/set_parameters", 60000) ||
+      !ros::service::waitForService("controller/velocity/z/set_parameters", 60000))
+  {
+    ros_error("The drone has not been spawned");
+  }
+
+  Controller controller;
+
+  ros::spin();
+
+  return EXIT_SUCCESS;
 }
-
-double Controller::getYawDiff(double yaw1, double yaw2)   // yaw1 and yaw2 are in radian
-{
-  double diff = std::fabs(yaw1 - yaw2);
-  return (diff > M_PI)? M_PI + M_PI - diff: diff;
-}
-
-double Controller::quaternionToYaw(const geometry_msgs::QuaternionConstPtr& q)
-{
-  double ysqr = q->y * q->y;
-
-  double t3 = +2.0 * (q->w * q->z + q->x * q->y);
-  double t4 = +1.0 - 2.0 * (ysqr + q->z * q->z);
-
-  //  yaw (z-axis rotation)
-  //          PI/2
-  //            ^
-  //            |
-  //  PI,-PI <--+--> 0
-  //            |
-  //            v
-  //         -PI/2
-  double yaw = std::atan2(t3, t4);
-
-  //  return the non-negative version
-  //          PI/2
-  //            ^
-  //            |
-  //      PI <--+--> 0
-  //            |
-  //            v
-  //          3PI/2
-  return (yaw < 0.0)? yaw + 2 * M_PI: yaw;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-/*
-typedef struct Euler
-{
-  double roll;
-  double pitch;
-  double yaw;
-} Euler;
-
-Euler quaternionToEuler(const geometry_msgs::Quaternion::ConstPtr& q)
-{
-  Euler euler;
-
-  double ysqr = q->y * q->y;
-
-  // roll (x-axis rotation)
-  double t0 = +2.0 * (q->w * q->x + q->y * q->z);
-  double t1 = +1.0 - 2.0 * (q->x * q->x + ysqr);
-  euler.roll = std::atan2(t0, t1);
-
-  // pitch (y-axis rotation)
-  double t2 = +2.0 * (q->w * q->y - q->z * q->x);
-  t2 = t2 > 1.0 ? 1.0 : t2;
-  t2 = t2 < -1.0 ? -1.0 : t2;
-  euler.pitch = std::asin(t2);
-
-  // yaw (z-axis rotation)
-  double t3 = +2.0 * (q->w * q->z + q->x * q->y);
-  double t4 = +1.0 - 2.0 * (ysqr + q->z * q->z);
-  euler.yaw = std::atan2(t3, t4);
-
-  return euler;
-}
-*/

@@ -2,29 +2,25 @@
 #include <thread>
 
 #include <actionlib/client/simple_action_client.h>
-#include "libcuckoo/cuckoohash_map.hh"
+#include <libcuckoo/cuckoohash_map.hh>
 #include <ros/ros.h>
+#include <urs_wearable/Action.h>
+#include <urs_wearable/DroneAction.h>
+#include <urs_wearable/Feedback.h>
+#include <urs_wearable/GetPose.h>
+#include <urs_wearable/GetState.h>
+#include <urs_wearable/LocationAdd.h>
+#include <urs_wearable/LocationRemove.h>
+#include <urs_wearable/PoseEuler.h>
+#include <urs_wearable/SetGoal.h>
 
-#include "urs_wearable/controller.h"
+#include "urs_wearable/common.h"
 #include "urs_wearable/knowledge_base.h"
-#include "urs_wearable/navigator.h"
-#include "urs_wearable/Action.h"
-#include "urs_wearable/DroneAction.h"
-#include "urs_wearable/Feedback.h"
-#include "urs_wearable/GetState.h"
-#include "urs_wearable/LocationAdd.h"
-#include "urs_wearable/LocationRemove.h"
-#include "urs_wearable/PoseEuler.h"
-#include "urs_wearable/SetGoal.h"
 
 // We use uint8_t here to match with the type of 'value' in ObjectDroneID.msg
 typedef std::uint8_t drone_id_type;
 
-const unsigned int N_UAV = 4;
 const std::string PLANNER_SERVICE_NAME = "/cpa/get_plan";
-
-Controller g_controller[N_UAV];
-//Navigator navigator[N_UAV];
 
 KnowledgeBase g_kb("urs_problem", "urs", PLANNER_SERVICE_NAME);
 
@@ -662,27 +658,6 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "exec_monitor");
   ros::NodeHandle nh;
 
-//  std::string planner_command;
-//  nh.param<std::string>("planner_command", planner_command, "No planner");
-//  std::cout << "planner_command: " << planner_command << std::endl;
-//  system(planner_command.c_str());
-
-  if (N_UAV == 0)
-  {
-    ROS_ERROR("No UAV to control");
-    exit(EXIT_SUCCESS);
-  }
-
-  // Initialize controllers, navigators, and action clients
-  for (unsigned int i = 0; i < N_UAV; i++)
-  {
-    if (!g_controller[i].setNamespace(nh, "/uav" + std::to_string(i)))
-    {
-      ROS_ERROR("Error in setting up controller %u", i);
-      exit(EXIT_FAILURE);
-    }
-  }
-
   // Set KB state publisher
   ros::Publisher state_pub = nh.advertise<urs_wearable::State>("/urs_wearable/state", 100);
   g_kb.setStatePub(&state_pub);
@@ -732,10 +707,29 @@ int main(int argc, char **argv)
   pred_took_off.type = urs_wearable::Predicate::TYPE_TOOK_OFF;
   pred_took_off.predicate_took_off.truth_value = false;
 
-  for (unsigned int i = 0; i < N_UAV; i++)
+  int n_uav;
+  retrieve("n_uav", n_uav);
+
+  std::string uav_ns;
+  retrieve("uav_ns", uav_ns);
+
+  for (unsigned int i = 0; i < n_uav; i++)
   {
+    if (!ros::service::waitForService(uav_ns + std::to_string(i) + "/get_pose", 60000))
+    {
+      ros_error("The controller for drone " + uav_ns + std::to_string(i) + " is not running");
+      return EXIT_FAILURE;
+    }
+
+    urs_wearable::GetPose get_pose_srv;
+    if (!ros::service::call(uav_ns + std::to_string(i) + "/get_pose", get_pose_srv))
+    {
+      ros_error("Error in calling service " + uav_ns + std::to_string(i) + "/get_pose");
+      return EXIT_FAILURE;
+    }
+
     pred_drone_at.predicate_drone_at.drone_id.value = i;
-    pred_drone_at.predicate_drone_at.location_id.value = g_kb.location_table_.insert(g_controller[i].getPose());
+    pred_drone_at.predicate_drone_at.location_id.value = g_kb.location_table_.insert(get_pose_srv.response.pose);
     initial_state.push_back(pred_drone_at);
 
     pred_took_off.predicate_took_off.drone_id.value = i;
@@ -744,18 +738,20 @@ int main(int argc, char **argv)
   g_kb.upsertPredicates(initial_state);
 
   // Advertise services
-  ros::ServiceServer get_state_service = nh.advertiseService("/urs_wearable/get_state", getState);
-  ros::ServiceServer add_location_service = nh.advertiseService("/urs_wearable/add_location", addLocation);
-  ros::ServiceServer remove_location_service = nh.advertiseService("/urs_wearable/remove_location", removeLocation);
-  ros::ServiceServer set_goal_service = nh.advertiseService("/urs_wearable/set_goal", setGoal);
+  ros::ServiceServer add_location_service = nh.advertiseService("urs_wearable/add_location", addLocation);
+  ros::ServiceServer get_state_service = nh.advertiseService("urs_wearable/get_state", getState);
+  ros::ServiceServer remove_location_service = nh.advertiseService("urs_wearable/remove_location", removeLocation);
+  ros::ServiceServer set_goal_service = nh.advertiseService("urs_wearable/set_goal", setGoal);
 
-  ROS_INFO("Waiting for connections from wearable devices...");
+  ros_info("Waiting for connections from wearable devices...");
 
   ros::spin();
 
   // Clean up
-  get_state_service.shutdown();
   add_location_service.shutdown();
+  get_state_service.shutdown();
   remove_location_service.shutdown();
   set_goal_service.shutdown();
+
+  return EXIT_SUCCESS;
 }

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <launch>
-  <arg name="world" default="$(find urs_wearable)/worlds/empty.world"/>
+  <arg name="world" default="$(find urs_wearable)/worlds/empty.world" />
 
   <include file="$(find hector_gazebo_worlds)/launch/start.launch">
     <arg name="world" value="$(arg world)" />
@@ -9,6 +9,8 @@
   </include>
 
   <include file="$(find urs_wearable)/launch/spawn_quadrotors.launch" />
+
+  <include file="$(find urs_wearable)/launch/exec_monitor.launch" />
 
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
     <arg name="port" value="9090"/>

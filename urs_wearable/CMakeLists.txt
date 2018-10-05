@@ -85,6 +85,8 @@ add_message_files(FILES
 
 ## Generate services in the 'srv' folder
 add_service_files(FILES
+  GetDest.srv
+  GetPose.srv
   GetPlan.srv
   GetState.srv
   LocationAdd.srv
@@ -154,23 +156,20 @@ include_directories(
 )
 
 ## Declare a C++ library
-add_library(controller src/controller.cpp)
 add_library(knowledge_base src/knowledge_base.cpp)
-add_library(navigator src/navigator.cpp)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
 #add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(controller ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(knowledge_base ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
-add_dependencies(navigator ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/urs_wearable_node.cpp)
-add_executable(drone_action src/drone_action.cpp src/navigator.cpp)
+add_executable(controller src/controller.cpp)
+add_executable(drone_action src/drone_action.cpp)
 add_executable(exec_monitor src/exec_monitor.cpp)
 add_executable(fake_wearable_1 src/fake_wearable_1.cpp)
 add_executable(fake_wearable_2 src/fake_wearable_2.cpp)
@@ -186,17 +185,19 @@ add_executable(try_hector src/try_hector.cpp)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(controller ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(drone_action ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(exec_monitor ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(fake_wearable_1 ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(fake_wearable_2 ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(drone_action controller navigator ${catkin_LIBRARIES})
-target_link_libraries(exec_monitor controller knowledge_base navigator ${catkin_LIBRARIES})
+target_link_libraries(controller ${catkin_LIBRARIES})
+target_link_libraries(drone_action ${catkin_LIBRARIES})
+target_link_libraries(exec_monitor knowledge_base ${catkin_LIBRARIES})
 target_link_libraries(fake_wearable_1 ${catkin_LIBRARIES})
 target_link_libraries(fake_wearable_2 ${catkin_LIBRARIES})
-target_link_libraries(keyboard_teleop controller navigator ${catkin_LIBRARIES})
+target_link_libraries(keyboard_teleop ${catkin_LIBRARIES})
 target_link_libraries(try_hector ${catkin_LIBRARIES})
 
 ###########################

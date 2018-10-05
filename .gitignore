@@ -1,5 +1,2 @@
-/archive/
-/hector_navigation/
-
 urs_wearable/include/*.pb.*
-urs_wearable/models/*/*.blend?*
+urs_wearable/models/**/*.blend?*

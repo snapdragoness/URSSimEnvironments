@@ -4,9 +4,9 @@
 #include <thread>
 
 #include <ros/ros.h>
-
-#include "colormod.h"
-#include "urs_wearable/SetGoal.h"
+#include <urs_wearable/LocationAdd.h>
+#include <urs_wearable/location_table.h>
+#include <urs_wearable/SetGoal.h>
 
 const std::string SET_GOAL_SERVICE_NAME = "/urs_wearable/set_goal";
 
@@ -36,5 +36,5 @@ int main(int argc, char **argv)
     ROS_INFO("Call %s failed", SET_GOAL_SERVICE_NAME.c_str());
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }
