@@ -94,6 +94,8 @@ add_service_files(FILES
   SetAltitude.srv
   SetDest.srv
   SetGoal.srv
+  Gather.srv
+  Scan.srv
 )
 
 ## Generate actions in the 'action' folder

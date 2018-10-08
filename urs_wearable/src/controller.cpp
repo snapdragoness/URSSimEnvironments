@@ -221,16 +221,36 @@ urs_wearable::PoseEuler Controller::getDest()
 
 void Controller::setDest(const urs_wearable::PoseEuler& dest, bool set_orientation)
 {
-  std::lock_guard<std::mutex> lock(dest_mutex_);
-  this->dest_.position.x = dest.position.x;
-  this->dest_.position.y = dest.position.y;
-  this->dest_.position.z = dest.position.z;
-  if (set_orientation)
+  urs_wearable::PoseEuler pose = this->getPose();
+  double vx = dest.position.x - pose.position.x;
+  double vy = dest.position.y - pose.position.y;
+  double yaw_to_dest = std::atan2(vy, vx);
+  if (yaw_to_dest < 0.0)
   {
-    this->dest_.orientation.z = dest.orientation.z;
+    yaw_to_dest += M_PI + M_PI;
   }
 
-  is_moving_ = true;
+  double planar_dist_to_dest = std::sqrt(vx * vx + vy * vy);
+  if (planar_dist_to_dest > max_position_error_)
+  {
+    {
+      std::lock_guard<std::mutex> lock(dest_mutex_);
+      dest_.orientation.z = yaw_to_dest;
+    }
+
+    do
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    } while (yawDiff(this->getPose().orientation.z, yaw_to_dest) > max_orientation_error_ * M_PI / 180.0);
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(dest_mutex_);
+    dest_.position.x = dest.position.x;
+    dest_.position.y = dest.position.y;
+    dest_.position.z = dest.position.z;
+    is_moving_ = true;
+  }
 }
 
 void Controller::setAltitude(double z)
@@ -261,33 +281,6 @@ bool Controller::setAltitude(urs_wearable::SetAltitude::Request& req, urs_wearab
 {
   setAltitude(req.z);
   return true;
-}
-
-void Controller::navigate(const urs_wearable::PoseEuler& dest, bool set_orientation)
-{
-  urs_wearable::PoseEuler pose = this->getPose();
-  double vx = dest.position.x - pose.position.x;
-  double vy = dest.position.y - pose.position.y;
-  double yaw_to_dest = std::atan2(vy, vx);
-  if (yaw_to_dest < 0.0)
-  {
-    yaw_to_dest += M_PI + M_PI;
-  }
-
-  double planar_dist_to_dest = std::sqrt(vx * vx + vy * vy);
-  if (planar_dist_to_dest > max_position_error_)
-  {
-    urs_wearable::PoseEuler dest = this->getDest();
-    dest.orientation.z = yaw_to_dest;
-    this->setDest(dest, true);
-
-    do
-    {
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    } while (yawDiff(this->getPose().orientation.z, yaw_to_dest) > max_orientation_error_ * M_PI / 180.0);
-  }
-
-  this->setDest(dest, set_orientation);
 }
 
 void Controller::stop()

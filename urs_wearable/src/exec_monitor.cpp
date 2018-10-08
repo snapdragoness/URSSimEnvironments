@@ -14,6 +14,10 @@
 #include <urs_wearable/PoseEuler.h>
 #include <urs_wearable/SetGoal.h>
 
+#include <urs_wearable/SetDest.h>
+#include <urs_wearable/Gather.h>
+#include <urs_wearable/Scan.h>
+
 #include "urs_wearable/common.h"
 #include "urs_wearable/knowledge_base.h"
 
@@ -652,6 +656,41 @@ bool setGoal(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::Respons
   return true;
 }
 
+bool scan(urs_wearable::Scan::Request& req, urs_wearable::Scan::Response& res)
+{
+  return true;
+}
+
+bool gather(urs_wearable::Gather::Request& req, urs_wearable::Gather::Response& res)
+{
+  for (int i = 0; i < req.uav_id.size(); i++)
+  {
+    urs_wearable::PoseEuler dest;
+    dest.position = req.position;
+
+    switch (req.uav_id[i])
+    {
+      case 0:
+        dest.position.x += 2;
+        break;
+      case 1:
+        dest.position.x -= 2;
+        break;
+      case 2:
+        dest.position.y += 2;
+        break;
+      case 3:
+        dest.position.y -= 2;
+        break;
+    }
+
+    urs_wearable::SetDest set_dest_srv;
+    set_dest_srv.request.dest = dest;
+    ros::service::call("/uav" + std::to_string(req.uav_id[i]) + "/set_dest", set_dest_srv);
+  }
+  return true;
+}
+
 int main(int argc, char **argv)
 {
   // Initialize ROS and sets up a node
@@ -742,6 +781,10 @@ int main(int argc, char **argv)
   ros::ServiceServer get_state_service = nh.advertiseService("urs_wearable/get_state", getState);
   ros::ServiceServer remove_location_service = nh.advertiseService("urs_wearable/remove_location", removeLocation);
   ros::ServiceServer set_goal_service = nh.advertiseService("urs_wearable/set_goal", setGoal);
+
+  // Advertise temporary services
+  ros::ServiceServer scan_service = nh.advertiseService("urs_wearable/scan", scan);
+  ros::ServiceServer gather_location_service = nh.advertiseService("urs_wearable/gather", gather);
 
   ros_info("Waiting for connections from wearable devices...");
 

@@ -82,8 +82,6 @@ public:
   bool setDest(urs_wearable::SetDest::Request&, urs_wearable::SetDest::Response&);
   bool setAltitude(urs_wearable::SetAltitude::Request&, urs_wearable::SetAltitude::Response&);
 
-  void navigate(const urs_wearable::PoseEuler&, bool);
-
   const double max_position_error_ = 0.2;      // maximum position error in meter (only non-negative values)
   const double max_orientation_error_ = 1.0;   // maximum orientation error in degree (only non-negative values)
 };
