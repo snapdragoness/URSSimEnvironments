@@ -1,3 +1,6 @@
+#include <thread>
+#include <vector>
+
 #include <actionlib/client/simple_action_client.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <libcuckoo/cuckoohash_map.hh>
@@ -22,6 +25,9 @@ typedef std::uint8_t drone_id_type;
 const std::string PLANNER_SERVICE_NAME = "/cpa/get_plan";
 
 KnowledgeBase g_kb("urs_problem", "urs", PLANNER_SERVICE_NAME);
+
+int g_n_uav;
+std::string g_uav_ns;
 
 bool isWithinActiveRegion(geometry_msgs::Pose& pose, const LocationTable::location_id_type location_id, std::string& feedback_message)
 {
@@ -623,37 +629,88 @@ void executor(urs_wearable::SetGoal::Request req)
   feedback_pub.shutdown();
 }
 
-bool getState(urs_wearable::GetState::Request& req, urs_wearable::GetState::Response& res)
+bool getStateService(urs_wearable::GetState::Request& req, urs_wearable::GetState::Response& res)
 {
   g_kb.publish();
   return true;
 }
 
-bool addLocation(urs_wearable::AddLocation::Request& req, urs_wearable::AddLocation::Response& res)
+bool addLocationService(urs_wearable::AddLocation::Request& req, urs_wearable::AddLocation::Response& res)
 {
   res.location_id = g_kb.location_table_.insert(req.pose);
   return true;
 }
 
-bool removeLocation(urs_wearable::RemoveLocation::Request& req, urs_wearable::RemoveLocation::Response& res)
+bool removeLocationService(urs_wearable::RemoveLocation::Request& req, urs_wearable::RemoveLocation::Response& res)
 {
   // TODO: Remove all predicates that have the removed location id
   return true;
 }
 
-bool setGoal(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::Response& res)
+bool setGoalService(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::Response& res)
 {
   std::thread thread_executor(executor, req);
   thread_executor.detach();
   return true;
 }
 
-bool scan(urs_wearable::Scan::Request& req, urs_wearable::Scan::Response& res)
+void scan(int uav_id, geometry_msgs::Point position_sw, geometry_msgs::Point position_ne)
 {
+  std::vector<geometry_msgs::Point> v;
+
+  int i = 0;
+  for (double y = position_sw.y; y < position_ne.y; y += 1.0, i++)
+  {
+    geometry_msgs::Point point;
+    if (i % 2 == 0)
+    {
+      point.x = position_sw.x;
+      point.y = y;
+      point.z = 4;
+      v.push_back(point);
+
+      point.x = position_ne.x;
+      point.y = y;
+      point.z = 4;
+      v.push_back(point);
+    }
+    else
+    {
+      point.x = position_ne.x;
+      point.y = y;
+      point.z = 4;
+      v.push_back(point);
+
+      point.x = position_sw.x;
+      point.y = y;
+      point.z = 4;
+      v.push_back(point);
+    }
+  }
+
+  urs_wearable::SetPosition set_position_srv;
+  std::cout << "%%%%SIZE:::  " << v.size() << std::endl;
+  for (i = 0; i < v.size(); i++)
+  {
+    set_position_srv.request.position = v[i];
+    ros::service::call(g_uav_ns + std::to_string(uav_id) + "/set_position", set_position_srv);
+
+    geometry_msgs::PoseStamped::ConstPtr pose_stamped;
+    do
+    {
+      pose_stamped = ros::topic::waitForMessage<geometry_msgs::PoseStamped>(g_uav_ns + std::to_string(uav_id) + "/ground_truth_to_tf/pose");
+    } while (pointDistance2D(pose_stamped->pose.position, v[i]) > 1.0);
+  }
+}
+
+bool scanService(urs_wearable::Scan::Request& req, urs_wearable::Scan::Response& res)
+{
+  std::thread t(scan, req.uav_id, req.position_sw, req.position_ne);
+  t.detach();
   return true;
 }
 
-bool gather(urs_wearable::Gather::Request& req, urs_wearable::Gather::Response& res)
+bool gatherService(urs_wearable::Gather::Request& req, urs_wearable::Gather::Response& res)
 {
   for (int i = 0; i < req.uav_id.size(); i++)
   {
@@ -678,7 +735,7 @@ bool gather(urs_wearable::Gather::Request& req, urs_wearable::Gather::Response& 
 
     urs_wearable::SetPosition set_position_srv;
     set_position_srv.request.position = target_position;
-    ros::service::call("/uav" + std::to_string(req.uav_id[i]) + "/set_position", set_position_srv);
+    ros::service::call(g_uav_ns + std::to_string(req.uav_id[i]) + "/set_position", set_position_srv);
   }
   return true;
 }
@@ -738,16 +795,13 @@ int main(int argc, char **argv)
   pred_took_off.type = urs_wearable::Predicate::TYPE_TOOK_OFF;
   pred_took_off.predicate_took_off.truth_value = false;
 
-  int n_uav;
-  retrieve("n_uav", n_uav);
+  retrieve("n_uav", g_n_uav);
+  retrieve("uav_ns", g_uav_ns);
 
-  std::string uav_ns;
-  retrieve("uav_ns", uav_ns);
-
-  for (unsigned int i = 0; i < n_uav; i++)
+  for (unsigned int i = 0; i < g_n_uav; i++)
   {
     geometry_msgs::PoseStamped::ConstPtr pose_stamped =
-        ros::topic::waitForMessage<geometry_msgs::PoseStamped>(uav_ns + std::to_string(i) + "/ground_truth_to_tf/pose");
+        ros::topic::waitForMessage<geometry_msgs::PoseStamped>(g_uav_ns + std::to_string(i) + "/ground_truth_to_tf/pose");
 
     pred_drone_at.predicate_drone_at.drone_id.value = i;
     pred_drone_at.predicate_drone_at.location_id.value = g_kb.location_table_.insert(pose_stamped->pose);
@@ -759,14 +813,14 @@ int main(int argc, char **argv)
   g_kb.upsertPredicates(initial_state);
 
   // Advertise services
-  ros::ServiceServer add_location_service = nh.advertiseService("urs_wearable/add_location", addLocation);
-  ros::ServiceServer get_state_service = nh.advertiseService("urs_wearable/get_state", getState);
-  ros::ServiceServer remove_location_service = nh.advertiseService("urs_wearable/remove_location", removeLocation);
-  ros::ServiceServer set_goal_service = nh.advertiseService("urs_wearable/set_goal", setGoal);
+  ros::ServiceServer add_location_service = nh.advertiseService("urs_wearable/add_location", addLocationService);
+  ros::ServiceServer get_state_service = nh.advertiseService("urs_wearable/get_state", getStateService);
+  ros::ServiceServer remove_location_service = nh.advertiseService("urs_wearable/remove_location", removeLocationService);
+  ros::ServiceServer set_goal_service = nh.advertiseService("urs_wearable/set_goal", setGoalService);
 
   // Advertise temporary services
-  ros::ServiceServer scan_service = nh.advertiseService("urs_wearable/scan", scan);
-  ros::ServiceServer gather_location_service = nh.advertiseService("urs_wearable/gather", gather);
+  ros::ServiceServer scan_service = nh.advertiseService("urs_wearable/scan", scanService);
+  ros::ServiceServer gather_location_service = nh.advertiseService("urs_wearable/gather", gatherService);
 
   ros_info("Waiting for connections from wearable devices...");
 
