@@ -1,11 +1,5 @@
-// This program is used to substitute a wearable device for testing
-
-#include <chrono>
-#include <thread>
-
 #include <ros/ros.h>
-#include <urs_wearable/LocationAdd.h>
-#include <urs_wearable/location_table.h>
+#include <urs_wearable/AddLocation.h>
 #include <urs_wearable/SetGoal.h>
 
 const std::string SET_GOAL_SERVICE_NAME = "/urs_wearable/set_goal";

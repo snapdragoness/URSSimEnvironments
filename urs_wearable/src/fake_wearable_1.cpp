@@ -1,11 +1,9 @@
- // This program is used to substitute a wearable device for testing
-
 #include <chrono>
 #include <thread>
 
 #include <ros/ros.h>
-#include <urs_wearable/LocationAdd.h>
-#include <urs_wearable/location_table.h>
+#include <geometry_msgs/Pose.h>
+#include <urs_wearable/AddLocation.h>
 #include <urs_wearable/SetGoal.h>
 
 const std::string SET_GOAL_SERVICE_NAME = "/urs_wearable/set_goal";
@@ -16,8 +14,8 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "fake_wearable_1");
   ros::NodeHandle nh;
 
-  LocationTable::location_id_type location_id_sw, location_id_ne;
-  urs_wearable::PoseEuler pose_sw, pose_ne;
+  unsigned int location_id_sw, location_id_ne;
+  geometry_msgs::Pose pose_sw, pose_ne;
   pose_sw.position.x = -20;
   pose_sw.position.y = -20;
   pose_sw.position.z = 0;
@@ -25,38 +23,38 @@ int main(int argc, char **argv)
   pose_ne.position.y = 20;
   pose_ne.position.z = 20;
 
-  ros::ServiceClient location_add_client = nh.serviceClient<urs_wearable::LocationAdd>("urs_wearable/add_location");
-  urs_wearable::LocationAdd location_add_srv;
+  ros::ServiceClient location_add_client = nh.serviceClient<urs_wearable::AddLocation>("urs_wearable/add_location");
+  urs_wearable::AddLocation add_location_srv;
 
-  location_add_srv.request.pose = pose_sw;
-  if (location_add_client.call(location_add_srv))
+  add_location_srv.request.pose = pose_sw;
+  if (location_add_client.call(add_location_srv))
   {
-    location_id_sw = location_add_srv.response.location_id;
+    location_id_sw = add_location_srv.response.location_id;
   }
   else
   {
     ROS_ERROR("Call /urs_wearable/location_add error");
   }
 
-  location_add_srv.request.pose = pose_ne;
-  if (location_add_client.call(location_add_srv))
+  add_location_srv.request.pose = pose_ne;
+  if (location_add_client.call(add_location_srv))
   {
-    location_id_ne = location_add_srv.response.location_id;
+    location_id_ne = add_location_srv.response.location_id;
   }
   else
   {
     ROS_ERROR("Call /urs_wearable/location_add error");
   }
 
-  LocationTable::location_id_type loc_id;
-  urs_wearable::PoseEuler pose;
+  unsigned int loc_id;
+  geometry_msgs::Pose pose;
   pose.position.x = -10;
   pose.position.y = 5;
   pose.position.z = 2;
-  location_add_srv.request.pose = pose;
-  if (location_add_client.call(location_add_srv))
+  add_location_srv.request.pose = pose;
+  if (location_add_client.call(add_location_srv))
   {
-    loc_id = location_add_srv.response.location_id;
+    loc_id = add_location_srv.response.location_id;
   }
   else
   {

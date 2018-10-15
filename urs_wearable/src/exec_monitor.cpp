@@ -1,22 +1,17 @@
-#include <chrono>
-#include <thread>
-
 #include <actionlib/client/simple_action_client.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <libcuckoo/cuckoohash_map.hh>
 #include <ros/ros.h>
 #include <urs_wearable/Action.h>
+#include <urs_wearable/AddLocation.h>
 #include <urs_wearable/DroneAction.h>
 #include <urs_wearable/Feedback.h>
-#include <urs_wearable/GetPose.h>
-#include <urs_wearable/GetState.h>
-#include <urs_wearable/LocationAdd.h>
-#include <urs_wearable/LocationRemove.h>
-#include <urs_wearable/PoseEuler.h>
-#include <urs_wearable/SetGoal.h>
-
-#include <urs_wearable/SetDest.h>
 #include <urs_wearable/Gather.h>
+#include <urs_wearable/GetState.h>
+#include <urs_wearable/RemoveLocation.h>
 #include <urs_wearable/Scan.h>
+#include <urs_wearable/SetGoal.h>
+#include <urs_wearable/SetPosition.h>
 
 #include "urs_wearable/common.h"
 #include "urs_wearable/knowledge_base.h"
@@ -28,7 +23,7 @@ const std::string PLANNER_SERVICE_NAME = "/cpa/get_plan";
 
 KnowledgeBase g_kb("urs_problem", "urs", PLANNER_SERVICE_NAME);
 
-bool isWithinActiveRegion(urs_wearable::PoseEuler& pose, const LocationTable::location_id_type location_id, std::string& feedback_message)
+bool isWithinActiveRegion(geometry_msgs::Pose& pose, const LocationTable::location_id_type location_id, std::string& feedback_message)
 {
   std::vector<urs_wearable::Predicate> active_region_preds = g_kb.getPredicateList(urs_wearable::Predicate::TYPE_ACTIVE_REGION);
 
@@ -46,14 +41,14 @@ bool isWithinActiveRegion(urs_wearable::PoseEuler& pose, const LocationTable::lo
 
   // Get poses of action region
   urs_wearable::Predicate pred_active_region = active_region_preds.back();
-  urs_wearable::PoseEuler pose_active_region_sw;
+  geometry_msgs::Pose pose_active_region_sw;
   if (!g_kb.location_table_.map_.find(pred_active_region.predicate_active_region.location_id_sw.value, pose_active_region_sw))
   {
     feedback_message = "Cannot find location id " + std::to_string(pred_active_region.predicate_active_region.location_id_sw.value) + " in the location table";
     return false;
   }
 
-  urs_wearable::PoseEuler pose_active_region_ne;
+  geometry_msgs::Pose pose_active_region_ne;
   if (!g_kb.location_table_.map_.find(pred_active_region.predicate_active_region.location_id_ne.value, pose_active_region_ne))
   {
     feedback_message = "Cannot find location id " + std::to_string(pred_active_region.predicate_active_region.location_id_ne.value) + " in the location table";
@@ -127,8 +122,8 @@ void executor(urs_wearable::SetGoal::Request req)
           ros::spinOnce();
 
           // Check the validity of location_id_sw_new and location_id_ne_new
-          urs_wearable::PoseEuler pose_sw_new;
-          urs_wearable::PoseEuler pose_ne_new;
+          geometry_msgs::Pose pose_sw_new;
+          geometry_msgs::Pose pose_ne_new;
           LocationTable::location_id_type location_id_sw_new = actions_it->action_active_region_update.location_id_sw_new.value;
           LocationTable::location_id_type location_id_ne_new = actions_it->action_active_region_update.location_id_ne_new.value;
 
@@ -219,7 +214,7 @@ void executor(urs_wearable::SetGoal::Request req)
           ros::spinOnce();
 
           // Get the pose to fly to
-          urs_wearable::PoseEuler pose_to;
+          geometry_msgs::Pose pose_to;
           LocationTable::location_id_type location_id_to = actions_it->action_fly_above.location_id_to.value;
 
           if (!isWithinActiveRegion(pose_to, location_id_to, feedback.message))
@@ -242,7 +237,6 @@ void executor(urs_wearable::SetGoal::Request req)
           drone_id = actions_it->action_fly_above.drone_id.value;
           goal.action_type = urs_wearable::DroneGoal::TYPE_POSE;
           goal.pose = pose_to;
-          goal.set_orientation = false;
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
@@ -285,7 +279,7 @@ void executor(urs_wearable::SetGoal::Request req)
           ros::spinOnce();
 
           // Get the pose to fly to
-          urs_wearable::PoseEuler pose_to;
+          geometry_msgs::Pose pose_to;
           LocationTable::location_id_type location_id_to = actions_it->action_fly_to.location_id_to.value;
 
           if (!isWithinActiveRegion(pose_to, location_id_to, feedback.message))
@@ -304,7 +298,6 @@ void executor(urs_wearable::SetGoal::Request req)
           drone_id = actions_it->action_fly_to.drone_id.value;
           goal.action_type = urs_wearable::DroneGoal::TYPE_POSE;
           goal.pose = pose_to;
-          goal.set_orientation = false;
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
@@ -370,7 +363,7 @@ void executor(urs_wearable::SetGoal::Request req)
           ros::spinOnce();
 
           // Get the pose to fly to
-          urs_wearable::PoseEuler pose_to;
+          geometry_msgs::Pose pose_to;
           LocationTable::location_id_type key_location_id = actions_it->action_key_pick.key_location_id.value;
 
           if (!isWithinActiveRegion(pose_to, key_location_id, feedback.message))
@@ -393,7 +386,6 @@ void executor(urs_wearable::SetGoal::Request req)
           drone_id = actions_it->action_key_pick.drone_id.value;
           goal.action_type = urs_wearable::DroneGoal::TYPE_POSE;
           goal.pose = pose_to;
-          goal.set_orientation = false;
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
@@ -490,7 +482,7 @@ void executor(urs_wearable::SetGoal::Request req)
         bool has_new_plan = false;
 
         do {
-          std::this_thread::sleep_for(std::chrono::milliseconds(10));
+          ros::Duration(0.01).sleep();
           state = ac.getState().state_;
 
           // Check if plan has changed
@@ -637,13 +629,13 @@ bool getState(urs_wearable::GetState::Request& req, urs_wearable::GetState::Resp
   return true;
 }
 
-bool addLocation(urs_wearable::LocationAdd::Request& req, urs_wearable::LocationAdd::Response& res)
+bool addLocation(urs_wearable::AddLocation::Request& req, urs_wearable::AddLocation::Response& res)
 {
   res.location_id = g_kb.location_table_.insert(req.pose);
   return true;
 }
 
-bool removeLocation(urs_wearable::LocationRemove::Request& req, urs_wearable::LocationRemove::Response& res)
+bool removeLocation(urs_wearable::RemoveLocation::Request& req, urs_wearable::RemoveLocation::Response& res)
 {
   // TODO: Remove all predicates that have the removed location id
   return true;
@@ -665,28 +657,28 @@ bool gather(urs_wearable::Gather::Request& req, urs_wearable::Gather::Response& 
 {
   for (int i = 0; i < req.uav_id.size(); i++)
   {
-    urs_wearable::PoseEuler dest;
-    dest.position = req.position;
+    geometry_msgs::Point target_position;
+    target_position = req.position;
 
     switch (req.uav_id[i])
     {
       case 0:
-        dest.position.x += 2;
+        target_position.x += 2;
         break;
       case 1:
-        dest.position.x -= 2;
+        target_position.x -= 2;
         break;
       case 2:
-        dest.position.y += 2;
+        target_position.y += 2;
         break;
       case 3:
-        dest.position.y -= 2;
+        target_position.y -= 2;
         break;
     }
 
-    urs_wearable::SetDest set_dest_srv;
-    set_dest_srv.request.dest = dest;
-    ros::service::call("/uav" + std::to_string(req.uav_id[i]) + "/set_dest", set_dest_srv);
+    urs_wearable::SetPosition set_position_srv;
+    set_position_srv.request.position = target_position;
+    ros::service::call("/uav" + std::to_string(req.uav_id[i]) + "/set_position", set_position_srv);
   }
   return true;
 }
@@ -705,11 +697,11 @@ int main(int argc, char **argv)
   std::vector<urs_wearable::Predicate> initial_state;
   urs_wearable::Predicate pred_active_region;
   pred_active_region.type = urs_wearable::Predicate::TYPE_ACTIVE_REGION;
-  urs_wearable::PoseEuler pose_sw;
+  geometry_msgs::Pose pose_sw;
   pose_sw.position.x = -10.0;
   pose_sw.position.y = -10.0;
   pose_sw.position.z = 0.0;
-  urs_wearable::PoseEuler pose_ne;
+  geometry_msgs::Pose pose_ne;
   pose_ne.position.x = 10.0;
   pose_ne.position.y = 10.0;
   pose_ne.position.z = 10.0;
@@ -754,21 +746,11 @@ int main(int argc, char **argv)
 
   for (unsigned int i = 0; i < n_uav; i++)
   {
-    if (!ros::service::waitForService(uav_ns + std::to_string(i) + "/get_pose", 60000))
-    {
-      ros_error("The controller for drone " + uav_ns + std::to_string(i) + " is not running");
-      return EXIT_FAILURE;
-    }
-
-    urs_wearable::GetPose get_pose_srv;
-    if (!ros::service::call(uav_ns + std::to_string(i) + "/get_pose", get_pose_srv))
-    {
-      ros_error("Error in calling service " + uav_ns + std::to_string(i) + "/get_pose");
-      return EXIT_FAILURE;
-    }
+    geometry_msgs::PoseStamped::ConstPtr pose_stamped =
+        ros::topic::waitForMessage<geometry_msgs::PoseStamped>(uav_ns + std::to_string(i) + "/ground_truth_to_tf/pose");
 
     pred_drone_at.predicate_drone_at.drone_id.value = i;
-    pred_drone_at.predicate_drone_at.location_id.value = g_kb.location_table_.insert(get_pose_srv.response.pose);
+    pred_drone_at.predicate_drone_at.location_id.value = g_kb.location_table_.insert(pose_stamped->pose);
     initial_state.push_back(pred_drone_at);
 
     pred_took_off.predicate_took_off.drone_id.value = i;

@@ -69,7 +69,6 @@ add_message_files(FILES
   ObjectDroneID.msg
   ObjectKeyID.msg
   ObjectLocationID.msg
-  PoseEuler.msg
   Predicate.msg
   PredicateActiveRegion.msg
   PredicateDroneAbove.msg
@@ -85,17 +84,17 @@ add_message_files(FILES
 
 ## Generate services in the 'srv' folder
 add_service_files(FILES
+  AddLocation.srv
+  Gather.srv
   GetDest.srv
-  GetPose.srv
   GetPlan.srv
   GetState.srv
-  LocationAdd.srv
-  LocationRemove.srv
-  SetAltitude.srv
-  SetDest.srv
-  SetGoal.srv
-  Gather.srv
+  RemoveLocation.srv
   Scan.srv
+  SetAltitude.srv
+  SetGoal.srv
+  SetOrientation.srv
+  SetPosition.srv
 )
 
 ## Generate actions in the 'action' folder

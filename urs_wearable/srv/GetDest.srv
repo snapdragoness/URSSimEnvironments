@@ -1,2 +1,2 @@
 ---
-PoseEuler dest
+geometry_msgs/Pose dest

@@ -5,8 +5,7 @@ uint8 TYPE_TAKEOFF=2
 
 uint8 action_type
 
-PoseEuler pose
-bool set_orientation
+geometry_msgs/Pose pose
 ---
 # Result Definition
 

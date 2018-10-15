@@ -8,9 +8,10 @@
 #include <string>
 #include <vector>
 
-#include <ros/ros.h>
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Quaternion.h>
+#include <tf/transform_datatypes.h>
+#include <ros/ros.h>
 
 std::string exec(const char* cmd)
 {
@@ -77,38 +78,19 @@ double pointDistance3D(const geometry_msgs::Point& from, const geometry_msgs::Po
   return std::sqrt(dx * dx + dy * dy + dz * dz);
 }
 
-double yawDiff(double yaw1, double yaw2)   // yaw1 and yaw2 are in radian
+double quaternionToYaw(const geometry_msgs::Quaternion& orientation)
+{
+  double roll, pitch, yaw;
+  tf::Quaternion quat;
+  tf::quaternionMsgToTF(orientation, quat);
+  tf::Matrix3x3(quat).getRPY(roll, pitch, yaw);
+  return yaw;
+}
+
+double yawDiff(double yaw1, double yaw2)
 {
   double diff = std::fabs(yaw1 - yaw2);
   return (diff > M_PI)? M_PI + M_PI - diff: diff;
-}
-
-double quaternionToYaw(const geometry_msgs::QuaternionConstPtr& q)
-{
-  double ysqr = q->y * q->y;
-
-  double t3 = +2.0 * (q->w * q->z + q->x * q->y);
-  double t4 = +1.0 - 2.0 * (ysqr + q->z * q->z);
-
-  //  yaw (z-axis rotation)
-  //          PI/2
-  //            ^
-  //            |
-  //  PI,-PI <--+--> 0
-  //            |
-  //            v
-  //         -PI/2
-  double yaw = std::atan2(t3, t4);
-
-  //  return the non-negative version
-  //          PI/2
-  //            ^
-  //            |
-  //      PI <--+--> 0
-  //            |
-  //            v
-  //          3PI/2
-  return (yaw < 0.0)? yaw + 2 * M_PI: yaw;
 }
 
 #endif /* URS_WEARABLE_INCLUDE_URS_WEARABLE_COMMON_H_ */
@@ -122,7 +104,7 @@ typedef struct Euler
   double yaw;
 } Euler;
 
-Euler quaternionToEuler(const geometry_msgs::Quaternion::ConstPtr& q)
+Euler quaternionToEuler(const geometry_msgs::QuaternionConstPtr& q)
 {
   Euler euler;
 
@@ -145,5 +127,31 @@ Euler quaternionToEuler(const geometry_msgs::Quaternion::ConstPtr& q)
   euler.yaw = std::atan2(t3, t4);
 
   return euler;
+}
+
+double quaternionToYaw(const geometry_msgs::QuaternionConstPtr& q)
+{
+  double t3 = +2.0 * (q->w * q->z + q->x * q->y);
+  double t4 = +1.0 - 2.0 * (q->y * q->y + q->z * q->z);
+
+  //  yaw (z-axis rotation)
+  //          PI/2
+  //            ^
+  //            |
+  //  PI,-PI <--+--> 0
+  //            |
+  //            v
+  //         -PI/2
+  double yaw = std::atan2(t3, t4);
+
+  //  return the non-negative version
+  //          PI/2
+  //            ^
+  //            |
+  //      PI <--+--> 0
+  //            |
+  //            v
+  //          3PI/2
+  return (yaw < 0.0)? yaw + 2 * M_PI: yaw;
 }
 */

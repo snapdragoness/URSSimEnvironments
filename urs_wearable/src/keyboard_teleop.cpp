@@ -5,11 +5,13 @@
 #include <termios.h>
 
 #include <ros/ros.h>
+#include <geometry_msgs/Pose.h>
 #include <hector_uav_msgs/EnableMotors.h>
+#include <std_srvs/Empty.h>
 #include <urs_wearable/GetDest.h>
-#include <urs_wearable/PoseEuler.h>
 #include <urs_wearable/SetAltitude.h>
-#include <urs_wearable/SetDest.h>
+#include <urs_wearable/SetOrientation.h>
+#include <urs_wearable/SetPosition.h>
 
 #include "urs_wearable/common.h"
 
@@ -80,7 +82,7 @@ int main(int argc, char **argv)
 
     // Set altitude
     urs_wearable::SetAltitude set_altitude_srv;
-    set_altitude_srv.request.z = 4.0;
+    set_altitude_srv.request.height = 4.0;
     if (!ros::service::call(ns + std::to_string(i) + "/set_altitude", set_altitude_srv))
     {
       ros_error("Error in calling service " + ns + std::to_string(i) + "/set_altitude");
@@ -108,51 +110,55 @@ int main(int argc, char **argv)
       ros_error("Error in calling service " + ns + std::to_string(active_id) + "/get_dest");
       return EXIT_FAILURE;
     }
-    urs_wearable::SetDest set_dest_srv;
-    set_dest_srv.request.dest = get_dest_srv.response.dest;
+
+    ros::ServiceClient set_orientation_service = nh.serviceClient<urs_wearable::SetOrientation>(ns + std::to_string(active_id) + "/set_orientation");
+    ros::ServiceClient set_position_bare_service = nh.serviceClient<urs_wearable::SetPosition>(ns + std::to_string(active_id) + "/set_position_bare");
+
+    urs_wearable::SetPosition set_position_srv;
+    urs_wearable::SetOrientation set_orientation_srv;
+    set_position_srv.request.position = get_dest_srv.response.dest.position;
+    set_orientation_srv.request.yaw = quaternionToYaw(get_dest_srv.response.dest.orientation);
 
     switch (key)
     {
       case 'w':
       case 'W':
-        set_dest_srv.request.dest.position.x += move_step;
-        ros::service::call(ns + std::to_string(active_id) + "/set_dest", set_dest_srv);
+        set_position_srv.request.position.x += move_step;
+        set_position_bare_service.call(set_position_srv);
         break;
       case 's':
       case 'S':
-        set_dest_srv.request.dest.position.x -= move_step;
-        ros::service::call(ns + std::to_string(active_id) + "/set_dest", set_dest_srv);
+        set_position_srv.request.position.x -= move_step;
+        set_position_bare_service.call(set_position_srv);
         break;
       case 'a':
       case 'A':
-        set_dest_srv.request.dest.position.y += move_step;
-        ros::service::call(ns + std::to_string(active_id) + "/set_dest", set_dest_srv);
+        set_position_srv.request.position.y += move_step;
+        set_position_bare_service.call(set_position_srv);
         break;
       case 'd':
       case 'D':
-        set_dest_srv.request.dest.position.y -= move_step;
-        ros::service::call(ns + std::to_string(active_id) + "/set_dest", set_dest_srv);
+        set_position_srv.request.position.y -= move_step;
+        set_position_bare_service.call(set_position_srv);
         break;
       case 'r':
       case 'R':
-        set_dest_srv.request.dest.position.z += move_step;
-        ros::service::call(ns + std::to_string(active_id) + "/set_dest", set_dest_srv);
+        set_position_srv.request.position.z += move_step;
+        set_position_bare_service.call(set_position_srv);
         break;
       case 'f':
       case 'F':
-        set_dest_srv.request.dest.position.z -= move_step;
-        ros::service::call(ns + std::to_string(active_id) + "/set_dest", set_dest_srv);
+        set_position_srv.request.position.z -= move_step;
+        set_position_bare_service.call(set_position_srv);
         break;
       case 'q':
       case 'Q':
-        set_dest_srv.request.dest.orientation.z += rotate_step;
-        ros::service::call(ns + std::to_string(active_id) + "/set_dest", set_dest_srv);
-        // TODO: Add set_orientation service
+        set_orientation_srv.request.yaw += rotate_step;
+        set_orientation_service.call(set_orientation_srv);
         break;
       case 'e': case 'E':
-        set_dest_srv.request.dest.orientation.z -= rotate_step;
-        ros::service::call(ns + std::to_string(active_id) + "/set_dest", set_dest_srv);
-        // TODO: Add set_orientation service
+        set_orientation_srv.request.yaw -= rotate_step;
+        set_orientation_service.call(set_orientation_srv);
         break;
       case 't': case 'T':
         move_step += 0.1;
@@ -181,7 +187,6 @@ int main(int argc, char **argv)
         {
           keyboardInput = keyboardInput.substr(0, keyboardInput.size() - 1);
         }
-        ros_warn("keyboard input = " + keyboardInput);
 
         if (keyboardInput.size())
         {
@@ -202,11 +207,11 @@ int main(int argc, char **argv)
               int id = std::stoi(tokens[1]);
               if (id >= 0 && id < n_uav)
               {
-                set_dest_srv.request.dest.position.x = std::stod(tokens[2]);
-                set_dest_srv.request.dest.position.y = std::stod(tokens[3]);
-                set_dest_srv.request.dest.position.z = std::stod(tokens[4]);
+                set_position_srv.request.position.x = std::stod(tokens[2]);
+                set_position_srv.request.position.y = std::stod(tokens[3]);
+                set_position_srv.request.position.z = std::stod(tokens[4]);
 
-                ros::service::call(ns + std::to_string(active_id) + "/set_dest", set_dest_srv);
+                ros::service::call(ns + std::to_string(active_id) + "/set_position", set_position_srv);
               }
             }
             else if (tokens.size() == 2 && !tokens[0].compare("land"))
@@ -222,8 +227,8 @@ int main(int argc, char **argv)
               int id = std::stoi(tokens[1]);
               if (id >= 0 && id < n_uav)
               {
-                set_dest_srv.request.dest.orientation.z = std::stod(tokens[2]) * M_PI / 180.0;
-                ros::service::call(ns + std::to_string(active_id) + "/set_dest", set_dest_srv);
+                set_orientation_srv.request.yaw = std::stod(tokens[2]) * M_PI / 180.0;
+                set_orientation_service.call(set_orientation_srv);
               }
             }
             else if (tokens.size() == 2 && !tokens[0].compare("stop"))
@@ -231,7 +236,8 @@ int main(int argc, char **argv)
               int id = std::stoi(tokens[1]);
               if (id >= 0 && id < n_uav)
               {
-                // TODO: Add stop service
+                std_srvs::Empty stop_srv;
+                ros::service::call(ns + std::to_string(active_id) + "/stop", stop_srv);
               }
             }
             else if (tokens.size() == 2 && !tokens[0].compare("takeoff"))

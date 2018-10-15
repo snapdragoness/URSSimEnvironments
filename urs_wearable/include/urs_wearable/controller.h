@@ -5,85 +5,73 @@
 #include <mutex>
 
 #include <ros/ros.h>
+#include <geometry_msgs/Point.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Quaternion.h>
-#include <geometry_msgs/Twist.h>
 #include <hector_uav_msgs/EnableMotors.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/Range.h>
+#include <std_srvs/Empty.h>
 #include <urs_wearable/GetDest.h>
-#include <urs_wearable/GetPose.h>
-#include <urs_wearable/PoseEuler.h>
-#include <urs_wearable/SetDest.h>
 #include <urs_wearable/SetAltitude.h>
-
-typedef struct PID
-{
-  double p, i, d;
-} PID;
+#include <urs_wearable/SetOrientation.h>
+#include <urs_wearable/SetPosition.h>
 
 class Controller {
   // read about adjusting PID coefficients at https://oscarliang.com/quadcopter-pid-explained-tuning
-  // {0.5, 0.0, 0.0} for perfect environment
-  // {0.5, 0.0002, 0.00005} for imperfect environment
-  PID pid_;
-  const PID pid_default_ = {0.2, 0.0, 0.0};
-  const PID pid_slow_ = {0.1, 0.0, 0.0};
+  const double P = 1.0;
+  const double I = 0.0;
+  const double D = 0.1;
+  const double P_Q = 2.0;
+  const double D_Q = 0.5;
 
-  urs_wearable::PoseEuler error_;
-  urs_wearable::PoseEuler prev_error_;
-  urs_wearable::PoseEuler proportional_;
-  urs_wearable::PoseEuler integral_;
-  urs_wearable::PoseEuler derivation_;
+  const double MAX_POSITION_ERROR = 0.2;      // maximum position error in meter (only non-negative values)
+  const double MAX_ORIENTATION_ERROR = 1.0;   // maximum orientation error in degree (only non-negative values)
 
-  urs_wearable::PoseEuler pose_;   // position of the UAV from ground truth
-  urs_wearable::PoseEuler dest_;   // desired destination of the UAV
+  geometry_msgs::Point position_prev_error_;
+  geometry_msgs::Point position_integral_;
+  geometry_msgs::Quaternion q_prev_error_;
+
+  geometry_msgs::Pose dest_;
+  std::mutex dest_mutex_;
 
   ros::Publisher cmd_pub_;
-  ros::Subscriber pose_sub_;      // a subscriber of the UAV's ground truth
-  ros::ServiceServer get_dest_service_;
-  ros::ServiceServer get_pose_service_;
-  ros::ServiceServer set_dest_service_;
-  ros::ServiceServer set_altitude_service_;
 
-  std::mutex dest_mutex_;
-  std::mutex pose_mutex_;
-
+  ros::Subscriber pose_sub_;
   void pidControl(const geometry_msgs::PoseStampedConstPtr& msg);
-  void poseEulerPublish();
 
   ros::Subscriber depth_image_sub_;
+  std::atomic<bool> is_moving_{false};
   void readDepthImage(const sensor_msgs::Image::ConstPtr&);
   void avoidObstacle();
-  std::atomic<bool> is_moving_{false};
+  void stop();
 
-  void readSonarHeight(const sensor_msgs::RangeConstPtr&);
-  void readSonarUpward(const sensor_msgs::RangeConstPtr&);
   ros::Subscriber sonar_height_sub_;
   ros::Subscriber sonar_upward_sub_;
-  float sonar_height_range_ = 0.0;
-  float sonar_upward_range_ = 0.0;
+  void readSonarHeight(const sensor_msgs::RangeConstPtr&);
+  void readSonarUpward(const sensor_msgs::RangeConstPtr&);
 
-  void stop();
-  void setSpeed(const PID&);
-  std::mutex pid_mutex_;
-
-  urs_wearable::PoseEuler getDest();
-  urs_wearable::PoseEuler getPose();
-  void setDest(const urs_wearable::PoseEuler&, bool);
+  geometry_msgs::Pose getDest();
   void setAltitude(const double);
+  void setOrientation(const double);
+  void setPosition(const geometry_msgs::Point&);
+  void setPositionBare(const geometry_msgs::Point&);
+
+  ros::ServiceServer get_dest_service_;
+  ros::ServiceServer set_altitude_service_;
+  ros::ServiceServer set_orientation_service_;
+  ros::ServiceServer set_position_service_;
+  ros::ServiceServer set_position_bare_service_;
+  ros::ServiceServer stop_service_;
+  bool getDest(urs_wearable::GetDest::Request&, urs_wearable::GetDest::Response&);
+  bool setAltitude(urs_wearable::SetAltitude::Request&, urs_wearable::SetAltitude::Response&);
+  bool setOrientation(urs_wearable::SetOrientation::Request&, urs_wearable::SetOrientation::Response&);
+  bool setPosition(urs_wearable::SetPosition::Request&, urs_wearable::SetPosition::Response&);
+  bool setPositionBare(urs_wearable::SetPosition::Request&, urs_wearable::SetPosition::Response&);
+  bool stop(std_srvs::Empty::Request&, std_srvs::Empty::Response&);
 
 public:
   Controller();
-  ~Controller();
-
-  bool getDestService(urs_wearable::GetDest::Request&, urs_wearable::GetDest::Response&);
-  bool getPoseService(urs_wearable::GetPose::Request&, urs_wearable::GetPose::Response&);
-  bool setDest(urs_wearable::SetDest::Request&, urs_wearable::SetDest::Response&);
-  bool setAltitude(urs_wearable::SetAltitude::Request&, urs_wearable::SetAltitude::Response&);
-
-  const double max_position_error_ = 0.2;      // maximum position error in meter (only non-negative values)
-  const double max_orientation_error_ = 1.0;   // maximum orientation error in degree (only non-negative values)
 };
 
 #endif /* URS_WEARABLE_INCLUDE_URS_WEARABLE_CONTROLLER_H_ */

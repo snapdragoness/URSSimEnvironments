@@ -2,10 +2,11 @@
 
 #include <actionlib/server/simple_action_server.h>
 #include <ros/ros.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <hector_uav_msgs/EnableMotors.h>
+#include <std_srvs/Empty.h>
 #include <urs_wearable/DroneAction.h>
-#include <urs_wearable/PoseEuler.h>
-#include <urs_wearable/SetDest.h>
+#include <urs_wearable/SetPosition.h>
 
 #include "urs_wearable/common.h"
 
@@ -20,7 +21,7 @@ class DroneActionServer
   ros::ServiceClient enable_motors_client_;
 
   ros::Subscriber pose_sub_;
-  urs_wearable::PoseEuler pose_;
+  geometry_msgs::Pose pose_;
   std::mutex pose_mutex_;
 
   double dist_tolerance_;
@@ -38,7 +39,7 @@ public:
     takeoff_height_ = 2.0;
 
     enable_motors_client_ = nh.serviceClient<hector_uav_msgs::EnableMotors>("enable_motors");
-    pose_sub_ = nh.subscribe("urs_wearable/pose_euler", 10, &DroneActionServer::poseCb, this);
+    pose_sub_ = nh.subscribe("ground_truth_to_tf/pose", 10, &DroneActionServer::poseCb, this);
 
     as_.start();
   }
@@ -48,10 +49,10 @@ public:
     pose_sub_.shutdown();
   }
 
-  void poseCb(const urs_wearable::PoseEulerConstPtr& pose)
+  void poseCb(const geometry_msgs::PoseStampedConstPtr& pose_stamped)
   {
     std::lock_guard<std::mutex> lock(pose_mutex_);
-    pose_ = *pose;
+    pose_ = pose_stamped->pose;
   }
 
   void droneActionCb(const urs_wearable::DroneGoalConstPtr& goal)
@@ -72,15 +73,14 @@ public:
 
   void actionLanding(const urs_wearable::DroneGoalConstPtr& goal)
   {
-    urs_wearable::SetDest set_dest_srv;
+    urs_wearable::SetPosition set_position_srv;
     {
       std::lock_guard<std::mutex> lock(pose_mutex_);
-      set_dest_srv.request.dest = pose_;
+      set_position_srv.request.position = pose_.position;
     }
-    set_dest_srv.request.dest.position.z = landing_height_;
-    set_dest_srv.request.set_orientation = false;
+    set_position_srv.request.position.z = landing_height_;
 
-    if (ros::service::call("set_dest", set_dest_srv))
+    if (ros::service::call("set_position", set_position_srv))
     {
       ros::Rate rate(frequency_);
       while (ros::ok() && as_.isActive())
@@ -89,13 +89,8 @@ public:
         {
           if (!as_.isNewGoalAvailable())
           {
-            // Stop moving
-            {
-              std::lock_guard<std::mutex> lock(pose_mutex_);
-              set_dest_srv.request.dest = pose_;
-            }
-            set_dest_srv.request.set_orientation = false;
-            ros::service::call("set_dest", set_dest_srv);
+            std_srvs::Empty stop_srv;
+            ros::service::call("stop", stop_srv);
           }
 
           as_.setPreempted();
@@ -105,7 +100,7 @@ public:
         {
           std::lock_guard<std::mutex> lock(pose_mutex_);
 
-          if (pointDistance3D(pose_.position, set_dest_srv.request.dest.position) < dist_tolerance_)
+          if (pointDistance3D(pose_.position, set_position_srv.request.position) < dist_tolerance_)
           {
             break;
           }
@@ -117,7 +112,7 @@ public:
     }
     else
     {
-      ROS_WARN("%s: actionLanding called %s failed", name_.c_str(), ros::names::resolve("set_dest").c_str());
+      ROS_WARN("%s: actionLanding called %s failed", name_.c_str(), ros::names::resolve("set_position").c_str());
       as_.setAborted();
       return;
     }
@@ -138,11 +133,10 @@ public:
 
   void actionPose(const urs_wearable::DroneGoalConstPtr& goal)
   {
-    urs_wearable::SetDest set_dest_srv;
-    set_dest_srv.request.dest = goal->pose;
-    set_dest_srv.request.set_orientation = goal->set_orientation;
+    urs_wearable::SetPosition set_position_srv;
+    set_position_srv.request.position = goal->pose.position;
 
-    if (ros::service::call("set_dest", set_dest_srv))
+    if (ros::service::call("set_position", set_position_srv))
     {
       ros::Rate rate(frequency_);
       while (ros::ok() && as_.isActive())
@@ -151,13 +145,8 @@ public:
         {
           if (!as_.isNewGoalAvailable())
           {
-            // Stop moving
-            {
-              std::lock_guard<std::mutex> lock(pose_mutex_);
-              set_dest_srv.request.dest = pose_;
-            }
-            set_dest_srv.request.set_orientation = false;
-            ros::service::call("set_dest", set_dest_srv);
+            std_srvs::Empty stop_srv;
+            ros::service::call("stop", stop_srv);
           }
 
           as_.setPreempted();
@@ -167,7 +156,7 @@ public:
         {
           std::lock_guard<std::mutex> lock(pose_mutex_);
 
-          if (pointDistance2D(pose_.position, set_dest_srv.request.dest.position) < dist_tolerance_)
+          if (pointDistance3D(pose_.position, set_position_srv.request.position) < dist_tolerance_)
           {
             as_.setSucceeded();
             return;
@@ -180,7 +169,7 @@ public:
     }
     else
     {
-      ROS_WARN("%s: actionPose called %s failed", name_.c_str(), ros::names::resolve("set_dest").c_str());
+      ROS_WARN("%s: actionPose called %s failed", name_.c_str(), ros::names::resolve("set_position").c_str());
     }
 
     as_.setAborted();
@@ -204,7 +193,6 @@ public:
       pose_goal.pose = pose_;
     }
     pose_goal.pose.position.z = takeoff_height_;
-    pose_goal.set_orientation = false;
 
     actionPose(boost::make_shared<urs_wearable::DroneGoal>(pose_goal));
   }

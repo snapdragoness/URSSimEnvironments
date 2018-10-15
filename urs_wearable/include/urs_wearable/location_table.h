@@ -8,10 +8,10 @@
 #include <stdexcept>
 #include <vector>
 
+#include <geometry_msgs/Pose.h>
 #include "libcuckoo/cuckoohash_map.hh"
 
 #include "urs_wearable/Location.h"
-#include "urs_wearable/PoseEuler.h"
 
 class LocationTable
 {
@@ -20,9 +20,9 @@ public:
   // Location.msg, ObjectLocationID.msg, LocationAdd.srv, LocationRemove.srv
   typedef std::uint8_t location_id_type;
 
-  cuckoohash_map<location_id_type, urs_wearable::PoseEuler> map_;
+  cuckoohash_map<location_id_type, geometry_msgs::Pose> map_;
 
-  location_id_type insert(const urs_wearable::PoseEuler& pose)
+  location_id_type insert(const geometry_msgs::Pose& pose)
   {
     {
       std::lock_guard<std::mutex> lock(unused_id_set_mutex_);
@@ -54,9 +54,9 @@ public:
     return map_.erase(id);
   }
 
-  bool update(location_id_type id, const urs_wearable::PoseEuler& pose)
+  bool update(location_id_type id, const geometry_msgs::Pose& pose)
   {
-    return map_.update_fn(id, [&pose](urs_wearable::PoseEuler &p)
+    return map_.update_fn(id, [&pose](geometry_msgs::Pose &p)
     {
       p = pose;
     });
