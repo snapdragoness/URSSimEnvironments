@@ -19,9 +19,9 @@
 
 class Controller {
   // read about adjusting PID coefficients at https://oscarliang.com/quadcopter-pid-explained-tuning
-  const double P = 1.0;
+  const double P = 0.5;
   const double I = 0.0;
-  const double D = 0.1;
+  const double D = 0.0;
   const double P_Q = 2.0;
   const double D_Q = 0.5;
 
@@ -54,7 +54,7 @@ class Controller {
   geometry_msgs::Pose getDest();
   void setAltitude(const double);
   void setOrientation(const double);
-  void setPosition(const geometry_msgs::Point&);
+  void setPosition(const geometry_msgs::Point);
   void setPositionBare(const geometry_msgs::Point&);
 
   ros::ServiceServer get_dest_service_;
@@ -63,12 +63,12 @@ class Controller {
   ros::ServiceServer set_position_service_;
   ros::ServiceServer set_position_bare_service_;
   ros::ServiceServer stop_service_;
-  bool getDest(urs_wearable::GetDest::Request&, urs_wearable::GetDest::Response&);
-  bool setAltitude(urs_wearable::SetAltitude::Request&, urs_wearable::SetAltitude::Response&);
-  bool setOrientation(urs_wearable::SetOrientation::Request&, urs_wearable::SetOrientation::Response&);
-  bool setPosition(urs_wearable::SetPosition::Request&, urs_wearable::SetPosition::Response&);
-  bool setPositionBare(urs_wearable::SetPosition::Request&, urs_wearable::SetPosition::Response&);
-  bool stop(std_srvs::Empty::Request&, std_srvs::Empty::Response&);
+  bool getDestService(urs_wearable::GetDest::Request&, urs_wearable::GetDest::Response&);
+  bool setAltitudeService(urs_wearable::SetAltitude::Request&, urs_wearable::SetAltitude::Response&);
+  bool setOrientationService(urs_wearable::SetOrientation::Request&, urs_wearable::SetOrientation::Response&);
+  bool setPositionService(urs_wearable::SetPosition::Request&, urs_wearable::SetPosition::Response&);
+  bool setPositionBareService(urs_wearable::SetPosition::Request&, urs_wearable::SetPosition::Response&);
+  bool stopService(std_srvs::Empty::Request&, std_srvs::Empty::Response&);
 
 public:
   Controller();

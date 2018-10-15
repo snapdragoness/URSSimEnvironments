@@ -1,3 +1,5 @@
+#include <thread>
+
 #include <geometry_msgs/Twist.h>
 #include <tf/transform_datatypes.h>
 
@@ -17,12 +19,12 @@ Controller::Controller()
   sonar_height_sub_ = nh.subscribe<sensor_msgs::Range>("sonar_height", 1, &Controller::readSonarHeight, this);
   sonar_upward_sub_ = nh.subscribe<sensor_msgs::Range>("sonar_upward", 1, &Controller::readSonarUpward, this);
 
-  get_dest_service_ = nh.advertiseService("get_dest", &Controller::getDest, this);
-  set_altitude_service_ = nh.advertiseService("set_altitude", &Controller::setAltitude, this);
-  set_orientation_service_ = nh.advertiseService("set_orientation", &Controller::setOrientation, this);
-  set_position_service_ = nh.advertiseService("set_position", &Controller::setPosition, this);
-  set_position_bare_service_ = nh.advertiseService("set_position_bare", &Controller::setPositionBare, this);
-  stop_service_ = nh.advertiseService("stop", &Controller::stop, this);
+  get_dest_service_ = nh.advertiseService("get_dest", &Controller::getDestService, this);
+  set_altitude_service_ = nh.advertiseService("set_altitude", &Controller::setAltitudeService, this);
+  set_orientation_service_ = nh.advertiseService("set_orientation", &Controller::setOrientationService, this);
+  set_position_service_ = nh.advertiseService("set_position", &Controller::setPositionService, this);
+  set_position_bare_service_ = nh.advertiseService("set_position_bare", &Controller::setPositionBareService, this);
+  stop_service_ = nh.advertiseService("stop", &Controller::stopService, this);
 }
 
 void Controller::pidControl(const geometry_msgs::PoseStampedConstPtr& pose_stamped)
@@ -209,7 +211,7 @@ void Controller::setOrientation(const double yaw)   // yaw in radian
   dest_.orientation.w = q.w();
 }
 
-void Controller::setPosition(const geometry_msgs::Point& position)
+void Controller::setPosition(const geometry_msgs::Point position)
 {
   geometry_msgs::PoseStamped::ConstPtr pose_stamped = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("ground_truth_to_tf/pose");
   double vx = position.x - pose_stamped->pose.position.x;
@@ -222,17 +224,11 @@ void Controller::setPosition(const geometry_msgs::Point& position)
     setOrientation(yaw_to_dest);
     do
     {
-      pose_stamped = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("ground_truth_to_tf/pose", ros::Duration(0.1));
+      pose_stamped = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("ground_truth_to_tf/pose");
     } while (yawDiff(quaternionToYaw(pose_stamped->pose.orientation), yaw_to_dest) > MAX_ORIENTATION_ERROR * M_PI / 180.0);
   }
 
-  {
-    std::lock_guard<std::mutex> lock(dest_mutex_);
-    dest_.position.x = position.x;
-    dest_.position.y = position.y;
-    dest_.position.z = position.z;
-  }
-
+  setPositionBare(position);
   is_moving_ = true;
 }
 
@@ -244,37 +240,38 @@ void Controller::setPositionBare(const geometry_msgs::Point& position)
   dest_.position.z = position.z;
 }
 
-bool Controller::getDest(urs_wearable::GetDest::Request& req, urs_wearable::GetDest::Response& res)
+bool Controller::getDestService(urs_wearable::GetDest::Request& req, urs_wearable::GetDest::Response& res)
 {
   res.dest = getDest();
   return true;
 }
 
-bool Controller::setAltitude(urs_wearable::SetAltitude::Request& req, urs_wearable::SetAltitude::Response& res)
+bool Controller::setAltitudeService(urs_wearable::SetAltitude::Request& req, urs_wearable::SetAltitude::Response& res)
 {
   setAltitude(req.height);
   return true;
 }
 
-bool Controller::setOrientation(urs_wearable::SetOrientation::Request& req, urs_wearable::SetOrientation::Response& res)
+bool Controller::setOrientationService(urs_wearable::SetOrientation::Request& req, urs_wearable::SetOrientation::Response& res)
 {
   setOrientation(req.yaw);
   return true;
 }
 
-bool Controller::setPosition(urs_wearable::SetPosition::Request& req, urs_wearable::SetPosition::Response& res)
+bool Controller::setPositionService(urs_wearable::SetPosition::Request& req, urs_wearable::SetPosition::Response& res)
 {
-  setPosition(req.position);
+  std::thread t(&Controller::setPosition, this, req.position);
+  t.detach();
   return true;
 }
 
-bool Controller::setPositionBare(urs_wearable::SetPosition::Request& req, urs_wearable::SetPosition::Response& res)
+bool Controller::setPositionBareService(urs_wearable::SetPosition::Request& req, urs_wearable::SetPosition::Response& res)
 {
   setPositionBare(req.position);
   return true;
 }
 
-bool Controller::stop(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
+bool Controller::stopService(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
 {
   stop();
   return true;

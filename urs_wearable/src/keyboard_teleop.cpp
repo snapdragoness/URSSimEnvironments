@@ -211,7 +211,7 @@ int main(int argc, char **argv)
                 set_position_srv.request.position.y = std::stod(tokens[3]);
                 set_position_srv.request.position.z = std::stod(tokens[4]);
 
-                ros::service::call(ns + std::to_string(active_id) + "/set_position", set_position_srv);
+                ros::service::call(ns + std::to_string(id) + "/set_position", set_position_srv);
               }
             }
             else if (tokens.size() == 2 && !tokens[0].compare("land"))
@@ -237,7 +237,7 @@ int main(int argc, char **argv)
               if (id >= 0 && id < n_uav)
               {
                 std_srvs::Empty stop_srv;
-                ros::service::call(ns + std::to_string(active_id) + "/stop", stop_srv);
+                ros::service::call(ns + std::to_string(id) + "/stop", stop_srv);
               }
             }
             else if (tokens.size() == 2 && !tokens[0].compare("takeoff"))
