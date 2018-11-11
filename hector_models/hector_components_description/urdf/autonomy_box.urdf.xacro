@@ -4,6 +4,7 @@
   <xacro:include filename="$(find hector_sensors_description)/urdf/generic_camera.urdf.xacro" />
   <xacro:include filename="$(find hector_components_description)/urdf/vlp16_mount.urdf.xacro.xml"/>
   <xacro:include filename="$(find hector_sensors_description)/urdf/camera360.urdf.xacro"/>
+  <xacro:include filename="$(find hector_chilitag_description)/urdf/chilitag.urdf.xacro"/>
   
   
 <!--  <xacro:arg name="add_self_filter_geom" default="0"/>-->
@@ -27,14 +28,14 @@
   
   <xacro:property name="chilitag_white_border" value="0.005"/>
   <xacro:property name="chilitag_thickness" value="0.003"/>
-  <xacro:property name="chilitag_28_x" value="${-computer_box_width/2 + 0.01 + chilitag_size/2}"/> <!-- border is bigger on this side -->
-  <xacro:property name="chilitag_28_y" value="${computer_box_width/2 - chilitag_white_border - chilitag_size/2}"/>
-  <xacro:property name="chilitag_28_z" value="${top_protection_bottom + alu_profile_side_length + chilitag_thickness}"/>
+  <xacro:property name="chilitag_29_x" value="${-computer_box_width/2 + chilitag_white_border + chilitag_size/2}"/> <!-- border is bigger on this side -->
+  <xacro:property name="chilitag_29_y" value="${-computer_box_width/2 + 2*chilitag_white_border + chilitag_size/2}"/>
+  <xacro:property name="chilitag_29_z" value="${top_protection_bottom + alu_profile_side_length + chilitag_thickness}"/>
 
   
     
   
-  <xacro:macro name="autonomy_box_macro" params="parent *origin alu_profile_collision_size_factor name:='autonomy_box'">
+  <xacro:macro name="autonomy_box_macro" params="parent *origin alu_profile_collision_size_factor name:='autonomy_box' imu_link='imu_link'">
       
     <xacro:arg name="add_containment_self_filter_geom" default="false"/>
     
@@ -153,9 +154,9 @@
       </visual>
       
       <!-- Chilitags visual -->
-      <xacro:chilitag_visual_sized name="chilitag28" size="${chilitag_size}">
+      <xacro:chilitag_visual_sized name="chilitag29" size="${chilitag_size}">
 <!--        <origin xyz="${chilitag_28_x} ${chilitag_28_y} ${chilitag_28_z}" rpy="0 ${-M_PI/2} 0"/>-->
-        <origin xyz="${chilitag_28_x} ${chilitag_28_y} ${chilitag_28_z}" rpy="${M_PI} ${0} ${M_PI/2}"/>
+        <origin xyz="${chilitag_29_x} ${chilitag_29_y} ${chilitag_29_z}" rpy="${M_PI} ${0} ${-M_PI/2}"/>
       </xacro:chilitag_visual_sized>
       
       <!-- Computer box-->
@@ -297,34 +298,43 @@
       </xacro:if>
     </link>
     
-        <!-- Chilitags -->
-    <xacro:chilitag_no_geom name="chilitag28" size="${chilitag_size}" parent="${name}_link">
-        <origin xyz="${chilitag_28_x} ${chilitag_28_y} ${chilitag_28_z}" rpy="${M_PI} ${0} ${M_PI/2}"/>
+    <!-- Chilitags -->
+    <xacro:chilitag_no_geom name="chilitag29" size="${chilitag_size}" parent="${name}_link">
+      <origin xyz="${chilitag_29_x} ${chilitag_29_y} ${chilitag_29_z}" rpy="${M_PI} ${0} ${-M_PI/2}"/>
     </xacro:chilitag_no_geom> 
     
     <!-- IMU -->
     <joint name="imu_link_joint" type="fixed">
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <parent link="${name}_link" />
-      <child link="imu_link"/>      
+      <child link="${imu_link}"/>      
     </joint>
     
-    <link name="imu_link">     
+    <link name="${imu_link}">     
     </link>
     
     <!-- Spinning VLP16 -->
     <xacro:spinning_sensor_mount_macro parent="${name}_link"  name="spin_lidar" scaling="0.001">
-      <origin xyz="0 0 ${0.27 + 0.0944673}" rpy="0.0 0.0 0.0"/>
+      <origin xyz="0 0 ${0.27 + 0.0944673}" rpy="0.0 0.0 ${M_PI}"/>
     </xacro:spinning_sensor_mount_macro>
       
     <!-- 360 camera -->
     <xacro:camera360 name="camera360" right_cam_name="right" left_cam_name="left" parent="${name}_link" collision_radius="${insta360_collision_radius}" dist_between_cameras="-0.03850784" ros_topic="image_raw" update_rate="10" res_x="1504" res_y="1504" image_format="R8G8B8" fov="${M_PI}">
       <origin xyz="0 0 ${insta360_mounting_height}" rpy="0.0 0 0"/> <!-- base_link to camera mount transform -->
-      <origin xyz="0.00009742  0.00061696 -0.03850784" rpy="3.1373499 -0.0021358 -3.1279404"/> <!-- cam to cam transform (calibration by kalibr) -->
+      <!-- cam to cam transform (calibration by kalibr) -->
+      <!--<origin xyz="0.00009742  0.00061696 -0.03850784" rpy="3.1373499 -0.0021358 -3.1279404"/>--> <!-- insta #1 -->
+      <origin xyz="0.002862424041614364  -0.00013127655875068252 -0.03724378451297336" rpy="-3.1402707 0.0036289 -3.1175768"/> <!-- insta #3 -->
     </xacro:camera360>
     
-    <gazebo reference="structure_addons_link">
-      <material>Gazebo/Grey</material>
+    <gazebo reference="${name}_link">
+      <visual>
+      <material>
+        <ambient>0.1 0.1 0.1 1</ambient>
+        <diffuse>0.48 0.48 0.48 1</diffuse>
+        <emissive>0.237 0.237 0.237 1</emissive>
+        <specular>0.8 0.8 0.8 1</specular>
+      </material>
+    </visual>
     </gazebo>
     
   </xacro:macro>
