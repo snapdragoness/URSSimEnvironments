@@ -10,6 +10,7 @@
 #include <std_srvs/Empty.h>
 #include <urs_wearable/GetDest.h>
 #include <urs_wearable/SetAltitude.h>
+#include <urs_wearable/SetDouble.h>
 #include <urs_wearable/SetOrientation.h>
 #include <urs_wearable/SetPosition.h>
 
@@ -202,7 +203,7 @@ int main(int argc, char **argv)
           // check the input
           try
           {
-            if (tokens.size() == 5 && !tokens[0].compare("goto"))
+            if (tokens.size() == 5 && tokens[0].compare("goto") == 0)
             {
               int id = std::stoi(tokens[1]);
               if (id >= 0 && id < n_uav)
@@ -214,7 +215,7 @@ int main(int argc, char **argv)
                 ros::service::call(ns + std::to_string(id) + "/set_position", set_position_srv);
               }
             }
-            else if (tokens.size() == 2 && !tokens[0].compare("land"))
+            else if (tokens.size() == 2 && tokens[0].compare("land") == 0)
             {
               int id = std::stoi(tokens[1]);
               if (id >= 0 && id < n_uav)
@@ -222,7 +223,7 @@ int main(int argc, char **argv)
                 // TODO: Add landing service
               }
             }
-            else if (tokens.size() == 3 && !tokens[0].compare("rotate"))
+            else if (tokens.size() == 3 && tokens[0].compare("rotate") == 0)
             {
               int id = std::stoi(tokens[1]);
               if (id >= 0 && id < n_uav)
@@ -231,7 +232,7 @@ int main(int argc, char **argv)
                 set_orientation_service.call(set_orientation_srv);
               }
             }
-            else if (tokens.size() == 2 && !tokens[0].compare("stop"))
+            else if (tokens.size() == 2 && tokens[0].compare("stop") == 0)
             {
               int id = std::stoi(tokens[1]);
               if (id >= 0 && id < n_uav)
@@ -240,12 +241,57 @@ int main(int argc, char **argv)
                 ros::service::call(ns + std::to_string(id) + "/stop", stop_srv);
               }
             }
-            else if (tokens.size() == 2 && !tokens[0].compare("takeoff"))
+            else if (tokens.size() == 2 && tokens[0].compare("takeoff") == 0)
             {
               int id = std::stoi(tokens[1]);
               if (id >= 0 && id < n_uav)
               {
                 // TODO: Add takeoff service
+              }
+            }
+            else if (tokens.size() == 2 && tokens[0].compare("p") == 0)
+            {
+              urs_wearable::SetDouble srv;
+              srv.request.value = std::stod(tokens[1]);
+              for (int id = 0; id < 4; id++)
+              {
+                ros::service::call(ns + std::to_string(id) + "/set_p", srv);
+              }
+            }
+            else if (tokens.size() == 2 && tokens[0].compare("i") == 0)
+            {
+              urs_wearable::SetDouble srv;
+              srv.request.value = std::stod(tokens[1]);
+              for (int id = 0; id < 4; id++)
+              {
+                ros::service::call(ns + std::to_string(id) + "/set_i", srv);
+              }
+            }
+            else if (tokens.size() == 2 && tokens[0].compare("d") == 0)
+            {
+              urs_wearable::SetDouble srv;
+              srv.request.value = std::stod(tokens[1]);
+              for (int id = 0; id < 4; id++)
+              {
+                ros::service::call(ns + std::to_string(id) + "/set_d", srv);
+              }
+            }
+            else if (tokens.size() == 2 && tokens[0].compare("pq") == 0)
+            {
+              urs_wearable::SetDouble srv;
+              srv.request.value = std::stod(tokens[1]);
+              for (int id = 0; id < 4; id++)
+              {
+                ros::service::call(ns + std::to_string(id) + "/set_pq", srv);
+              }
+            }
+            else if (tokens.size() == 2 && tokens[0].compare("dq") == 0)
+            {
+              urs_wearable::SetDouble srv;
+              srv.request.value = std::stod(tokens[1]);
+              for (int id = 0; id < 4; id++)
+              {
+                ros::service::call(ns + std::to_string(id) + "/set_dq", srv);
               }
             }
             else if (tokens.size() == 1)

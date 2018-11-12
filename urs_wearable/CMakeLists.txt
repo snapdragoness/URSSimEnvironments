@@ -92,6 +92,7 @@ add_service_files(FILES
   RemoveLocation.srv
   Scan.srv
   SetAltitude.srv
+  SetDouble.srv
   SetGoal.srv
   SetOrientation.srv
   SetPosition.srv

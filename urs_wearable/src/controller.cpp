@@ -1,6 +1,7 @@
 #include <thread>
 
 #include <geometry_msgs/Twist.h>
+#include <sensor_msgs/Imu.h>
 #include <tf/transform_datatypes.h>
 
 #include "urs_wearable/common.h"
@@ -25,7 +26,66 @@ Controller::Controller()
   set_position_service_ = nh.advertiseService("set_position", &Controller::setPositionService, this);
   set_position_bare_service_ = nh.advertiseService("set_position_bare", &Controller::setPositionBareService, this);
   stop_service_ = nh.advertiseService("stop", &Controller::stopService, this);
+
+/* Uncomment to test PID values
+  set_p_service_ = nh.advertiseService("set_p", &Controller::setP, this);
+  set_i_service_ = nh.advertiseService("set_i", &Controller::setI, this);
+  set_d_service_ = nh.advertiseService("set_d", &Controller::setD, this);
+  set_pq_service_ = nh.advertiseService("set_pq", &Controller::setPQ, this);
+  set_dq_service_ = nh.advertiseService("set_dq", &Controller::setDQ, this);
+*/
 }
+
+/* Uncomment to test PID values
+bool Controller::setP(urs_wearable::SetDouble::Request& req, urs_wearable::SetDouble::Response& res)
+{
+  {
+    std::lock_guard<std::mutex> lock(p_mutex_);
+    p_ = req.value;
+  }
+  ros_warn("[" + std::to_string(p_) + ", " + std::to_string(i_) + ", " + std::to_string(d_) + ", " + std::to_string(pq_) + ", " + std::to_string(dq_) + "]");
+  return true;
+}
+bool Controller::setI(urs_wearable::SetDouble::Request& req, urs_wearable::SetDouble::Response& res)
+{
+  {
+    std::lock_guard<std::mutex> lock(i_mutex_);
+    i_ = req.value;
+    position_integral_.x = 0.0;
+    position_integral_.y = 0.0;
+    position_integral_.z = 0.0;
+  }
+  ros_warn("[" + std::to_string(p_) + ", " + std::to_string(i_) + ", " + std::to_string(d_) + ", " + std::to_string(pq_) + ", " + std::to_string(dq_) + "]");
+  return true;
+}
+bool Controller::setD(urs_wearable::SetDouble::Request& req, urs_wearable::SetDouble::Response& res)
+{
+  {
+    std::lock_guard<std::mutex> lock(d_mutex_);
+    d_ = req.value;
+  }
+  ros_warn("[" + std::to_string(p_) + ", " + std::to_string(i_) + ", " + std::to_string(d_) + ", " + std::to_string(pq_) + ", " + std::to_string(dq_) + "]");
+  return true;
+}
+bool Controller::setPQ(urs_wearable::SetDouble::Request& req, urs_wearable::SetDouble::Response& res)
+{
+  {
+    std::lock_guard<std::mutex> lock(pq_mutex_);
+    pq_ = req.value;
+  }
+  ros_warn("[" + std::to_string(p_) + ", " + std::to_string(i_) + ", " + std::to_string(d_) + ", " + std::to_string(pq_) + ", " + std::to_string(dq_) + "]");
+  return true;
+}
+bool Controller::setDQ(urs_wearable::SetDouble::Request& req, urs_wearable::SetDouble::Response& res)
+{
+  {
+    std::lock_guard<std::mutex> lock(dq_mutex_);
+    dq_ = req.value;
+  }
+  ros_warn("[" + std::to_string(p_) + ", " + std::to_string(i_) + ", " + std::to_string(d_) + ", " + std::to_string(pq_) + ", " + std::to_string(dq_) + "]");
+  return true;
+}
+*/
 
 void Controller::pidControl(const geometry_msgs::PoseStampedConstPtr& pose_stamped)
 {
@@ -62,7 +122,6 @@ void Controller::pidControl(const geometry_msgs::PoseStampedConstPtr& pose_stamp
 //                    - dest_.orientation.x * pose_stamped->pose.orientation.y
 //                    + dest_.orientation.y * pose_stamped->pose.orientation.x
 //                    + dest_.orientation.z * pose_stamped->pose.orientation.w;
-
     yaw_error = quaternionToYaw(dest_.orientation) - yaw;
   }
 
@@ -72,7 +131,6 @@ void Controller::pidControl(const geometry_msgs::PoseStampedConstPtr& pose_stamp
 //    q_error.y *= -1;
 //    q_error.z *= -1;
 //  }
-
   if (yaw_error < -M_PI)
   {
     yaw_error += M_PI + M_PI;
@@ -97,23 +155,24 @@ void Controller::pidControl(const geometry_msgs::PoseStampedConstPtr& pose_stamp
   double x = proportional.x + position_integral_.x + derivation.x;
   double y = proportional.y + position_integral_.y + derivation.y;
   double z = proportional.z + position_integral_.z + derivation.z;
-
-  double rx = x * std::cos(-1 * yaw) - y * std::sin(-1 * yaw);
-  double ry = x * std::sin(-1 * yaw) + y * std::cos(-1 * yaw);
+  double rx = x * std::cos(-yaw) - y * std::sin(-yaw);
+  double ry = x * std::sin(-yaw) + y * std::cos(-yaw);
 
   geometry_msgs::Twist cmd;
   cmd.linear.x = rx;
   cmd.linear.y = ry;
   cmd.linear.z = z;
-//  cmd.angular.x = - P_Q * q_error.x - D_Q * q_prev_error_.x;
-//  cmd.angular.y = - P_Q * q_error.y - D_Q * q_prev_error_.y;
-//  cmd.angular.z = - P_Q * q_error.z - D_Q * q_prev_error_.z;
-  cmd.angular.z = yaw_error;
+
+//  sensor_msgs::Imu::ConstPtr imu = ros::topic::waitForMessage<sensor_msgs::Imu>("raw_imu");
+//  cmd.angular.x = - PQ * q_error.x - DQ * imu->angular_velocity.x;
+//  cmd.angular.y = - PQ * q_error.y - DQ * imu->angular_velocity.y;
+//  cmd.angular.z = PQ * q_error.z + DQ * imu->angular_velocity.z;
+  cmd.angular.z = PQ * yaw_error + DQ * (yaw_error - yaw_prev_error_);
 
   cmd_pub_.publish(cmd);
 
   position_prev_error_ = position_error;
-//  q_prev_error_ = q_error;
+  yaw_prev_error_ = yaw_error;
 }
 
 void Controller::readDepthImage(const sensor_msgs::Image::ConstPtr& msg)
@@ -173,7 +232,7 @@ void Controller::avoidObstacle()
 void Controller::stop()
 {
   geometry_msgs::PoseStamped::ConstPtr pose_stamped = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("ground_truth_to_tf/pose");
-  setPosition(pose_stamped->pose.position);
+  setPositionBare(pose_stamped->pose.position);
 }
 
 void Controller::readSonarHeight(const sensor_msgs::RangeConstPtr& msg)

@@ -88,7 +88,7 @@ private:
     bool plan_has_changed;
   };
 
-  std::atomic<executor_id_type> executor_id_ {0};
+  std::atomic<executor_id_type> executor_id_{0};
   cuckoohash_map<executor_id_type, struct Executor> executor_map_;
 
   cuckoohash_map<predicate_type, std::vector<urs_wearable::Predicate>> predicate_map_;

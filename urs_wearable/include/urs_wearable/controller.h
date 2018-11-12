@@ -14,23 +14,24 @@
 #include <std_srvs/Empty.h>
 #include <urs_wearable/GetDest.h>
 #include <urs_wearable/SetAltitude.h>
+#include <urs_wearable/SetDouble.h>
 #include <urs_wearable/SetOrientation.h>
 #include <urs_wearable/SetPosition.h>
 
 class Controller {
   // read about adjusting PID coefficients at https://oscarliang.com/quadcopter-pid-explained-tuning
-  const double P = 0.5;
-  const double I = 0.0;
-  const double D = 0.0;
-  const double P_Q = 2.0;
-  const double D_Q = 0.5;
+  const double P = 1.0;
+  const double I = 0.00005;
+  const double D = 0.05;
+  const double PQ = 1.0;
+  const double DQ = 0.1;
 
   const double MAX_POSITION_ERROR = 0.2;      // maximum position error in meter (only non-negative values)
   const double MAX_ORIENTATION_ERROR = 1.0;   // maximum orientation error in degree (only non-negative values)
 
   geometry_msgs::Point position_prev_error_;
   geometry_msgs::Point position_integral_;
-  geometry_msgs::Quaternion q_prev_error_;
+  double yaw_prev_error_;
 
   geometry_msgs::Pose dest_;
   std::mutex dest_mutex_;
@@ -69,6 +70,29 @@ class Controller {
   bool setPositionService(urs_wearable::SetPosition::Request&, urs_wearable::SetPosition::Response&);
   bool setPositionBareService(urs_wearable::SetPosition::Request&, urs_wearable::SetPosition::Response&);
   bool stopService(std_srvs::Empty::Request&, std_srvs::Empty::Response&);
+
+/* Uncomment to test PID values
+  double p_ = 0.5;
+  double i_ = 0.00005;
+  double d_ = 0.05;
+  double pq_ = 1.0;
+  double dq_ = 0.1;
+  std::mutex p_mutex_;
+  std::mutex i_mutex_;
+  std::mutex d_mutex_;
+  std::mutex pq_mutex_;
+  std::mutex dq_mutex_;
+  ros::ServiceServer set_p_service_;
+  ros::ServiceServer set_i_service_;
+  ros::ServiceServer set_d_service_;
+  ros::ServiceServer set_pq_service_;
+  ros::ServiceServer set_dq_service_;
+  bool setP(urs_wearable::SetDouble::Request&, urs_wearable::SetDouble::Response&);
+  bool setI(urs_wearable::SetDouble::Request&, urs_wearable::SetDouble::Response&);
+  bool setD(urs_wearable::SetDouble::Request&, urs_wearable::SetDouble::Response&);
+  bool setPQ(urs_wearable::SetDouble::Request&, urs_wearable::SetDouble::Response&);
+  bool setDQ(urs_wearable::SetDouble::Request&, urs_wearable::SetDouble::Response&);
+*/
 
 public:
   Controller();

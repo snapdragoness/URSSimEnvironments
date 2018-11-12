@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 
 <launch>
-  <arg name="n_uav" default="4" />
+  <arg name="uav_total" default="4" />
   <arg name="uav_ns" default="/uav" />
 
-  <param name="n_uav" value="$(arg n_uav)" type="int" />
+  <param name="uav_total" value="$(arg uav_total)" type="int" />
   <param name="uav_ns" value="$(arg uav_ns)" type="str" />
 
   <param name="planner_command" value="timeout 10 $(find urs_wearable)/../FF-v2.3/ff" type="str" />
