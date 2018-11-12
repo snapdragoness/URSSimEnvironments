@@ -89,6 +89,30 @@ bool Controller::setDQ(urs_wearable::SetDouble::Request& req, urs_wearable::SetD
 
 void Controller::pidControl(const geometry_msgs::PoseStampedConstPtr& pose_stamped)
 {
+/* Uncomment to test PID values
+  double P, I, D, PQ, DQ;
+  {
+    std::lock_guard<std::mutex> lock(p_mutex_);
+    P = p_;
+  }
+  {
+    std::lock_guard<std::mutex> lock(i_mutex_);
+    I = i_;
+  }
+  {
+    std::lock_guard<std::mutex> lock(d_mutex_);
+    D = d_;
+  }
+  {
+    std::lock_guard<std::mutex> lock(pq_mutex_);
+    PQ = pq_;
+  }
+  {
+    std::lock_guard<std::mutex> lock(dq_mutex_);
+    DQ = dq_;
+  }
+*/
+
   geometry_msgs::Point position_error;
 //  geometry_msgs::Quaternion q_error;
   double yaw = quaternionToYaw(pose_stamped->pose.orientation);
