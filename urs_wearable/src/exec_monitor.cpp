@@ -118,90 +118,6 @@ void executor(urs_wearable::SetGoal::Request req)
 
       switch (actions_it->type)
       {
-        case urs_wearable::Action::TYPE_ACTIVE_REGION_UPDATE:
-        {
-          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionActiveRegionUpdate::NAME.c_str());
-          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
-          feedback.current_action = *actions_it;
-          feedback_pub.publish(feedback);
-
-          // Check the validity of location_id_sw_new and location_id_ne_new
-          geometry_msgs::Pose pose_sw_new;
-          geometry_msgs::Pose pose_ne_new;
-          LocationTable::location_id_type location_id_sw_new = actions_it->action_active_region_update.location_id_sw_new.value;
-          LocationTable::location_id_type location_id_ne_new = actions_it->action_active_region_update.location_id_ne_new.value;
-
-          if (!g_kb.location_table_.map_.find(location_id_sw_new, pose_sw_new))
-          {
-            ROS_WARN("Executor %u: ABORTED", executor_id);
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Cannot find location id " + std::to_string(location_id_sw_new) + " in the location table";
-            feedback_pub.publish(feedback);
-
-            g_kb.unregisterExecutor(executor_id);
-            return;
-          }
-
-          if (!g_kb.location_table_.map_.find(location_id_ne_new, pose_ne_new))
-          {
-            ROS_WARN("Executor %u: ABORTED", executor_id);
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "Cannot find location id " + std::to_string(location_id_ne_new) + " in the location table";
-            feedback_pub.publish(feedback);
-
-            g_kb.unregisterExecutor(executor_id);
-            return;
-          }
-
-          if (pose_sw_new.position.x > pose_ne_new.position.x
-              || pose_sw_new.position.y > pose_ne_new.position.y
-              || pose_sw_new.position.z > pose_ne_new.position.z)
-          {
-            ROS_WARN("Executor %u: ABORTED", executor_id);
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback.message = "The new position of location_id_sw is not in the south-west of the new position of location_id_ne";
-            feedback_pub.publish(feedback);
-
-            g_kb.unregisterExecutor(executor_id);
-            return;
-          }
-
-          // Add the effects of the action to the list
-          urs_wearable::Predicate effect;
-          effect.type = urs_wearable::Predicate::TYPE_ACTIVE_REGION;
-          effect.predicate_active_region.location_id_sw.value = actions_it->action_active_region_update.location_id_sw_old.value;
-          effect.predicate_active_region.location_id_ne.value = actions_it->action_active_region_update.location_id_ne_old.value;
-          effect.predicate_active_region.truth_value = false;
-          effects.push_back(effect);
-
-          effect.predicate_active_region.location_id_sw.value = location_id_sw_new;
-          effect.predicate_active_region.location_id_ne.value = location_id_ne_new;
-          effect.predicate_active_region.truth_value = true;
-          effects.push_back(effect);
-        }
-        break;
-
-//        case urs_wearable::Action::TYPE_ADD_LOCATION:
-//        {
-//          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionAddLocation::NAME.c_str());
-//          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
-//          feedback.current_action = *actions_it;
-//          feedback_pub.publish(feedback);
-//
-//          // Add the effects of the action to the list
-//          urs_wearable::Predicate effect;
-//          effect.type = urs_wearable::Predicate::TYPE_IS_LOCATION;
-//          effect.predicate_is_location.location_id.value = actions_it->action_add_location.location_id.value;
-//          effect.predicate_is_location.truth_value = true;
-//          effects.push_back(effect);
-//
-//          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
-//          effect.predicate_is_occupied.location_id.value = actions_it->action_add_location.location_id.value;
-//          effect.predicate_is_occupied.truth_value = false;
-//          effects.push_back(effect);
-//        }
-//        break;
-
         case urs_wearable::Action::TYPE_FLY_ABOVE:
         {
           ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionFlyAbove::NAME.c_str());
@@ -251,16 +167,6 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_drone_above.location_id.value = location_id_to;
           effect.predicate_drone_above.truth_value = true;
           effects.push_back(effect);
-
-//          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
-//          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_above.location_id_from.value;
-//          effect.predicate_is_occupied.truth_value = false;
-//          effects.push_back(effect);
-//
-//          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
-//          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_above.location_id_to.value;
-//          effect.predicate_is_occupied.truth_value = true;
-//          effects.push_back(effect);
         }
         break;
 
@@ -308,101 +214,6 @@ void executor(urs_wearable::SetGoal::Request req)
           effect.predicate_drone_at.drone_id.value = drone_id;
           effect.predicate_drone_at.location_id.value = location_id_to;
           effect.predicate_drone_at.truth_value = true;
-          effects.push_back(effect);
-
-//          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
-//          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_to.location_id_from.value;
-//          effect.predicate_is_occupied.truth_value = false;
-//          effects.push_back(effect);
-//
-//          effect.type = urs_wearable::Predicate::TYPE_IS_OCCUPIED;
-//          effect.predicate_is_occupied.location_id.value = actions_it->action_fly_to.location_id_to.value;
-//          effect.predicate_is_occupied.truth_value = true;
-//          effects.push_back(effect);
-        }
-        break;
-
-        case urs_wearable::Action::TYPE_KEY_ADD:
-        {
-          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionKeyAdd::NAME.c_str());
-          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
-          feedback.current_action = *actions_it;
-          feedback_pub.publish(feedback);
-
-          // Add the effects of the action to the list
-          urs_wearable::Predicate effect;
-//          effect.type = urs_wearable::Predicate::TYPE_KEY_AT;
-//          effect.predicate_key_at.key_id.value = actions_it->action_key_add.key_id.value;
-//          effect.predicate_key_at.location_id.value = actions_it->action_key_add.location_id.value;
-//          effect.predicate_key_at.truth_value = true;
-//          effects.push_back(effect);
-
-          effect.type = urs_wearable::Predicate::TYPE_KEY_PICKED;
-          effect.predicate_key_picked.key_id.value = actions_it->action_key_add.key_id.value;
-          effect.predicate_key_picked.truth_value = false;
-          effects.push_back(effect);
-        }
-        break;
-
-        case urs_wearable::Action::TYPE_KEY_PICK:
-        {
-          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionKeyPick::NAME.c_str());
-          feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
-          feedback.current_action = *actions_it;
-          feedback_pub.publish(feedback);
-
-          // Get the pose to fly to
-          geometry_msgs::Pose pose_to;
-          LocationTable::location_id_type key_location_id = actions_it->action_key_pick.key_location_id.value;
-
-          if (!isWithinActiveRegion(pose_to, key_location_id, feedback.message))
-          {
-            ROS_WARN("Executor %u: ABORTED", executor_id);
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback_pub.publish(feedback);
-
-            g_kb.unregisterExecutor(executor_id);
-            return;
-          }
-
-          // Add the height to fly above
-          double fly_above_height = 1.0;
-          pose_to.position.z += fly_above_height;
-
-          require_drone_action = true;
-          drone_id = actions_it->action_key_pick.drone_id.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_POSE;
-          goal.pose = pose_to;
-
-          // Add the effects of the action to the list
-          urs_wearable::Predicate effect;
-          effect.type = urs_wearable::Predicate::TYPE_DRONE_ABOVE;
-          effect.predicate_drone_above.drone_id.value = drone_id;
-          effect.predicate_drone_above.location_id.value = actions_it->action_key_pick.drone_location_id.value;
-          effect.predicate_drone_above.truth_value = false;
-          effects.push_back(effect);
-
-          effect.type = urs_wearable::Predicate::TYPE_DRONE_AT;
-          effect.predicate_drone_at.drone_id.value = drone_id;
-          effect.predicate_drone_at.location_id.value = actions_it->action_key_pick.drone_location_id.value;
-          effect.predicate_drone_at.truth_value = false;
-          effects.push_back(effect);
-
-          effect.type = urs_wearable::Predicate::TYPE_DRONE_ABOVE;
-          effect.predicate_drone_above.drone_id.value = drone_id;
-          effect.predicate_drone_above.location_id.value = key_location_id;
-          effect.predicate_drone_above.truth_value = true;
-          effects.push_back(effect);
-
-          effect.type = urs_wearable::Predicate::TYPE_KEY_PICKED;
-          effect.predicate_key_picked.key_id.value = actions_it->action_key_pick.key_id.value;
-          effect.predicate_key_picked.truth_value = true;
-          effects.push_back(effect);
-
-          effect.type = urs_wearable::Predicate::TYPE_KEY_WITH;
-          effect.predicate_key_with.key_id.value = actions_it->action_key_pick.key_id.value;
-          effect.predicate_key_with.drone_id.value = drone_id;
-          effect.predicate_key_with.truth_value = true;
           effects.push_back(effect);
         }
         break;

@@ -1,6 +1,0 @@
-string NAME=active_region_update
-
-ObjectLocationID location_id_sw_old
-ObjectLocationID location_id_ne_old
-ObjectLocationID location_id_sw_new
-ObjectLocationID location_id_ne_new

@@ -1,6 +1,0 @@
-string NAME=key_pick
-
-ObjectDroneID drone_id
-ObjectLocationID drone_location_id
-ObjectKeyID key_id
-ObjectLocationID key_location_id

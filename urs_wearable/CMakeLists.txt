@@ -56,28 +56,18 @@ add_subdirectory("../libcuckoo" libcuckoo)
 ## Generate messages in the 'msg' folder
 add_message_files(FILES
   Action.msg
-  ActionActiveRegionUpdate.msg
-  ActionAddLocation.msg
   ActionFlyAbove.msg
   ActionFlyTo.msg
-  ActionKeyAdd.msg
-  ActionKeyPick.msg
   ActionLand.msg
   ActionTakeOff.msg
   Feedback.msg
   Location.msg
   ObjectDroneID.msg
-  ObjectKeyID.msg
   ObjectLocationID.msg
   Predicate.msg
   PredicateActiveRegion.msg
   PredicateDroneAbove.msg
   PredicateDroneAt.msg
-  PredicateIsLocation.msg
-  PredicateIsOccupied.msg
-  PredicateKeyAt.msg
-  PredicateKeyPicked.msg
-  PredicateKeyWith.msg
   PredicateTookOff.msg
   State.msg
 )
@@ -173,8 +163,7 @@ add_dependencies(knowledge_base ${PROJECT_NAME}_generate_messages_cpp ${catkin_E
 add_executable(controller src/controller.cpp)
 add_executable(drone_action src/drone_action.cpp)
 add_executable(exec_monitor src/exec_monitor.cpp)
-add_executable(fake_wearable_1 src/fake_wearable_1.cpp)
-add_executable(fake_wearable_2 src/fake_wearable_2.cpp)
+add_executable(fake_wearable src/fake_wearable.cpp)
 add_executable(keyboard_teleop src/keyboard_teleop.cpp)
 add_executable(try_hector src/try_hector.cpp)
 
@@ -190,15 +179,13 @@ add_executable(try_hector src/try_hector.cpp)
 add_dependencies(controller ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(drone_action ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_dependencies(exec_monitor ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
-add_dependencies(fake_wearable_1 ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
-add_dependencies(fake_wearable_2 ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
+add_dependencies(fake_wearable ${PROJECT_NAME}_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(controller ${catkin_LIBRARIES})
 target_link_libraries(drone_action ${catkin_LIBRARIES})
 target_link_libraries(exec_monitor knowledge_base ${catkin_LIBRARIES})
-target_link_libraries(fake_wearable_1 ${catkin_LIBRARIES})
-target_link_libraries(fake_wearable_2 ${catkin_LIBRARIES})
+target_link_libraries(fake_wearable ${catkin_LIBRARIES})
 target_link_libraries(keyboard_teleop ${catkin_LIBRARIES})
 target_link_libraries(try_hector ${catkin_LIBRARIES})
 

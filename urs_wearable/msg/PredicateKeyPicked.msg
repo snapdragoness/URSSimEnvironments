@@ -1,6 +1,0 @@
-string NAME=key_picked
-bool ERASE_WHEN_FALSE=0
-
-ObjectKeyID key_id
-
-bool truth_value
