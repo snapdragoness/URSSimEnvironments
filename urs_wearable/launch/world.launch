@@ -2,13 +2,18 @@
 
 <launch>
   <arg name="world" default="$(find urs_wearable)/worlds/empty.world" />
+  <arg name="reference_latitude" default="49.860246" />
+  <arg name="reference_longitude" default="8.687077" />
 
   <include file="$(find hector_gazebo_worlds)/launch/start.launch">
     <arg name="world" value="$(arg world)" />
     <arg name="gui" value="true" />
   </include>
 
-  <include file="$(find urs_wearable)/launch/spawn_quadrotors.launch" />
+  <include file="$(find urs_wearable)/launch/spawn_quadrotors.launch">
+    <arg name="reference_latitude" value="$(arg reference_latitude)" />
+    <arg name="reference_longitude" value="$(arg reference_longitude)" />
+  </include>
 
   <include file="$(find urs_wearable)/launch/exec_monitor.launch" />
 
