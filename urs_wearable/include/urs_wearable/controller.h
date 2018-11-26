@@ -31,7 +31,7 @@ class Controller {
 
   geometry_msgs::Point position_prev_error_;
   geometry_msgs::Point position_integral_;
-  double yaw_prev_error_;
+  double yaw_prev_error_ = 0.0;
 
   geometry_msgs::Pose dest_;
   std::mutex dest_mutex_;

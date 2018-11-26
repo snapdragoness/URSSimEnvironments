@@ -77,7 +77,6 @@ add_service_files(FILES
   AddLocation.srv
   Gather.srv
   GetDest.srv
-  GetPlan.srv
   GetState.srv
   RemoveLocation.srv
   Scan.srv

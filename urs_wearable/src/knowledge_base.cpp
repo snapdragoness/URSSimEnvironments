@@ -9,7 +9,6 @@
 #include <boost/tokenizer.hpp>
 
 #include "urs_wearable/knowledge_base.h"
-#include "urs_wearable/GetPlan.h"
 
 void KnowledgeBase::publish()
 {
@@ -860,3 +859,16 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
 
   return actions;
 }
+
+//int main(int argc, char** argv)
+//{
+//  ros::init(argc, argv, "knowledge_base");
+//  ros::NodeHandle nh;
+//
+//  const std::string PLANNER_SERVICE_NAME = "/cpa/get_plan";
+//  KnowledgeBase kb("urs_problem", "urs", PLANNER_SERVICE_NAME);
+//
+//  ros::spin();
+//
+//  return EXIT_SUCCESS;
+//}

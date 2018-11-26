@@ -23,10 +23,8 @@
 typedef std::uint8_t drone_id_type;
 
 const std::string PLANNER_SERVICE_NAME = "/cpa/get_plan";
-
 KnowledgeBase g_kb("urs_problem", "urs", PLANNER_SERVICE_NAME);
 
-int g_uav_total;
 std::string g_uav_ns;
 
 bool isWithinActiveRegion(geometry_msgs::Pose& pose, const LocationTable::location_id_type location_id, std::string& feedback_message)
@@ -522,7 +520,8 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "exec_monitor");
   ros::NodeHandle nh;
 
-  retrieve("uav_total", g_uav_total);
+  int uav_total;
+  retrieve("uav_total", uav_total);
   retrieve("uav_ns", g_uav_ns);
 
   // Set KB state publisher
@@ -554,7 +553,7 @@ int main(int argc, char **argv)
   pred_took_off.type = urs_wearable::Predicate::TYPE_TOOK_OFF;
   pred_took_off.predicate_took_off.truth_value = false;
 
-  for (unsigned int i = 0; i < g_uav_total; i++)
+  for (int i = 0; i < uav_total; i++)
   {
     geometry_msgs::PoseStamped::ConstPtr pose_stamped =
         ros::topic::waitForMessage<geometry_msgs::PoseStamped>(g_uav_ns + std::to_string(i) + "/ground_truth_to_tf/pose");
