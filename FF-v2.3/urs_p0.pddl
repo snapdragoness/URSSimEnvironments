@@ -1,6 +1,0 @@
-(define (problem urs_problem)
-  (:domain urs)
-  (:objects drone_id0 drone_id1 drone_id2 drone_id3 - drone_id key_id_dummy - key_id loc_id0 loc_id1 loc_id2 loc_id3 loc_id4 loc_id5 loc_id6 loc_id7 loc_id8 - loc_id)
-  (:init (active_region loc_id0 loc_id1) (drone_at drone_id0 loc_id2) (drone_at drone_id1 loc_id3) (drone_at drone_id2 loc_id4) (drone_at drone_id3 loc_id5) (not (took_off drone_id0)) (not (took_off drone_id1)) (not (took_off drone_id2)) (not (took_off drone_id3)) (not (active_region loc_id6 loc_id7)) (not (drone_at drone_id0 loc_id8)))
-  (:goal (and (active_region loc_id6 loc_id7) (took_off drone_id0) (took_off drone_id1) (drone_at drone_id0 loc_id8)))
-)
