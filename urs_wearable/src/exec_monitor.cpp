@@ -1,3 +1,4 @@
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -82,7 +83,7 @@ void executor(urs_wearable::SetGoal::Request req)
 {
   if (req.feedback_topic_name.empty())
   {
-    req.feedback_topic_name = "/urs_wearable/feedback_dump";
+    req.feedback_topic_name = "/urs_wearable/feedback";
   }
 
   KnowledgeBase::executor_id_type executor_id = g_kb.registerExecutor();
@@ -92,7 +93,7 @@ void executor(urs_wearable::SetGoal::Request req)
   ros::Rate rate(10);
   urs_wearable::Feedback feedback;
 
-  ROS_INFO("Executor %u: PENDING", executor_id);
+  ros_warn("p" + std::to_string(executor_id) + ": PENDING");
   feedback.executor_id = executor_id;
   feedback.status = urs_wearable::Feedback::STATUS_PENDING;
   feedback_pub.publish(feedback);
@@ -121,7 +122,6 @@ void executor(urs_wearable::SetGoal::Request req)
       {
         case urs_wearable::Action::TYPE_FLY_ABOVE:
         {
-          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionFlyAbove::NAME.c_str());
           feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
           feedback.current_action = *actions_it;
           feedback_pub.publish(feedback);
@@ -129,24 +129,26 @@ void executor(urs_wearable::SetGoal::Request req)
           rate.sleep();
 
           // Get the pose to fly to
-          geometry_msgs::Pose pose_to;
           LocationTable::location_id_type location_id_to = actions_it->action_fly_above.location_id_to.value;
+          geometry_msgs::Pose pose_to;
+          g_kb.location_table_.map_.find(location_id_to, pose_to);
+          pose_to.position.z += 1.0;   // Add the height to fly over
 
-          if (!isWithinActiveRegion(pose_to, location_id_to, feedback.message))
-          {
-            ROS_WARN("Executor %u: ABORTED", executor_id);
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-            rate.sleep();
+          ros_warn("p" + std::to_string(executor_id) + ": ACTIVE "
+                   + actions_it->action_fly_above.NAME + "(" + std::to_string(actions_it->action_fly_above.drone_id.value) + ",("
+                   + std::to_string(pose_to.position.x) + "," + std::to_string(pose_to.position.y) + "," + std::to_string(pose_to.position.z) + "))");
 
-            g_kb.unregisterExecutor(executor_id);
-            return;
-          }
-
-          // Add the height to fly above
-          double fly_above_height = 1.0;
-          pose_to.position.z += fly_above_height;
+//          if (!isWithinActiveRegion(pose_to, location_id_to, feedback.message))
+//          {
+//            ROS_WARN("Executor %u: ABORTED", executor_id);
+//            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
+//            feedback_pub.publish(feedback);
+//            ros::spinOnce();
+//            rate.sleep();
+//
+//            g_kb.unregisterExecutor(executor_id);
+//            return;
+//          }
 
           require_drone_action = true;
           drone_id = actions_it->action_fly_above.drone_id.value;
@@ -185,20 +187,25 @@ void executor(urs_wearable::SetGoal::Request req)
           rate.sleep();
 
           // Get the pose to fly to
-          geometry_msgs::Pose pose_to;
           LocationTable::location_id_type location_id_to = actions_it->action_fly_to.location_id_to.value;
+          geometry_msgs::Pose pose_to;
+          g_kb.location_table_.map_.find(location_id_to, pose_to);
 
-          if (!isWithinActiveRegion(pose_to, location_id_to, feedback.message))
-          {
-            ROS_WARN("Executor %u: ABORTED", executor_id);
-            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
-            feedback_pub.publish(feedback);
-            ros::spinOnce();
-            rate.sleep();
+          ros_warn("p" + std::to_string(executor_id) + ": ACTIVE "
+                   + actions_it->action_fly_to.NAME + "(" + std::to_string(actions_it->action_fly_to.drone_id.value) + ",("
+                   + std::to_string(pose_to.position.x) + "," + std::to_string(pose_to.position.y) + "," + std::to_string(pose_to.position.z) + "))");
 
-            g_kb.unregisterExecutor(executor_id);
-            return;
-          }
+//          if (!isWithinActiveRegion(pose_to, location_id_to, feedback.message))
+//          {
+//            ROS_WARN("Executor %u: ABORTED", executor_id);
+//            feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
+//            feedback_pub.publish(feedback);
+//            ros::spinOnce();
+//            rate.sleep();
+//
+//            g_kb.unregisterExecutor(executor_id);
+//            return;
+//          }
 
           require_drone_action = true;
           drone_id = actions_it->action_fly_to.drone_id.value;
@@ -229,12 +236,14 @@ void executor(urs_wearable::SetGoal::Request req)
 
         case urs_wearable::Action::TYPE_LAND:
         {
-          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionLand::NAME.c_str());
           feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
           feedback.current_action = *actions_it;
           feedback_pub.publish(feedback);
           ros::spinOnce();
           rate.sleep();
+
+          ros_warn("p" + std::to_string(executor_id) + ": ACTIVE "
+                   + actions_it->action_land.NAME + "(" + std::to_string(actions_it->action_land.drone_id.value) + ")");
 
           require_drone_action = true;
           drone_id = actions_it->action_land.drone_id.value;
@@ -251,12 +260,14 @@ void executor(urs_wearable::SetGoal::Request req)
 
         case urs_wearable::Action::TYPE_TAKE_OFF:
         {
-          ROS_INFO("Executor %u: ACTIVE - action %s", executor_id, urs_wearable::ActionTakeOff::NAME.c_str());
           feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
           feedback.current_action = *actions_it;
           feedback_pub.publish(feedback);
           ros::spinOnce();
           rate.sleep();
+
+          ros_warn("p" + std::to_string(executor_id) + ": ACTIVE "
+                   + actions_it->action_take_off.NAME + "(" + std::to_string(actions_it->action_take_off.drone_id.value) + ")");
 
           require_drone_action = true;
           drone_id = actions_it->action_take_off.drone_id.value;
@@ -273,7 +284,7 @@ void executor(urs_wearable::SetGoal::Request req)
 
         default:
         {
-          ROS_ERROR("Executor %u: Unrecognized action", executor_id);
+          ros_error("p" + std::to_string(executor_id) + ": unrecognized action");
           g_kb.unregisterExecutor(executor_id);
           return;
         }
@@ -304,32 +315,35 @@ void executor(urs_wearable::SetGoal::Request req)
 
         if (has_new_plan)
         {
-          ROS_INFO("Executor %u: REPLANNED", executor_id);
           feedback.status = urs_wearable::Feedback::STATUS_REPLANNED;
           feedback_pub.publish(feedback);
           ros::spinOnce();
           rate.sleep();
 
+          ros_warn("p" + std::to_string(executor_id) + ": REPLANNED");
+
           ac.cancelGoal();
-          ROS_INFO("Executor %u: Drone action finished with state: %s", executor_id, ac.getState().toString().c_str());
+          ros_warn("p" + std::to_string(executor_id) + ": drone action finished with state " + ac.getState().toString());
 
           if (new_plan.empty())
           {
             if (g_kb.excludeAlreadySatisfiedGoals(req.goal).empty())
             {
-              ROS_WARN("Executor %u: SUCCEEDED", executor_id);
               feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
               feedback_pub.publish(feedback);
               ros::spinOnce();
               rate.sleep();
+
+              ros_warn("p" + std::to_string(executor_id) + ": SUCCEEDED");
             }
             else
             {
-              ROS_WARN("Executor %u: PREEMPTED", executor_id);
               feedback.status = urs_wearable::Feedback::STATUS_PREEMPTED;
               feedback_pub.publish(feedback);
               ros::spinOnce();
               rate.sleep();
+
+              ros_warn("p" + std::to_string(executor_id) + ": PREEMPTED");
             }
 
             g_kb.unregisterExecutor(executor_id);
@@ -344,14 +358,16 @@ void executor(urs_wearable::SetGoal::Request req)
           continue;
         }
 
-        ROS_INFO("Executor %u: Drone action finished with state: %s", executor_id, ac.getState().toString().c_str());
+        ros_warn("p" + std::to_string(executor_id) + ": drone action finished with state " + ac.getState().toString());
+
         if (ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
         {
-          ROS_WARN("Executor %u: PREEMPTED", executor_id);
           feedback.status = urs_wearable::Feedback::STATUS_PREEMPTED;
           feedback_pub.publish(feedback);
           ros::spinOnce();
           rate.sleep();
+
+          ros_warn("p" + std::to_string(executor_id) + ": PREEMPTED");
 
           g_kb.unregisterExecutor(executor_id);
           return;
@@ -365,29 +381,32 @@ void executor(urs_wearable::SetGoal::Request req)
         if (g_kb.getPlanIfPlanHasChanged(executor_id, new_plan)
             && (new_plan.empty() || !std::equal(plan_it, plan.end(), new_plan.begin())))
         {
-          ROS_INFO("Executor %u: REPLANNED", executor_id);
           feedback.status = urs_wearable::Feedback::STATUS_REPLANNED;
           feedback_pub.publish(feedback);
           ros::spinOnce();
           rate.sleep();
 
+          ros_warn("p" + std::to_string(executor_id) + ": REPLANNED");
+
           if (new_plan.empty())
           {
             if (g_kb.excludeAlreadySatisfiedGoals(req.goal).empty())
             {
-              ROS_WARN("Executor %u: SUCCEEDED", executor_id);
               feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
               feedback_pub.publish(feedback);
               ros::spinOnce();
               rate.sleep();
+
+              ros_warn("p" + std::to_string(executor_id) + ": SUCCEEDED");
             }
             else
             {
-              ROS_WARN("Executor %u: PREEMPTED", executor_id);
               feedback.status = urs_wearable::Feedback::STATUS_PREEMPTED;
               feedback_pub.publish(feedback);
               ros::spinOnce();
               rate.sleep();
+
+              ros_warn("p" + std::to_string(executor_id) + ": PREEMPTED");
             }
             g_kb.unregisterExecutor(executor_id);
             return;
@@ -412,27 +431,30 @@ void executor(urs_wearable::SetGoal::Request req)
       ++actions_it;
     }
 
-    ROS_WARN("Executor %u: SUCCEEDED", executor_id);
     feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
     feedback_pub.publish(feedback);
     ros::spinOnce();
     rate.sleep();
+
+    ros_warn("p" + std::to_string(executor_id) + ": SUCCEEDED");
   }
   else if (g_kb.excludeAlreadySatisfiedGoals(req.goal).empty())
   {
-    ROS_WARN("Executor %u: SUCCEEDED", executor_id);
     feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
     feedback_pub.publish(feedback);
     ros::spinOnce();
     rate.sleep();
+
+    ros_warn("p" + std::to_string(executor_id) + ": SUCCEEDED");
   }
   else
   {
-    ROS_WARN("Executor %u: REJECTED", executor_id);
     feedback.status = urs_wearable::Feedback::STATUS_REJECTED;
     feedback_pub.publish(feedback);
     ros::spinOnce();
     rate.sleep();
+
+    ros_warn("p" + std::to_string(executor_id) + ": REJECTED");
   }
 
   g_kb.unregisterExecutor(executor_id);
@@ -565,20 +587,6 @@ int main(int argc, char **argv)
 
   // Set initial state
   std::vector<urs_wearable::Predicate> initial_state;
-  urs_wearable::Predicate pred_active_region;
-  pred_active_region.type = urs_wearable::Predicate::TYPE_ACTIVE_REGION;
-  geometry_msgs::Pose pose_sw;
-  pose_sw.position.x = -10.0;
-  pose_sw.position.y = -10.0;
-  pose_sw.position.z = 0.0;
-  geometry_msgs::Pose pose_ne;
-  pose_ne.position.x = 10.0;
-  pose_ne.position.y = 10.0;
-  pose_ne.position.z = 10.0;
-  pred_active_region.predicate_active_region.location_id_sw.value = g_kb.location_table_.insert(pose_sw);
-  pred_active_region.predicate_active_region.location_id_ne.value = g_kb.location_table_.insert(pose_ne);
-  pred_active_region.predicate_active_region.truth_value = true;
-  initial_state.push_back(pred_active_region);
 
   urs_wearable::Predicate pred_drone_at;
   pred_drone_at.type = urs_wearable::Predicate::TYPE_DRONE_AT;

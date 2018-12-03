@@ -15,6 +15,7 @@ Controller::Controller()
   ros::NodeHandle nh;
   cmd_pub_ = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
 
+  orientator_sub = nh.subscribe("ground_truth_to_tf/pose", 1, &Controller::orientator, this);
   pose_sub_ = nh.subscribe("ground_truth_to_tf/pose", 1, &Controller::pidControl, this);
   depth_image_sub_ = nh.subscribe("camera/depth/image_raw", 1, &Controller::readDepthImage, this);
   sonar_height_sub_ = nh.subscribe<sensor_msgs::Range>("sonar_height", 1, &Controller::readSonarHeight, this);
@@ -86,6 +87,18 @@ bool Controller::setDQ(urs_wearable::SetDouble::Request& req, urs_wearable::SetD
   return true;
 }
 */
+void Controller::orientator(const geometry_msgs::PoseStampedConstPtr& pose_stamped)
+{
+  geometry_msgs::Pose dest = getDest();
+  double vx = dest.position.x - pose_stamped->pose.position.x;
+  double vy = dest.position.y - pose_stamped->pose.position.y;
+  double yaw_to_dest = std::atan2(vy, vx);
+
+  if (std::sqrt(vx * vx + vy * vy) > MAX_POSITION_ERROR)
+  {
+    setOrientation(yaw_to_dest);
+  }
+}
 
 void Controller::pidControl(const geometry_msgs::PoseStampedConstPtr& pose_stamped)
 {
@@ -113,22 +126,27 @@ void Controller::pidControl(const geometry_msgs::PoseStampedConstPtr& pose_stamp
   }
 */
 
-  geometry_msgs::Point position_error;
+  {
+    std::lock_guard<std::mutex> lock(pose_mutex_);
+    pose_ = pose_stamped->pose;
+  }
+
 //  geometry_msgs::Quaternion q_error;
-  double yaw = quaternionToYaw(pose_stamped->pose.orientation);
+  geometry_msgs::Point position_error;
+  double yaw = quaternionToYaw(pose_.orientation);
   double yaw_error;
 
   {
     std::lock_guard<std::mutex> lock(dest_mutex_);
 
-    if (pointDistance3D(pose_stamped->pose.position, dest_.position) < MAX_POSITION_ERROR)
+    if (pointDistance3D(pose_.position, dest_.position) < MAX_POSITION_ERROR)
     {
       is_moving_ = false;
     }
 
-    position_error.x = dest_.position.x - pose_stamped->pose.position.x;
-    position_error.y = dest_.position.y - pose_stamped->pose.position.y;
-    position_error.z = dest_.position.z - pose_stamped->pose.position.z;
+    position_error.x = dest_.position.x - pose_.position.x;
+    position_error.y = dest_.position.y - pose_.position.y;
+    position_error.z = dest_.position.z - pose_.position.z;
 
 //    q_error.w = + dest_.orientation.w * pose_stamped->pose.orientation.w
 //                    + dest_.orientation.x * pose_stamped->pose.orientation.x
@@ -206,9 +224,9 @@ void Controller::readDepthImage(const sensor_msgs::Image::ConstPtr& msg)
   if (is_moving_ && msg->encoding.compare("32FC1") == 0)
   {
     const float* depth_image_array = reinterpret_cast<const float*>(&(msg->data[0]));
-    geometry_msgs::PoseStamped::ConstPtr pose_stamped = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("ground_truth_to_tf/pose");
+    geometry_msgs::Pose pose = getPose();
 
-    if (pose_stamped->pose.position.z > 1.0)
+    if (pose.position.z > 2.0)
     {
       for (int i = 225; i < 255; i++)
       {
@@ -223,9 +241,22 @@ void Controller::readDepthImage(const sensor_msgs::Image::ConstPtr& msg)
               !std::isnan(depth_image_array[index - 640]) &&
               !std::isnan(depth_image_array[index + 640]))
           {
-            if (pointDistance2D(pose_stamped->pose.position, getDest().position) > depth)
+            if (pointDistance2D(pose.position, getDest().position) > depth)
             {
-              avoidObstacle();
+              ros_warn("avoiding obstacle");
+
+              geometry_msgs::Pose dest_original = getDest();
+
+              stop();
+              ros::Duration(1.0).sleep();
+
+              geometry_msgs::Pose pose = getPose();
+              pose.position.z += 2.0;
+              setPositionBare(pose.position);
+              ros::Duration(1.0).sleep();
+
+              setPositionBare(dest_original.position);
+
               return;
             }
           }
@@ -235,28 +266,9 @@ void Controller::readDepthImage(const sensor_msgs::Image::ConstPtr& msg)
   }
 }
 
-void Controller::avoidObstacle()
-{
-  ros_warn("Avoiding obstacle");
-
-  const geometry_msgs::Pose curr_dest = getDest();
-
-  stop();
-  ros::Duration(1.0).sleep();
-
-  geometry_msgs::PoseStamped::ConstPtr pose_stamped = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("ground_truth_to_tf/pose");
-  geometry_msgs::Pose pose = pose_stamped->pose;
-  pose.position.z += 2.0;
-  setPosition(pose.position);
-  ros::Duration(1.0).sleep();
-
-  setPosition(curr_dest.position);
-}
-
 void Controller::stop()
 {
-  geometry_msgs::PoseStamped::ConstPtr pose_stamped = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("ground_truth_to_tf/pose");
-  setPositionBare(pose_stamped->pose.position);
+  setPositionBare(getPose().position);
 }
 
 void Controller::readSonarHeight(const sensor_msgs::RangeConstPtr& msg)
@@ -275,6 +287,12 @@ geometry_msgs::Pose Controller::getDest()
 {
   std::lock_guard<std::mutex> lock(dest_mutex_);
   return dest_;
+}
+
+geometry_msgs::Pose Controller::getPose()
+{
+  std::lock_guard<std::mutex> lock(pose_mutex_);
+  return pose_;
 }
 
 void Controller::setAltitude(double height)
@@ -296,19 +314,25 @@ void Controller::setOrientation(const double yaw)   // yaw in radian
 
 void Controller::setPosition(const geometry_msgs::Point position)
 {
-  geometry_msgs::PoseStamped::ConstPtr pose_stamped = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("ground_truth_to_tf/pose");
-  double vx = position.x - pose_stamped->pose.position.x;
-  double vy = position.y - pose_stamped->pose.position.y;
+  geometry_msgs::Pose pose = getPose();
+  double vx = position.x - pose.position.x;
+  double vy = position.y - pose.position.y;
   double yaw_to_dest = std::atan2(vy, vx);
 
-  double planar_dist_to_dest = std::sqrt(vx * vx + vy * vy);
-  if (planar_dist_to_dest > MAX_POSITION_ERROR)
+  if (std::sqrt(vx * vx + vy * vy) > MAX_POSITION_ERROR)
   {
     setOrientation(yaw_to_dest);
-    do
+
+    ros::Rate rate(10);
+    while (ros::ok())
     {
-      pose_stamped = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("ground_truth_to_tf/pose");
-    } while (yawDiff(quaternionToYaw(pose_stamped->pose.orientation), yaw_to_dest) > MAX_ORIENTATION_ERROR * M_PI / 180.0);
+      if (yawDiff(quaternionToYaw(getPose().orientation), yaw_to_dest) <= MAX_ORIENTATION_ERROR * M_PI / 180.0)
+      {
+        break;
+      }
+      ros::spinOnce();
+      rate.sleep();
+    }
   }
 
   setPositionBare(position);
@@ -343,8 +367,8 @@ bool Controller::setOrientationService(urs_wearable::SetOrientation::Request& re
 
 bool Controller::setPositionService(urs_wearable::SetPosition::Request& req, urs_wearable::SetPosition::Response& res)
 {
-  std::thread t(&Controller::setPosition, this, req.position);
-  t.detach();
+  std::thread set_position_thread(&Controller::setPosition, this, req.position);
+  set_position_thread.detach();
   return true;
 }
 
@@ -366,12 +390,9 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
 
   // Make sure internal controller of hector_quadrotor is running
-  if (!ros::service::waitForService("controller/attitude/yawrate/set_parameters", -1) ||
-      !ros::service::waitForService("controller/position/z/set_parameters", -1) ||
-      !ros::service::waitForService("controller/velocity/z/set_parameters", -1))
-  {
-    ros_error("The drone has not been spawned");
-  }
+  ros::service::waitForService("controller/attitude/yawrate/set_parameters", -1);
+  ros::service::waitForService("controller/position/z/set_parameters", -1);
+  ros::service::waitForService("controller/velocity/z/set_parameters", -1);
 
   Controller controller;
 

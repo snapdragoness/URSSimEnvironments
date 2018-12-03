@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 
     // Set altitude
     urs_wearable::SetAltitude set_altitude_srv;
-    set_altitude_srv.request.height = 4.0;
+    set_altitude_srv.request.height = 5.0;
     if (!ros::service::call(ns + std::to_string(i) + "/set_altitude", set_altitude_srv))
     {
       ros_error("Error in calling service " + ns + std::to_string(i) + "/set_altitude");

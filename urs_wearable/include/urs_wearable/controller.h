@@ -26,8 +26,8 @@ class Controller {
   const double PQ = 1.0;
   const double DQ = 0.1;
 
-  const double MAX_POSITION_ERROR = 0.2;      // maximum position error in meter (only non-negative values)
-  const double MAX_ORIENTATION_ERROR = 1.0;   // maximum orientation error in degree (only non-negative values)
+  const double MAX_POSITION_ERROR = 1.0;      // maximum position error in meter (only non-negative values)
+  const double MAX_ORIENTATION_ERROR = 2.0;   // maximum orientation error in degree (only non-negative values)
 
   geometry_msgs::Point position_prev_error_;
   geometry_msgs::Point position_integral_;
@@ -36,15 +36,19 @@ class Controller {
   geometry_msgs::Pose dest_;
   std::mutex dest_mutex_;
 
+  geometry_msgs::Pose pose_;
+  std::mutex pose_mutex_;
+
   ros::Publisher cmd_pub_;
 
+  ros::Subscriber orientator_sub;
+  void orientator(const geometry_msgs::PoseStampedConstPtr& msg);
   ros::Subscriber pose_sub_;
   void pidControl(const geometry_msgs::PoseStampedConstPtr& msg);
 
   ros::Subscriber depth_image_sub_;
   std::atomic<bool> is_moving_{false};
   void readDepthImage(const sensor_msgs::Image::ConstPtr&);
-  void avoidObstacle();
   void stop();
 
   ros::Subscriber sonar_height_sub_;
@@ -53,6 +57,7 @@ class Controller {
   void readSonarUpward(const sensor_msgs::RangeConstPtr&);
 
   geometry_msgs::Pose getDest();
+  geometry_msgs::Pose getPose();
   void setAltitude(const double);
   void setOrientation(const double);
   void setPosition(const geometry_msgs::Point);

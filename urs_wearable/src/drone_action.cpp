@@ -36,7 +36,7 @@ public:
     dist_tolerance_ = 0.5;
     frequency_ = 10.0;
     landing_height_ = 0.3;
-    takeoff_height_ = 2.0;
+    takeoff_height_ = 5.0;
 
     enable_motors_client_ = nh.serviceClient<hector_uav_msgs::EnableMotors>("enable_motors");
     pose_sub_ = nh.subscribe("ground_truth_to_tf/pose", 10, &DroneActionServer::poseCb, this);

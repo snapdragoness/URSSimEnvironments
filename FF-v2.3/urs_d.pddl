@@ -2,11 +2,6 @@
   (:requirements :strips :typing :equality :adl)
   (:types drone_id loc_id)
   (:predicates
-    (active_region ?sw - loc_id ?ne - loc_id)
-    (clue_drone ?l - loc_id)
-    (clue_human ?l - loc_id)
-    (danger_zone_drone ?sw - loc_id ?ne - loc_id)
-    (danger_zone_human ?sw - loc_id ?ne - loc_id)
     (drone_above ?d - drone_id ?l - loc_id)
     (drone_at ?d - drone_id ?l - loc_id)
     (took_off ?d - drone_id)
@@ -19,8 +14,6 @@
       (not (= ?from ?to))
       (not (exists (?x - drone_id) (drone_above ?x ?to)))
       (not (exists (?x - drone_id) (drone_at ?x ?to)))
-      (not (exists (?x - loc_id) (active_region ?x ?to)))
-      (not (exists (?x - loc_id) (active_region ?to ?x)))
     )
     :effect (and
       (not (drone_above ?d ?from))
@@ -36,8 +29,6 @@
       (not (= ?from ?to))
       (not (exists (?x - drone_id) (drone_above ?x ?to)))
       (not (exists (?x - drone_id) (drone_at ?x ?to)))
-      (not (exists (?x - loc_id) (active_region ?x ?to)))
-      (not (exists (?x - loc_id) (active_region ?to ?x)))
     )
     :effect (and
       (not (drone_above ?d ?from))
