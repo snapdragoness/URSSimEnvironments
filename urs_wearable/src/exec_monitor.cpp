@@ -89,12 +89,15 @@ void executor(urs_wearable::SetGoal::Request req)
 
   ros::NodeHandle nh;
   ros::Publisher feedback_pub = nh.advertise<urs_wearable::Feedback>(req.feedback_topic_name, 10, true);
+  ros::Rate rate(10);
   urs_wearable::Feedback feedback;
 
   ROS_INFO("Executor %u: PENDING", executor_id);
   feedback.executor_id = executor_id;
   feedback.status = urs_wearable::Feedback::STATUS_PENDING;
   feedback_pub.publish(feedback);
+  ros::spinOnce();
+  rate.sleep();
 
   std::vector<std::string> plan;
   g_kb.getPlan(executor_id, req.goal, plan);
@@ -122,6 +125,8 @@ void executor(urs_wearable::SetGoal::Request req)
           feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
           feedback.current_action = *actions_it;
           feedback_pub.publish(feedback);
+          ros::spinOnce();
+          rate.sleep();
 
           // Get the pose to fly to
           geometry_msgs::Pose pose_to;
@@ -132,6 +137,8 @@ void executor(urs_wearable::SetGoal::Request req)
             ROS_WARN("Executor %u: ABORTED", executor_id);
             feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
             feedback_pub.publish(feedback);
+            ros::spinOnce();
+            rate.sleep();
 
             g_kb.unregisterExecutor(executor_id);
             return;
@@ -174,6 +181,8 @@ void executor(urs_wearable::SetGoal::Request req)
           feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
           feedback.current_action = *actions_it;
           feedback_pub.publish(feedback);
+          ros::spinOnce();
+          rate.sleep();
 
           // Get the pose to fly to
           geometry_msgs::Pose pose_to;
@@ -184,6 +193,8 @@ void executor(urs_wearable::SetGoal::Request req)
             ROS_WARN("Executor %u: ABORTED", executor_id);
             feedback.status = urs_wearable::Feedback::STATUS_ABORTED;
             feedback_pub.publish(feedback);
+            ros::spinOnce();
+            rate.sleep();
 
             g_kb.unregisterExecutor(executor_id);
             return;
@@ -222,6 +233,8 @@ void executor(urs_wearable::SetGoal::Request req)
           feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
           feedback.current_action = *actions_it;
           feedback_pub.publish(feedback);
+          ros::spinOnce();
+          rate.sleep();
 
           require_drone_action = true;
           drone_id = actions_it->action_land.drone_id.value;
@@ -242,6 +255,8 @@ void executor(urs_wearable::SetGoal::Request req)
           feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
           feedback.current_action = *actions_it;
           feedback_pub.publish(feedback);
+          ros::spinOnce();
+          rate.sleep();
 
           require_drone_action = true;
           drone_id = actions_it->action_take_off.drone_id.value;
@@ -292,6 +307,8 @@ void executor(urs_wearable::SetGoal::Request req)
           ROS_INFO("Executor %u: REPLANNED", executor_id);
           feedback.status = urs_wearable::Feedback::STATUS_REPLANNED;
           feedback_pub.publish(feedback);
+          ros::spinOnce();
+          rate.sleep();
 
           ac.cancelGoal();
           ROS_INFO("Executor %u: Drone action finished with state: %s", executor_id, ac.getState().toString().c_str());
@@ -303,12 +320,16 @@ void executor(urs_wearable::SetGoal::Request req)
               ROS_WARN("Executor %u: SUCCEEDED", executor_id);
               feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
               feedback_pub.publish(feedback);
+              ros::spinOnce();
+              rate.sleep();
             }
             else
             {
               ROS_WARN("Executor %u: PREEMPTED", executor_id);
               feedback.status = urs_wearable::Feedback::STATUS_PREEMPTED;
               feedback_pub.publish(feedback);
+              ros::spinOnce();
+              rate.sleep();
             }
 
             g_kb.unregisterExecutor(executor_id);
@@ -329,6 +350,8 @@ void executor(urs_wearable::SetGoal::Request req)
           ROS_WARN("Executor %u: PREEMPTED", executor_id);
           feedback.status = urs_wearable::Feedback::STATUS_PREEMPTED;
           feedback_pub.publish(feedback);
+          ros::spinOnce();
+          rate.sleep();
 
           g_kb.unregisterExecutor(executor_id);
           return;
@@ -345,6 +368,8 @@ void executor(urs_wearable::SetGoal::Request req)
           ROS_INFO("Executor %u: REPLANNED", executor_id);
           feedback.status = urs_wearable::Feedback::STATUS_REPLANNED;
           feedback_pub.publish(feedback);
+          ros::spinOnce();
+          rate.sleep();
 
           if (new_plan.empty())
           {
@@ -353,12 +378,16 @@ void executor(urs_wearable::SetGoal::Request req)
               ROS_WARN("Executor %u: SUCCEEDED", executor_id);
               feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
               feedback_pub.publish(feedback);
+              ros::spinOnce();
+              rate.sleep();
             }
             else
             {
               ROS_WARN("Executor %u: PREEMPTED", executor_id);
               feedback.status = urs_wearable::Feedback::STATUS_PREEMPTED;
               feedback_pub.publish(feedback);
+              ros::spinOnce();
+              rate.sleep();
             }
             g_kb.unregisterExecutor(executor_id);
             return;
@@ -386,18 +415,24 @@ void executor(urs_wearable::SetGoal::Request req)
     ROS_WARN("Executor %u: SUCCEEDED", executor_id);
     feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
     feedback_pub.publish(feedback);
+    ros::spinOnce();
+    rate.sleep();
   }
   else if (g_kb.excludeAlreadySatisfiedGoals(req.goal).empty())
   {
     ROS_WARN("Executor %u: SUCCEEDED", executor_id);
     feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
     feedback_pub.publish(feedback);
+    ros::spinOnce();
+    rate.sleep();
   }
   else
   {
     ROS_WARN("Executor %u: REJECTED", executor_id);
     feedback.status = urs_wearable::Feedback::STATUS_REJECTED;
     feedback_pub.publish(feedback);
+    ros::spinOnce();
+    rate.sleep();
   }
 
   g_kb.unregisterExecutor(executor_id);

@@ -47,8 +47,10 @@ void KnowledgeBase::publish()
     location_table_lt.unlock();
 
     // Publish
+    ros::Rate rate(10);
     state_pub_->publish(state);
     ros::spinOnce();
+    rate.sleep();
   }
 }
 
