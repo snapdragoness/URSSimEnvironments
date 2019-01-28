@@ -39,11 +39,11 @@ private:
 public:
   using allocator_type = typename traits_::allocator_type;
   using partial_t = Partial;
-  using size_type = std::size_t;
+  using size_type = typename traits_::size_type;
   using reference = value_type &;
   using const_reference = const value_type &;
-  using pointer = value_type *;
-  using const_pointer = const value_type *;
+  using pointer = typename traits_::pointer;
+  using const_pointer = typename traits_::const_pointer;
 
   /*
    * The bucket type holds SLOT_PER_BUCKET key-value pairs, along with their
@@ -165,7 +165,8 @@ public:
   void swap(libcuckoo_bucket_container &bc) noexcept {
     swap_allocator(allocator_, bc.allocator_,
                    typename traits_::propagate_on_container_swap());
-    bucket_allocator_ = allocator_;
+    swap_allocator(bucket_allocator_, bc.bucket_allocator_,
+                   typename traits_::propagate_on_container_swap());
     // Regardless of whether we actually swapped the allocators or not, it will
     // always be okay to do the remainder of the swap. This is because if the
     // allocators were swapped, then the subsequent operations are okay. If the
@@ -216,7 +217,8 @@ public:
     traits_::destroy(allocator_, std::addressof(b.storage_kvpair(slot)));
   }
 
-  // Destroys all the live data in the buckets
+  // Destroys all the live data in the buckets. Does not deallocate the bucket
+  // memory.
   void clear() noexcept {
     static_assert(
         std::is_nothrow_destructible<key_type>::value &&
@@ -233,7 +235,17 @@ public:
     }
   }
 
+  // Destroys and deallocates all data in the buckets. After this operation,
+  // the bucket container will have no allocated data. It is still valid to
+  // swap, move or copy assign to this container.
+  void clear_and_deallocate() noexcept {
+    destroy_buckets();
+  }
+
 private:
+  using bucket_traits_ = typename traits_::template rebind_traits<bucket>;
+  using bucket_pointer = typename bucket_traits_::pointer;
+  
   // true here means the allocators from `src` are propagated on libcuckoo_copy
   template <typename A>
   void copy_allocator(A &dst, const A &src, std::true_type) {
@@ -301,7 +313,7 @@ private:
   }
 
   template <bool B>
-  bucket *transfer(
+  bucket_pointer transfer(
       size_type dst_hp,
       typename std::conditional<B, libcuckoo_bucket_container &,
                                 const libcuckoo_bucket_container &>::type src,
@@ -317,7 +329,7 @@ private:
       }
     }
     // Take away the pointer from `dst` and return it
-    bucket *dst_pointer = dst.buckets_;
+    bucket_pointer dst_pointer = dst.buckets_;
     dst.buckets_ = nullptr;
     return dst_pointer;
   }
@@ -334,7 +346,7 @@ private:
   std::atomic<size_type> hashpower_;
   // These buckets are protected by striped locks (external to the
   // BucketContainer), which must be obtained before accessing a bucket.
-  bucket *buckets_;
+  bucket_pointer buckets_;
 
   // If the key and value are Trivial, the bucket be serilizable. Since we
   // already disallow user-specialized instances of std::pair, we know that the
@@ -342,11 +354,13 @@ private:
   // this should be okay. We could in theory just check if the type is
   // TriviallyCopyable but this check is not available on some compilers we
   // want to support.
-  template <typename Bogus = void *>
-  friend typename std::enable_if<sizeof(Bogus) && std::is_trivial<Key>::value &&
-                                     std::is_trivial<T>::value,
+  template <typename ThisKey, typename ThisT>
+  friend typename std::enable_if<std::is_trivial<ThisKey>::value &&
+                                     std::is_trivial<ThisT>::value,
                                  std::ostream &>::type
-  operator<<(std::ostream &os, const libcuckoo_bucket_container &bc) {
+  operator<<(std::ostream &os,
+             const libcuckoo_bucket_container<ThisKey, ThisT, Allocator,
+                                              Partial, SLOT_PER_BUCKET> &bc) {
     size_type hp = bc.hashpower();
     os.write(reinterpret_cast<const char *>(&hp), sizeof(size_type));
     os.write(reinterpret_cast<const char *>(bc.buckets_),
@@ -354,11 +368,13 @@ private:
     return os;
   }
 
-  template <typename Bogus = void *>
-  friend typename std::enable_if<sizeof(Bogus) && std::is_trivial<Key>::value &&
-                                     std::is_trivial<T>::value,
+  template <typename ThisKey, typename ThisT>
+  friend typename std::enable_if<std::is_trivial<ThisKey>::value &&
+                                     std::is_trivial<ThisT>::value,
                                  std::istream &>::type
-  operator>>(std::istream &is, libcuckoo_bucket_container &bc) {
+  operator>>(std::istream &is,
+             libcuckoo_bucket_container<ThisKey, ThisT, Allocator,
+                                        Partial, SLOT_PER_BUCKET> &bc) {
     size_type hp;
     is.read(reinterpret_cast<char *>(&hp), sizeof(size_type));
     libcuckoo_bucket_container new_bc(hp, bc.get_allocator());
