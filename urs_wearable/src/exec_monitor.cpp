@@ -23,8 +23,7 @@
 // We use uint8_t here to match with the type of 'value' in ObjectDroneID.msg
 typedef std::uint8_t drone_id_type;
 
-const std::string PLANNER_SERVICE_NAME = "/cpa/get_plan";
-KnowledgeBase g_kb("urs_problem", "urs", PLANNER_SERVICE_NAME);
+KnowledgeBase g_kb("urs", "urs_problem");
 
 std::string g_uav_ns;
 
@@ -578,8 +577,14 @@ int main(int argc, char **argv)
   ros::NodeHandle nh;
 
   int uav_total;
-  retrieve("uav_total", uav_total);
-  retrieve("uav_ns", g_uav_ns);
+  retrieve("~uav_total", uav_total);
+  retrieve("~uav_ns", g_uav_ns);
+
+  // Set KB connection with a planner
+  retrieve("~domain_file", g_kb.domain_file);
+  retrieve("~planner_command", g_kb.planner_command);
+  retrieve("~problem_path", g_kb.problem_path);
+  retrieve("~tmp_path", g_kb.tmp_path);
 
   // Set KB state publisher
   ros::Publisher state_pub = nh.advertise<urs_wearable::State>("/urs_wearable/state", 1);

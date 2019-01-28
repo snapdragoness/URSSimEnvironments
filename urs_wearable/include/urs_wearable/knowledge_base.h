@@ -25,8 +25,8 @@ public:
 
   LocationTable location_table_;
 
-  KnowledgeBase(const std::string& problem_name, const std::string& domain_name, const std::string& planner_service_name)
-  : PROBLEM_NAME(problem_name), DOMAIN_NAME(domain_name), PLANNER_SERVICE_NAME(planner_service_name)
+  KnowledgeBase(const std::string& domain_name, const std::string& problem_name)
+  : DOMAIN_NAME(domain_name), PROBLEM_NAME(problem_name)
   {
     state_pub_ = nullptr;
   }
@@ -80,6 +80,11 @@ public:
 
   void publish();
 
+  std::string domain_file;
+  std::string planner_command;
+  std::string problem_path;
+  std::string tmp_path;
+
 private:
   struct Executor
   {
@@ -96,7 +101,6 @@ private:
 
   const std::string PROBLEM_NAME;
   const std::string DOMAIN_NAME;
-  const std::string PLANNER_SERVICE_NAME;
 
   ros::Publisher* state_pub_;
   std::mutex state_pub_mutex_;

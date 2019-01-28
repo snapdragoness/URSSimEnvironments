@@ -8,6 +8,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/tokenizer.hpp>
 
+#include "urs_wearable/common.h"
 #include "urs_wearable/knowledge_base.h"
 
 void KnowledgeBase::publish()
@@ -83,29 +84,13 @@ void KnowledgeBase::replan()
 
       if (goal_excluded.size() > 0)
       {
-//        urs_wearable::GetPlan get_plan_srv;
-//        get_plan_srv.request.problem_def = getProblemDef(goal_excluded);
-//
-//        if (ros::service::call(PLANNER_SERVICE_NAME, get_plan_srv))
-//        {
-//          if (executor.plan != get_plan_srv.response.plan)
-//          {
-//            executor.plan = get_plan_srv.response.plan;
-//            executor.plan_has_changed = true;
-//          }
-//        }
-//        else
-//        {
-//          ROS_ERROR("Re-planning: Call %s failed", PLANNER_SERVICE_NAME.c_str());
-//        }
+        std::ofstream ofs;
+        std::string problem_file = tmp_path + "q" + std::to_string(executorReplanID++) + ".pddl";
+        ofs.open(problem_file.c_str());
+        ofs << getProblemDef(goal_excluded);
+        ofs.close();
 
-        std::ofstream problem_file;
-        std::string name = "/home/poom/catkin_ws/src/URSSimEnvironments/urs_wearable/../FF-v2.3/urs_q" + std::to_string(executorReplanID++) + ".pddl";
-        problem_file.open (name.c_str());
-        problem_file << getProblemDef(goal_excluded);
-        problem_file.close();
-
-        std::string command = "timeout 10 /home/poom/catkin_ws/src/URSSimEnvironments/urs_wearable/../FF-v2.3/ff -o /home/poom/catkin_ws/src/URSSimEnvironments/urs_wearable/../FF-v2.3/urs_d.pddl -f " + name;
+        std::string command = planner_command + " -o " + domain_file + " -f " + problem_file;
         std::vector<std::string> plan = parseFF(exec(command.c_str()));
 
         if (!plan.empty())
@@ -118,8 +103,7 @@ void KnowledgeBase::replan()
         }
         else
         {
-//          ROS_ERROR("Re-planning: Call %s failed", PLANNER_SERVICE_NAME.c_str());
-//          ROS_WARN("No plan");
+          ros_error("Failed in calling " + command);
         }
       }
     });
@@ -132,29 +116,13 @@ void KnowledgeBase::getPlan(executor_id_type executor_id, const std::vector<urs_
 
   if (goal_excluded.size() > 0)
   {
-//    urs_wearable::GetPlan get_plan_srv;
-//    get_plan_srv.request.problem_def = getProblemDef(goal_excluded);
-//
-//    if (ros::service::call(PLANNER_SERVICE_NAME, get_plan_srv))
-//    {
-//      struct Executor executor = {goal, get_plan_srv.response.plan, false};
-//      if (executor_map_.insert(executor_id, executor))
-//      {
-//        plan = executor.plan;
-//      }
-//    }
-//    else
-//    {
-//      ROS_ERROR("Executor %u: Call %s failed", executor_id, PLANNER_SERVICE_NAME.c_str());
-//    }
+    std::ofstream ofs;
+    std::string problem_file = tmp_path + "p" + std::to_string(executor_id) + ".pddl";
+    ofs.open(problem_file.c_str());
+    ofs << getProblemDef(goal_excluded);
+    ofs.close();
 
-    std::ofstream problem_file;
-    std::string name = "/home/poom/catkin_ws/src/URSSimEnvironments/urs_wearable/../FF-v2.3/urs_p" + std::to_string(executor_id) + ".pddl";
-    problem_file.open (name.c_str());
-    problem_file << getProblemDef(goal_excluded);
-    problem_file.close();
-
-    std::string command = "timeout 10 /home/poom/catkin_ws/src/URSSimEnvironments/urs_wearable/../FF-v2.3/ff -o /home/poom/catkin_ws/src/URSSimEnvironments/urs_wearable/../FF-v2.3/urs_d.pddl -f " + name;
+    std::string command = planner_command + " -o " + domain_file + " -f " + problem_file;
     plan = parseFF(exec(command.c_str()));
 
     if (!plan.empty())
@@ -167,8 +135,7 @@ void KnowledgeBase::getPlan(executor_id_type executor_id, const std::vector<urs_
     }
     else
     {
-//      ROS_ERROR("Executor %u: Call %s failed", executor_id, PLANNER_SERVICE_NAME.c_str());
-      ROS_WARN("No plan");
+      ros_error("Failed in calling " + command);
     }
 
   }
@@ -861,16 +828,3 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
 
   return actions;
 }
-
-//int main(int argc, char** argv)
-//{
-//  ros::init(argc, argv, "knowledge_base");
-//  ros::NodeHandle nh;
-//
-//  const std::string PLANNER_SERVICE_NAME = "/cpa/get_plan";
-//  KnowledgeBase kb("urs_problem", "urs", PLANNER_SERVICE_NAME);
-//
-//  ros::spin();
-//
-//  return EXIT_SUCCESS;
-//}
