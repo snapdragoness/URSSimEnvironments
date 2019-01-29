@@ -17,7 +17,7 @@ Controller::Controller()
 
   orientator_sub = nh.subscribe("ground_truth_to_tf/pose", 1, &Controller::orientator, this);
   pose_sub_ = nh.subscribe("ground_truth_to_tf/pose", 1, &Controller::pidControl, this);
-  depth_image_sub_ = nh.subscribe("camera/depth/image_raw", 1, &Controller::readDepthImage, this);
+//  depth_image_sub_ = nh.subscribe("camera/depth/image_raw", 1, &Controller::readDepthImage, this);
   sonar_height_sub_ = nh.subscribe<sensor_msgs::Range>("sonar_height", 1, &Controller::readSonarHeight, this);
   sonar_upward_sub_ = nh.subscribe<sensor_msgs::Range>("sonar_upward", 1, &Controller::readSonarUpward, this);
 
@@ -94,9 +94,14 @@ void Controller::orientator(const geometry_msgs::PoseStampedConstPtr& pose_stamp
   double vy = dest.position.y - pose_stamped->pose.position.y;
   double yaw_to_dest = std::atan2(vy, vx);
 
-  if (std::sqrt(vx * vx + vy * vy) > MAX_POSITION_ERROR)
+  if (std::sqrt(vx * vx + vy * vy) > 3.0)
   {
     setOrientation(yaw_to_dest);
+    is_moving_ = true;
+  }
+  else
+  {
+    is_moving_ = false;
   }
 }
 
@@ -212,6 +217,7 @@ void Controller::pidControl(const geometry_msgs::PoseStampedConstPtr& pose_stamp
   cmd.angular.z = PQ * yaw_error + DQ * (yaw_error - yaw_prev_error_);
 
   cmd_pub_.publish(cmd);
+  ros::spinOnce();
 
   position_prev_error_ = position_error;
   yaw_prev_error_ = yaw_error;
@@ -235,11 +241,11 @@ void Controller::readDepthImage(const sensor_msgs::Image::ConstPtr& msg)
           int index = i * 640 + j;
           float depth = depth_image_array[i * 640 + j];
 
-          if (!std::isnan(depth) &&
-              !std::isnan(depth_image_array[index - 1]) &&
-              !std::isnan(depth_image_array[index + 1]) &&
-              !std::isnan(depth_image_array[index - 640]) &&
-              !std::isnan(depth_image_array[index + 640]))
+          if (!std::isnan(depth)
+              && !std::isnan(depth_image_array[index - 1])
+              && !std::isnan(depth_image_array[index + 1])
+              && !std::isnan(depth_image_array[index - 640])
+              && !std::isnan(depth_image_array[index + 640]))
           {
             if (pointDistance2D(pose.position, getDest().position) > depth)
             {
@@ -336,7 +342,6 @@ void Controller::setPosition(const geometry_msgs::Point position)
   }
 
   setPositionBare(position);
-  is_moving_ = true;
 }
 
 void Controller::setPositionBare(const geometry_msgs::Point& position)

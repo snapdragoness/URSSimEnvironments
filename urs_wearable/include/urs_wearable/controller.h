@@ -20,7 +20,7 @@
 
 class Controller {
   // read about adjusting PID coefficients at https://oscarliang.com/quadcopter-pid-explained-tuning
-  const double P = 1.0;
+  const double P = 0.5;
   const double I = 0.00005;
   const double D = 0.05;
   const double PQ = 1.0;
