@@ -41,12 +41,12 @@ public:
 
   executor_id_type registerExecutor()
   {
-    executor_id_type id_mutex = executor_id_++;
-    while (executor_map_.contains(id_mutex))
+    executor_id_type id = executor_id_++;
+    while (executor_map_.contains(id))
     {
-      id_mutex = executor_id_++;
+      id = executor_id_++;
     }
-    return id_mutex;
+    return id;
   }
 
   bool unregisterExecutor(executor_id_type id)
