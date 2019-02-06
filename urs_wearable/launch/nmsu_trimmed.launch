@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+
+<launch>
+  <include file="$(find urs_wearable)/launch/world.launch">
+    <arg name="world" value="$(find urs_wearable)/worlds/nmsu_trimmed.world" />
+    <arg name="reference_latitude" value="32.319939" />
+    <arg name="reference_longitude" value="-106.763657" />
+  </include>
+</launch>
