@@ -320,26 +320,26 @@ void Controller::setOrientation(const double yaw)   // yaw in radian
 
 void Controller::setPosition(const geometry_msgs::Point position)
 {
-  geometry_msgs::Pose pose = getPose();
-  double vx = position.x - pose.position.x;
-  double vy = position.y - pose.position.y;
-  double yaw_to_dest = std::atan2(vy, vx);
-
-  if (std::sqrt(vx * vx + vy * vy) > MAX_POSITION_ERROR)
-  {
-    setOrientation(yaw_to_dest);
-
-    ros::Rate rate(10);
-    while (ros::ok())
-    {
-      if (yawDiff(quaternionToYaw(getPose().orientation), yaw_to_dest) <= MAX_ORIENTATION_ERROR * M_PI / 180.0)
-      {
-        break;
-      }
-      ros::spinOnce();
-      rate.sleep();
-    }
-  }
+//  geometry_msgs::Pose pose = getPose();
+//  double vx = position.x - pose.position.x;
+//  double vy = position.y - pose.position.y;
+//  double yaw_to_dest = std::atan2(vy, vx);
+//
+//  if (std::sqrt(vx * vx + vy * vy) > MAX_POSITION_ERROR)
+//  {
+//    setOrientation(yaw_to_dest);
+//
+//    ros::Rate rate(10);
+//    while (ros::ok())
+//    {
+//      if (yawDiff(quaternionToYaw(getPose().orientation), yaw_to_dest) <= MAX_ORIENTATION_ERROR * M_PI / 180.0)
+//      {
+//        break;
+//      }
+//      ros::spinOnce();
+//      rate.sleep();
+//    }
+//  }
 
   setPositionBare(position);
 }
