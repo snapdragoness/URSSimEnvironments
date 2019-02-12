@@ -5,7 +5,7 @@ uint8 TYPE_TAKEOFF=2
 
 uint8 action_type
 
-geometry_msgs/Pose pose
+geometry_msgs/Pose[] poses
 ---
 # Result Definition
 

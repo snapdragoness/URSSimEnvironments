@@ -1,10 +1,18 @@
-uint8 TYPE_ACTIVE_REGION=0
-uint8 TYPE_DRONE_ABOVE=1
-uint8 TYPE_DRONE_AT=2
-uint8 TYPE_TOOK_OFF=3
+uint8 TYPE_ABOVE = 0
+uint8 TYPE_ALIGNED = 1
+uint8 TYPE_AT = 2
+uint8 TYPE_CLOSEST = 3
+uint8 TYPE_COLLIDED = 4
+uint8 TYPE_HOVERED = 5
+uint8 TYPE_ORIENTED = 6
+uint8 TYPE_SCANNED = 7
 
 uint8 type
-PredicateActiveRegion predicate_active_region
-PredicateDroneAbove predicate_drone_above
-PredicateDroneAt predicate_drone_at
-PredicateTookOff predicate_took_off
+PredicateAbove above
+PredicateAligned aligned
+PredicateAt at
+PredicateClosest closest
+PredicateCollided collided
+PredicateHovered hovered
+PredicateOriented oriented
+PredicateScanned scanned

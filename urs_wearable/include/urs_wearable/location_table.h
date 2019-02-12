@@ -20,9 +20,9 @@ public:
   // Location.msg, ObjectLocationID.msg, LocationAdd.srv, LocationRemove.srv
   typedef std::uint8_t location_id_type;
 
-  cuckoohash_map<location_id_type, geometry_msgs::Pose> map_;
+  cuckoohash_map<location_id_type, std::vector<geometry_msgs::Pose>> map_;
 
-  location_id_type insert(const geometry_msgs::Pose& pose)
+  location_id_type insert(const std::vector<geometry_msgs::Pose>& poses)
   {
     {
       std::lock_guard<std::mutex> lock(unused_id_set_mutex_);
@@ -31,7 +31,7 @@ public:
         std::set<location_id_type>::iterator it = unused_id_set_.begin();
         location_id_type id = *it;
         unused_id_set_.erase(it);
-        map_.insert(id, pose);
+        map_.insert(id, poses);
         return id;
       }
     }
@@ -41,8 +41,14 @@ public:
     {
       throw std::length_error("Location table full. The size of location_id type should be increased.");
     }
-    map_.insert(id_mutex, pose);
+    map_.insert(id_mutex, poses);
     return id_mutex;
+  }
+
+  location_id_type insert(const geometry_msgs::Pose& pose)
+  {
+    std::vector<geometry_msgs::Pose> poses{pose};
+    return insert(poses);
   }
 
   bool erase(location_id_type id)
@@ -54,11 +60,11 @@ public:
     return map_.erase(id);
   }
 
-  bool update(location_id_type id, const geometry_msgs::Pose& pose)
+  bool update(location_id_type id, const std::vector<geometry_msgs::Pose>& poses)
   {
-    return map_.update_fn(id, [&pose](geometry_msgs::Pose &p)
+    return map_.update_fn(id, [&poses](std::vector<geometry_msgs::Pose> &p)
     {
-      p = pose;
+      p = poses;
     });
   }
 

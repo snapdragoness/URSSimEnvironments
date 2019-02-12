@@ -133,46 +133,49 @@ public:
 
   void actionPose(const urs_wearable::DroneGoalConstPtr& goal)
   {
-    urs_wearable::SetPosition set_position_srv;
-    set_position_srv.request.position = goal->pose.position;
-
-    if (ros::service::call("set_position", set_position_srv))
+    for (const auto& pose : goal->poses)
     {
-      ros::Rate rate(frequency_);
-      while (ros::ok() && as_.isActive())
+      urs_wearable::SetPosition set_position_srv;
+      set_position_srv.request.position = pose.position;
+
+      if (ros::service::call("set_position", set_position_srv))
       {
-        if (as_.isPreemptRequested())
+        ros::Rate rate(frequency_);
+        while (ros::ok() && as_.isActive())
         {
-          if (!as_.isNewGoalAvailable())
+          if (as_.isPreemptRequested())
           {
-            std_srvs::Empty stop_srv;
-            ros::service::call("stop", stop_srv);
-          }
+            if (!as_.isNewGoalAvailable())
+            {
+              std_srvs::Empty stop_srv;
+              ros::service::call("stop", stop_srv);
+            }
 
-          as_.setPreempted();
-          return;
-        }
-
-        {
-          std::lock_guard<std::mutex> lock(pose_mutex_);
-
-          if (pointDistance3D(pose_.position, set_position_srv.request.position) < dist_tolerance_)
-          {
-            as_.setSucceeded();
+            as_.setPreempted();
             return;
           }
-        }
 
-        ros::spinOnce();
-        rate.sleep();
+          {
+            std::lock_guard<std::mutex> lock(pose_mutex_);
+
+            if (pointDistance3D(pose_.position, set_position_srv.request.position) < dist_tolerance_)
+            {
+              break;
+            }
+          }
+
+          ros::spinOnce();
+          rate.sleep();
+        }
+      }
+      else
+      {
+        ROS_ERROR("%s: actionPose called %s failed", name_.c_str(), ros::names::resolve("set_position").c_str());
+        as_.setAborted();
       }
     }
-    else
-    {
-      ROS_WARN("%s: actionPose called %s failed", name_.c_str(), ros::names::resolve("set_position").c_str());
-    }
 
-    as_.setAborted();
+    as_.setSucceeded();
   }
 
   void actionTakeoff(const urs_wearable::DroneGoalConstPtr& goal)
@@ -190,9 +193,9 @@ public:
     urs_wearable::DroneGoal pose_goal;
     {
       std::lock_guard<std::mutex> lock(pose_mutex_);
-      pose_goal.pose = pose_;
+      pose_goal.poses.push_back(pose_);
     }
-    pose_goal.pose.position.z = takeoff_height_;
+    pose_goal.poses.back().position.z = takeoff_height_;
 
     actionPose(boost::make_shared<urs_wearable::DroneGoal>(pose_goal));
   }

@@ -1,10 +1,16 @@
-uint8 TYPE_FLY_ABOVE=0
-uint8 TYPE_FLY_TO=1
-uint8 TYPE_LAND=2
-uint8 TYPE_TAKE_OFF=3
+uint8 TYPE_ASCEND = 0
+uint8 TYPE_DESCEND = 1
+uint8 TYPE_LAND = 2
+uint8 TYPE_MOVE = 3
+uint8 TYPE_ROTATE = 4
+uint8 TYPE_SCAN = 5
+uint8 TYPE_TAKEOFF = 6
 
 uint8 type
-ActionFlyAbove action_fly_above
-ActionFlyTo action_fly_to
-ActionLand action_land
-ActionTakeOff action_take_off
+ActionAscend ascend
+ActionDescend descend
+ActionLand land
+ActionMove move
+ActionRotate rotate
+ActionScan scan
+ActionTakeoff takeoff

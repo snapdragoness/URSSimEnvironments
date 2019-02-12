@@ -56,19 +56,26 @@ add_subdirectory("../libcuckoo" libcuckoo)
 ## Generate messages in the 'msg' folder
 add_message_files(FILES
   Action.msg
-  ActionFlyAbove.msg
-  ActionFlyTo.msg
+  ActionAscend.msg
+  ActionDescend.msg
   ActionLand.msg
-  ActionTakeOff.msg
+  ActionMove.msg
+  ActionRotate.msg
+  ActionScan.msg
+  ActionTakeoff.msg
   Feedback.msg
   Location.msg
-  ObjectDroneID.msg
-  ObjectLocationID.msg
+  ObjectDrone.msg
+  ObjectLocation.msg
   Predicate.msg
-  PredicateActiveRegion.msg
-  PredicateDroneAbove.msg
-  PredicateDroneAt.msg
-  PredicateTookOff.msg
+  PredicateAbove.msg
+  PredicateAligned.msg
+  PredicateAt.msg
+  PredicateClosest.msg
+  PredicateCollided.msg
+  PredicateHovered.msg
+  PredicateOriented.msg
+  PredicateScanned.msg
   State.msg
 )
 
