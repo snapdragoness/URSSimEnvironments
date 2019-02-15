@@ -1,6 +1,6 @@
 string NAME=closest
 
-ObjectDrone d
-ObjectLocation l
+ObjectLocation l0
+ObjectLocation l1
 
 bool truth_value

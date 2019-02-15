@@ -198,7 +198,7 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
         // FIXME
         case urs_wearable::Action::TYPE_SCAN:
         {
-          LocationTable::location_id_type loc_id = actions_it->scan.l.value;
+          LocationTable::location_id_type loc_id = actions_it->scan.to.value;
           std::vector<geometry_msgs::Pose> poses_to;
           g_kb.location_table_.map_.find(loc_id, poses_to);
           geometry_msgs::Pose pose_to = poses_to.front();   // FIXME
@@ -218,7 +218,7 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
           effect.type = urs_wearable::Predicate::TYPE_SCANNED;
-          effect.scanned.l.value = actions_it->scan.l.value;
+          effect.scanned.l.value = actions_it->scan.to.value;
           effect.scanned.truth_value = true;
           effects.push_back(effect);
         }

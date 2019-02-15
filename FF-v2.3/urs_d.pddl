@@ -5,7 +5,7 @@
     (above ?l0 ?l1 - loc)
     (aligned ?l0 ?l1 - loc)
     (at ?d - drone ?l - loc)
-    (closest ?d - drone ?l - loc)
+    (closest ?l0 ?l1 - loc)
     (collided ?l0 ?l1 - loc)
     (hovered ?d - drone)
     (oriented ?d - drone)
@@ -68,7 +68,6 @@
         )
       ))
       (hovered ?d)
-      (not (aligned ?from ?to))
     )
     :effect (and
       (not (at ?d ?from))
@@ -84,13 +83,25 @@
     :effect (and (oriented ?d))
   )
   (:action scan
-    :parameters (?d  - drone ?l - loc)
+    :parameters (?d  - drone ?from ?to - loc)
     :precondition (and
-      (closest ?d ?l)
+      (at ?d ?from)
+      (closest ?from ?to)
+      (not (exists (?x - drone ?y - loc)
+        (and
+          (not (= ?x ?d))
+          (at ?x ?y)
+          (collided ?to ?y)
+        )
+      ))
       (hovered ?d)
-      (not (scanned ?l))
+      (not (scanned ?to))
     )
-    :effect (and (scanned ?l))
+    :effect (and
+      (not (at ?d ?from))
+      (at ?d ?to)
+      (scanned ?to)
+    )
   )
   (:action takeoff
     :parameters (?d - drone)

@@ -306,8 +306,8 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
         {
           for (const auto& cur_pred : cur_preds)
           {
-            if (cur_pred.closest.d.value == goal_excluded_it->closest.d.value
-                && cur_pred.closest.l.value == goal_excluded_it->closest.l.value
+            if (cur_pred.closest.l0.value == goal_excluded_it->closest.l0.value
+                && cur_pred.closest.l1.value == goal_excluded_it->closest.l1.value
                 && cur_pred.closest.truth_value == goal_excluded_it->closest.truth_value)
             {
               matched = true;
@@ -624,21 +624,21 @@ std::string KnowledgeBase::getProblemDef(const std::vector<urs_wearable::Predica
       case urs_wearable::Predicate::TYPE_AT:
         break;
 
-      case urs_wearable::Predicate::TYPE_SCANNED:
-      {
-        for (const auto& pred : current_predicates)
-        {
-          if (pred.type == urs_wearable::Predicate::TYPE_AT)
-          {
-            urs_wearable::Predicate aux_pred;
-            aux_pred.type = urs_wearable::Predicate::TYPE_CLOSEST;
-            aux_pred.closest.d.value = pred.at.d.value;
-            aux_pred.closest.l.value = goal_pred.scanned.l.value;
-            aux_preds.push_back(aux_pred);
-            break;
-          }
-        }
-      }
+//      case urs_wearable::Predicate::TYPE_SCANNED:
+//      {
+//        for (const auto& pred : current_predicates)
+//        {
+//          if (pred.type == urs_wearable::Predicate::TYPE_AT)
+//          {
+//            urs_wearable::Predicate aux_pred;
+//            aux_pred.type = urs_wearable::Predicate::TYPE_CLOSEST;
+//            aux_pred.closest.d.value = pred.at.d.value;
+//            aux_pred.closest.l.value = goal_pred.scanned.l.value;
+//            aux_preds.push_back(aux_pred);
+//            break;
+//          }
+//        }
+//      }
       break;
     }
   }
@@ -710,13 +710,13 @@ std::string KnowledgeBase::getProblemDef(const std::vector<urs_wearable::Predica
 
         case urs_wearable::Predicate::TYPE_CLOSEST:
           s = " (" + urs_wearable::PredicateClosest::NAME
-            + " " + urs_wearable::ObjectDrone::TYPE + std::to_string(pred.closest.d.value)
-            + " " + urs_wearable::ObjectLocation::TYPE + std::to_string(pred.closest.l.value)
+            + " " + urs_wearable::ObjectDrone::TYPE + std::to_string(pred.closest.l0.value)
+            + " " + urs_wearable::ObjectLocation::TYPE + std::to_string(pred.closest.l1.value)
             + ")";
           *preds_string += (pred.closest.truth_value) ? s : " (not" + s + ")";
 
-          object_drone_id_set.insert(pred.closest.d.value);
-          object_location_id_set.insert(pred.closest.l.value);
+          object_location_id_set.insert(pred.closest.l1.value);
+          object_location_id_set.insert(pred.closest.l1.value);
           break;
 
         case urs_wearable::Predicate::TYPE_COLLIDED:
@@ -850,7 +850,8 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
     {
       action.type = urs_wearable::Action::TYPE_SCAN;
       action.scan.d.value = std::stoi(tokens[1].erase(0, urs_wearable::ObjectDrone::TYPE.size()));
-      action.scan.l.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.scan.from.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.scan.to.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
     }
     else if (tokens[0] == urs_wearable::ActionTakeoff::NAME)
     {

@@ -1,4 +1,5 @@
 string NAME=scan
 
 ObjectDrone d
-ObjectLocation l
+ObjectLocation from
+ObjectLocation to
