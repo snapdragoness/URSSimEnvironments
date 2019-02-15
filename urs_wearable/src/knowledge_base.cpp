@@ -42,7 +42,7 @@ void KnowledgeBase::publish()
     {
       urs_wearable::Location l;
       l.location_id = m.first;
-      l.pose = m.second.front();     // FIXME
+      l.poses = m.second;
       state.locations.push_back(l);
     }
     location_table_lt.unlock();
