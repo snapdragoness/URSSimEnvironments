@@ -71,7 +71,7 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
 
           require_drone_action = true;
           drone_id = actions_it->ascend.d.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_POSE;
+          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
           goal.poses = poses_to;
 
           // Add the effects of the action to the list
@@ -105,7 +105,7 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
 
           require_drone_action = true;
           drone_id = actions_it->descend.d.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_POSE;
+          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
           goal.poses = poses_to;
 
           // Add the effects of the action to the list
@@ -133,7 +133,7 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
 
           require_drone_action = true;
           drone_id = actions_it->land.d.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_LANDING;
+          goal.action_type = urs_wearable::DroneGoal::TYPE_LAND;
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
@@ -173,7 +173,7 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
 
           require_drone_action = true;
           drone_id = actions_it->move.d.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_POSE;
+          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
           goal.poses = poses_to;
 
           // Add the effects of the action to the list
@@ -212,7 +212,7 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
 
           require_drone_action = true;
           drone_id = actions_it->scan.d.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_POSE;
+          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
           goal.poses = poses_to;
 
           // Add the effects of the action to the list

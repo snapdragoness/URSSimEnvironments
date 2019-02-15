@@ -59,11 +59,11 @@ public:
   {
     switch (goal->action_type)
     {
-      case urs_wearable::DroneGoal::TYPE_LANDING:
-        actionLanding(goal);
+      case urs_wearable::DroneGoal::TYPE_LAND:
+        actionLand(goal);
         break;
-      case urs_wearable::DroneGoal::TYPE_POSE:
-        actionPose(goal);
+      case urs_wearable::DroneGoal::TYPE_MOVE:
+        actionMove(goal);
         break;
       case urs_wearable::DroneGoal::TYPE_TAKEOFF:
         actionTakeoff(goal);
@@ -71,7 +71,7 @@ public:
     }
   }
 
-  void actionLanding(const urs_wearable::DroneGoalConstPtr& goal)
+  void actionLand(const urs_wearable::DroneGoalConstPtr& goal)
   {
     urs_wearable::SetPosition set_position_srv;
     {
@@ -131,7 +131,7 @@ public:
     }
   }
 
-  void actionPose(const urs_wearable::DroneGoalConstPtr& goal)
+  void actionMove(const urs_wearable::DroneGoalConstPtr& goal)
   {
     for (const auto& pose : goal->poses)
     {
@@ -197,7 +197,7 @@ public:
     }
     pose_goal.poses.back().position.z = takeoff_height_;
 
-    actionPose(boost::make_shared<urs_wearable::DroneGoal>(pose_goal));
+    actionMove(boost::make_shared<urs_wearable::DroneGoal>(pose_goal));
   }
 };
 
