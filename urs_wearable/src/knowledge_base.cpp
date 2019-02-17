@@ -30,28 +30,25 @@ void KnowledgeBase::publish()
 
     // Get a vector of predicates from predicate_map_
     state.predicates.reserve(predicate_map_lt.size());
-    for (const auto& m : predicate_map_lt)
+    for (const auto& pred : predicate_map_lt)
     {
-      state.predicates.insert(state.predicates.end(), m.second.begin(), m.second.end());
+      state.predicates.insert(state.predicates.end(), pred.second.begin(), pred.second.end());
     }
     predicate_map_lt.unlock();
 
     // Get a vector of locations from location_map_
     auto location_table_lt = location_table_.map_.lock_table();
-    for (const auto& m : location_table_lt)
+    for (const auto& loc : location_table_lt)
     {
       urs_wearable::Location l;
-      l.location_id = m.first;
-      l.poses = m.second;
+      l.location_id = loc.first;
+      l.poses = loc.second;
       state.locations.push_back(l);
     }
     location_table_lt.unlock();
 
     // Publish
-    ros::Rate rate(10);
     state_pub_->publish(state);
-    ros::spinOnce();
-    rate.sleep();
   }
 }
 
@@ -819,15 +816,15 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
     {
       action.type = urs_wearable::Action::TYPE_ASCEND;
       action.ascend.d.value = std::stoi(tokens[1].erase(0, urs_wearable::ObjectDrone::TYPE.size()));
-      action.ascend.from.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
-      action.ascend.to.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.ascend.l0.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.ascend.l1.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
     }
     else if (tokens[0] == urs_wearable::ActionDescend::NAME)
     {
       action.type = urs_wearable::Action::TYPE_DESCEND;
       action.descend.d.value = std::stoi(tokens[1].erase(0, urs_wearable::ObjectDrone::TYPE.size()));
-      action.descend.from.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
-      action.descend.to.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.descend.l0.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.descend.l1.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
     }
     else if (tokens[0] == urs_wearable::ActionLand::NAME)
     {
@@ -838,8 +835,8 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
     {
       action.type = urs_wearable::Action::TYPE_MOVE;
       action.move.d.value = std::stoi(tokens[1].erase(0, urs_wearable::ObjectDrone::TYPE.size()));
-      action.move.from.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
-      action.move.to.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.move.l0.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.move.l1.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
     }
     else if (tokens[0] == urs_wearable::ActionRotate::NAME)
     {
@@ -850,8 +847,8 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
     {
       action.type = urs_wearable::Action::TYPE_SCAN;
       action.scan.d.value = std::stoi(tokens[1].erase(0, urs_wearable::ObjectDrone::TYPE.size()));
-      action.scan.from.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
-      action.scan.to.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.scan.l0.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.scan.l1.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
     }
     else if (tokens[0] == urs_wearable::ActionTakeoff::NAME)
     {

@@ -57,9 +57,8 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
       {
         case urs_wearable::Action::TYPE_ASCEND:
         {
-          LocationTable::location_id_type loc_id = actions_it->ascend.to.value;
           std::vector<geometry_msgs::Pose> poses_to;
-          g_kb.location_table_.map_.find(loc_id, poses_to);
+          g_kb.location_table_.map_.find(actions_it->ascend.l1.value, poses_to);
           geometry_msgs::Pose pose_to = poses_to.front();   // FIXME
 
           feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
@@ -78,12 +77,12 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
           urs_wearable::Predicate effect;
           effect.type = urs_wearable::Predicate::TYPE_AT;
           effect.at.d.value = drone_id;
-          effect.at.l.value = actions_it->ascend.from.value;
+          effect.at.l.value = actions_it->ascend.l0.value;
           effect.at.truth_value = false;
           effects.push_back(effect);
 
           effect.at.d.value = drone_id;
-          effect.at.l.value = loc_id;
+          effect.at.l.value = actions_it->ascend.l1.value;
           effect.at.truth_value = true;
           effects.push_back(effect);
         }
@@ -91,9 +90,8 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
 
         case urs_wearable::Action::TYPE_DESCEND:
         {
-          LocationTable::location_id_type loc_id = actions_it->descend.to.value;
           std::vector<geometry_msgs::Pose> poses_to;
-          g_kb.location_table_.map_.find(loc_id, poses_to);
+          g_kb.location_table_.map_.find(actions_it->descend.l1.value, poses_to);
           geometry_msgs::Pose pose_to = poses_to.front();   // FIXME
 
           feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
@@ -112,12 +110,12 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
           urs_wearable::Predicate effect;
           effect.type = urs_wearable::Predicate::TYPE_AT;
           effect.at.d.value = drone_id;
-          effect.at.l.value = actions_it->descend.from.value;
+          effect.at.l.value = actions_it->descend.l0.value;
           effect.at.truth_value = false;
           effects.push_back(effect);
 
           effect.at.d.value = drone_id;
-          effect.at.l.value = loc_id;
+          effect.at.l.value = actions_it->descend.l1.value;
           effect.at.truth_value = true;
           effects.push_back(effect);
         }
@@ -146,9 +144,8 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
 
         case urs_wearable::Action::TYPE_MOVE:
         {
-          LocationTable::location_id_type loc_id = actions_it->move.to.value;
           std::vector<geometry_msgs::Pose> poses_to;
-          g_kb.location_table_.map_.find(loc_id, poses_to);
+          g_kb.location_table_.map_.find(actions_it->move.l1.value, poses_to);
           geometry_msgs::Pose pose_to = poses_to.front();   // FIXME
 
           feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
@@ -180,12 +177,12 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
           urs_wearable::Predicate effect;
           effect.type = urs_wearable::Predicate::TYPE_AT;
           effect.at.d.value = drone_id;
-          effect.at.l.value = actions_it->move.from.value;
+          effect.at.l.value = actions_it->move.l0.value;
           effect.at.truth_value = false;
           effects.push_back(effect);
 
           effect.at.d.value = drone_id;
-          effect.at.l.value = loc_id;
+          effect.at.l.value = actions_it->move.l1.value;
           effect.at.truth_value = true;
           effects.push_back(effect);
         }
@@ -198,9 +195,8 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
         // FIXME
         case urs_wearable::Action::TYPE_SCAN:
         {
-          LocationTable::location_id_type loc_id = actions_it->scan.to.value;
           std::vector<geometry_msgs::Pose> poses_to;
-          g_kb.location_table_.map_.find(loc_id, poses_to);
+          g_kb.location_table_.map_.find(actions_it->scan.l1.value, poses_to);
           geometry_msgs::Pose pose_to = poses_to.front();   // FIXME
 
           feedback.status = urs_wearable::Feedback::STATUS_ACTIVE;
@@ -217,8 +213,19 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
+          effect.type = urs_wearable::Predicate::TYPE_AT;
+          effect.at.d.value = drone_id;
+          effect.at.l.value = actions_it->scan.l0.value;
+          effect.at.truth_value = false;
+          effects.push_back(effect);
+
+          effect.at.d.value = drone_id;
+          effect.at.l.value = actions_it->scan.l1.value;
+          effect.at.truth_value = true;
+          effects.push_back(effect);
+
           effect.type = urs_wearable::Predicate::TYPE_SCANNED;
-          effect.scanned.l.value = actions_it->scan.to.value;
+          effect.scanned.l.value = actions_it->scan.l1.value;
           effect.scanned.truth_value = true;
           effects.push_back(effect);
         }
@@ -399,9 +406,71 @@ bool getStateService(urs_wearable::GetState::Request& req, urs_wearable::GetStat
   return true;
 }
 
+LocationTable::location_id_type addLocation(const std::vector<geometry_msgs::Pose>& poses)
+{
+  LocationTable::location_id_type new_loc_id = g_kb.location_table_.insert(poses);
+  std::vector<urs_wearable::Predicate> aux_preds;
+
+  // TODO: Generate auxiliary predicates
+  auto location_table_lt = g_kb.location_table_.map_.lock_table();
+  for (const auto& loc : location_table_lt)
+  {
+    if (loc.first != new_loc_id)
+    {
+      // above(l0,l1)
+      if (loc.second.size() == 1
+          && poses.size() == 1)
+      {
+        urs_wearable::Predicate pred;
+        pred.type = urs_wearable::Predicate::TYPE_ABOVE;
+        pred.above.truth_value = true;
+        if (loc.second.front().position.z > poses.front().position.z)
+        {
+          pred.above.l0.value = loc.first;
+          pred.above.l1.value = new_loc_id;
+        }
+        else
+        {
+          pred.above.l0.value = new_loc_id;
+          pred.above.l1.value = loc.first;
+        }
+        aux_preds.push_back(pred);
+      }
+
+      // aligned(l0,l1)
+      if (loc.second.size() == 1
+          && poses.size() == 1
+          && std::fabs(loc.second.front().position.z - poses.front().position.z) < 1.0)
+      {
+        urs_wearable::Predicate pred;
+        pred.type = urs_wearable::Predicate::TYPE_ALIGNED;
+        pred.aligned.truth_value = true;
+
+        pred.aligned.l0.value = loc.first;
+        pred.aligned.l1.value = new_loc_id;
+        aux_preds.push_back(pred);
+
+        pred.aligned.l0.value = new_loc_id;
+        pred.aligned.l1.value = loc.first;
+        aux_preds.push_back(pred);
+      }
+
+      // closest(l0,l1)
+
+      // collided(l0,l1)
+
+    }
+  }
+  location_table_lt.unlock();
+
+  g_kb.upsertPredicates(aux_preds);
+
+  return new_loc_id;
+}
+
 bool addLocationService(urs_wearable::AddLocation::Request& req, urs_wearable::AddLocation::Response& res)
 {
-  res.location_id = g_kb.location_table_.insert(req.poses);
+  res.location_id = addLocation(req.poses);
   return true;
 }
 
@@ -545,7 +614,7 @@ int main(int argc, char **argv)
         ros::topic::waitForMessage<geometry_msgs::PoseStamped>(g_uav_ns + std::to_string(i) + "/ground_truth_to_tf/pose");
 
     pred_at.at.d.value = i;
-    pred_at.at.l.value = g_kb.location_table_.insert(pose_stamped->pose);
+    pred_at.at.l.value = addLocation(std::vector<geometry_msgs::Pose>{pose_stamped->pose});
     initial_state.push_back(pred_at);
 
     pred_hovered.hovered.d.value = i;

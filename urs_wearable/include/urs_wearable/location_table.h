@@ -47,8 +47,7 @@ public:
 
   location_id_type insert(const geometry_msgs::Pose& pose)
   {
-    std::vector<geometry_msgs::Pose> poses{pose};
-    return insert(poses);
+    return insert(std::vector<geometry_msgs::Pose>{pose});
   }
 
   bool erase(location_id_type id)
