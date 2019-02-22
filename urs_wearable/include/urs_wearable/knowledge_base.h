@@ -23,7 +23,7 @@ public:
   // We use uint8_t here to match with the type of 'executor_id' in Feedback.msg
   typedef std::uint8_t executor_id_type;
 
-  LocationTable location_table_;
+  LocationTable loc_table_;
 
   KnowledgeBase(const std::string& domain_name, const std::string& problem_name)
   : DOMAIN_NAME(domain_name), PROBLEM_NAME(problem_name)

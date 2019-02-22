@@ -30,10 +30,10 @@ int main(int argc, char **argv)
   pose.position.x = -10;
   pose.position.y = 5;
   pose.position.z = 5;
-  add_location_srv.request.poses.push_back(pose);
+  add_location_srv.request.pose = pose;
   if (location_add_client.call(add_location_srv))
   {
-    loc_id = add_location_srv.response.location_id;
+    loc_id = add_location_srv.response.loc_id;
   }
   else
   {
@@ -42,20 +42,18 @@ int main(int argc, char **argv)
 
   urs_wearable::SetGoal set_goal_srv;
   urs_wearable::Predicate pred;
+  pred.truth_value = true;
 
   pred.type = urs_wearable::Predicate::TYPE_HOVERED;
   pred.hovered.d.value = 0;
-  pred.hovered.truth_value = true;
   set_goal_srv.request.goal.push_back(pred);
 
   pred.hovered.d.value = 1;
-  pred.hovered.truth_value = true;
   set_goal_srv.request.goal.push_back(pred);
 
   pred.type = urs_wearable::Predicate::TYPE_AT;
   pred.at.d.value = 0;
   pred.at.l.value = loc_id;
-  pred.at.truth_value = true;
   set_goal_srv.request.goal.push_back(pred);
 
   if (!ros::service::call(SET_GOAL_SERVICE_NAME, set_goal_srv))

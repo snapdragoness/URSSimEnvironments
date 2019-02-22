@@ -1,15 +1,15 @@
 (define (domain urs)
   (:requirements :strips :typing :equality :adl)
-  (:types drone loc)
+  (:types area drone loc)
   (:predicates
     (above ?l0 ?l1 - loc)
     (aligned ?l0 ?l1 - loc)
     (at ?d - drone ?l - loc)
-    (closest ?l0 ?l1 - loc)
     (collided ?l0 ?l1 - loc)
     (hovered ?d - drone)
-    (oriented ?d - drone)
-    (scanned ?l - loc)
+    (in ?l - loc ?a - area)
+    (low_battery ?d - drone)
+    (scanned ?d - drone ?a - area)
   )
   (:action ascend
     :parameters (?d - drone ?l0 ?l1 - loc)
@@ -21,10 +21,14 @@
         (and
           (not (= ?x ?d))
           (at ?x ?y)
-          (collided ?l1 ?y)
+          (or
+            (= ?y ?l1)
+            (collided ?y ?l1)
+          )
         )
       ))
       (hovered ?d)
+      (not (low_battery ?d))
     )
     :effect (and
       (not (at ?d ?l0))
@@ -41,10 +45,26 @@
         (and
           (not (= ?x ?d))
           (at ?x ?y)
-          (collided ?l1 ?y)
+          (or
+            (= ?y ?l1)
+            (collided ?y ?l1)
+          )
         )
       ))
       (hovered ?d)
+      (not (low_battery ?d))
+    )
+    :effect (and
+      (not (at ?d ?l0))
+      (at ?d ?l1)
+    )
+  )
+  (:action gather
+    :parameters (?d - drone ?l0 ?l1 - loc)
+    :precondition (and
+      (at ?d ?l0)
+      (hovered ?d)
+      (not (low_battery ?d))
     )
     :effect (and
       (not (at ?d ?l0))
@@ -54,7 +74,9 @@
   (:action land
     :parameters (?d - drone)
     :precondition (hovered ?d)
-    :effect (and (not (hovered ?d)))
+    :effect (and
+      (not (hovered ?d))
+    )
   )
   (:action move
     :parameters (?d - drone ?l0 ?l1 - loc)
@@ -64,48 +86,52 @@
         (and
           (not (= ?x ?d))
           (at ?x ?y)
-          (collided ?l1 ?y)
+          (or
+            (= ?y ?l1)
+            (collided ?y ?l1)
+          )
         )
       ))
       (hovered ?d)
+      (not (low_battery ?d))
     )
     :effect (and
       (not (at ?d ?l0))
       (at ?d ?l1)
     )
   )
-  (:action rotate
-    :parameters (?d - drone)
-    :precondition (and
-      (not (oriented ?d))
-      (hovered ?d)
-    )
-    :effect (and (oriented ?d))
-  )
   (:action scan
-    :parameters (?d  - drone ?l0 ?l1 - loc)
+    :parameters (?d  - drone ?l - loc ?a - area)
     :precondition (and
-      (at ?d ?l0)
-      (closest ?l0 ?l1)
+      (at ?d ?l)
       (not (exists (?x - drone ?y - loc)
         (and
           (not (= ?x ?d))
           (at ?x ?y)
-          (collided ?l1 ?y)
+          (in ?y ?a)
         )
       ))
       (hovered ?d)
-      (not (scanned ?l1))
+      (not (scanned ?d ?a))
     )
     :effect (and
-      (not (at ?d ?l0))
-      (at ?d ?l1)
-      (scanned ?l1)
+      (not (at ?d ?l))
+      (forall (?y - loc)
+        (when (in ?y ?a)
+          (at ?d ?y)
+        )
+      )
+      (scanned ?d ?a)
     )
   )
   (:action takeoff
     :parameters (?d - drone)
-    :precondition (not (hovered ?d))
-    :effect (and (hovered ?d))
+    :precondition (and
+      (not (hovered ?d))
+      (not (low_battery ?d))
+    )
+    :effect (and
+      (hovered ?d)
+    )
   )
 )

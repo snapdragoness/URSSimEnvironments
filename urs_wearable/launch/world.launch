@@ -9,7 +9,7 @@
 
   <include file="$(find hector_gazebo_worlds)/launch/start.launch">
     <arg name="world" value="$(arg world)" />
-    <arg name="gui" value="true" />
+    <arg name="gui" value="false" />
   </include>
 
   <include file="$(find urs_wearable)/launch/spawn_quadrotors.launch">
@@ -26,11 +26,11 @@
 	  <param name="uav_ns" value="$(arg uav_ns)" type="str" />
 
 	  <param name="domain_file" value="$(find urs_wearable)/../FF-v2.3/urs_d.pddl" type="str" />
-	  <param name="planner_command" value="timeout 10 $(find urs_wearable)/../FF-v2.3/ff" type="str" />
+	  <param name="planner_command" value="timeout 3 $(find urs_wearable)/../FF-v2.3/ff" type="str" />
 	  <param name="problem_path" value="$(find urs_wearable)/../FF-v2.3/" type="str" />
 	  <param name="tmp_path" value="$(find urs_wearable)/../tmp/" type="str"/>
   </node>
 
   <!-- Start rviz visualization with preset config -->
-  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find urs_wearable)/rviz_cfg/four_quadrotors.rviz" />
+  <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find urs_wearable)/rviz_cfg/four_quadrotors.rviz" /> -->
 </launch>

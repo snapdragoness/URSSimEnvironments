@@ -37,15 +37,17 @@ void KnowledgeBase::publish()
     predicate_map_lt.unlock();
 
     // Get a vector of locations from location_map_
-    auto location_table_lt = location_table_.map_.lock_table();
-    for (const auto& loc : location_table_lt)
+    auto loc_map_lt = loc_table_.loc_map_.lock_table();
+    for (const auto& loc : loc_map_lt)
     {
       urs_wearable::Location l;
       l.location_id = loc.first;
-      l.poses = loc.second;
+      l.pose = loc.second;
       state.locations.push_back(l);
     }
-    location_table_lt.unlock();
+    loc_map_lt.unlock();
+
+    // TODO: Add area
 
     // Publish
     state_pub_->publish(state);
@@ -157,7 +159,6 @@ std::string KnowledgeBase::exec(const char* cmd)
   return result;
 }
 
-// TODO: Integrate with exec() function?
 std::vector<std::string> KnowledgeBase::parseFF(std::string s)
 {
   std::vector<std::string> plan;
@@ -251,7 +252,7 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
           {
             if (cur_pred.above.l0.value == goal_excluded_it->above.l0.value
                 && cur_pred.above.l1.value == goal_excluded_it->above.l1.value
-                && cur_pred.above.truth_value == goal_excluded_it->above.truth_value)
+                && cur_pred.truth_value == goal_excluded_it->truth_value)
             {
               matched = true;
               break;
@@ -269,7 +270,7 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
           {
             if (cur_pred.aligned.l0.value == goal_excluded_it->aligned.l0.value
                 && cur_pred.aligned.l1.value == goal_excluded_it->aligned.l1.value
-                && cur_pred.aligned.truth_value == goal_excluded_it->aligned.truth_value)
+                && cur_pred.truth_value == goal_excluded_it->truth_value)
             {
               matched = true;
               break;
@@ -287,25 +288,7 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
           {
             if (cur_pred.at.d.value == goal_excluded_it->at.d.value
                 && cur_pred.at.l.value == goal_excluded_it->at.l.value
-                && cur_pred.at.truth_value == goal_excluded_it->at.truth_value)
-            {
-              matched = true;
-              break;
-            }
-          }
-        });
-      }
-      break;
-
-      case urs_wearable::Predicate::TYPE_CLOSEST:
-      {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_CLOSEST, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
-        {
-          for (const auto& cur_pred : cur_preds)
-          {
-            if (cur_pred.closest.l0.value == goal_excluded_it->closest.l0.value
-                && cur_pred.closest.l1.value == goal_excluded_it->closest.l1.value
-                && cur_pred.closest.truth_value == goal_excluded_it->closest.truth_value)
+                && cur_pred.truth_value == goal_excluded_it->truth_value)
             {
               matched = true;
               break;
@@ -323,7 +306,7 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
           {
             if (cur_pred.collided.l0.value == goal_excluded_it->collided.l0.value
                 && cur_pred.collided.l1.value == goal_excluded_it->collided.l1.value
-                && cur_pred.collided.truth_value == goal_excluded_it->collided.truth_value)
+                && cur_pred.truth_value == goal_excluded_it->truth_value)
             {
               matched = true;
               break;
@@ -340,7 +323,7 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
           for (const auto& cur_pred : cur_preds)
           {
             if (cur_pred.hovered.d.value == goal_excluded_it->hovered.d.value
-                && cur_pred.hovered.truth_value == goal_excluded_it->hovered.truth_value)
+                && cur_pred.truth_value == goal_excluded_it->truth_value)
             {
               matched = true;
               break;
@@ -350,14 +333,32 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
       }
       break;
 
-      case urs_wearable::Predicate::TYPE_ORIENTED:
+      case urs_wearable::Predicate::TYPE_IN:
       {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_ORIENTED, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_IN, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
         {
           for (const auto& cur_pred : cur_preds)
           {
-            if (cur_pred.oriented.d.value == goal_excluded_it->oriented.d.value
-                && cur_pred.oriented.truth_value == goal_excluded_it->oriented.truth_value)
+            if (cur_pred.in.l.value == goal_excluded_it->in.l.value
+                && cur_pred.in.a.value == goal_excluded_it->in.a.value
+                && cur_pred.truth_value == goal_excluded_it->truth_value)
+            {
+              matched = true;
+              break;
+            }
+          }
+        });
+      }
+      break;
+
+      case urs_wearable::Predicate::TYPE_LOW_BATTERY:
+      {
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_LOW_BATTERY, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          for (const auto& cur_pred : cur_preds)
+          {
+            if (cur_pred.low_battery.d.value == goal_excluded_it->low_battery.d.value
+                && cur_pred.truth_value == goal_excluded_it->truth_value)
             {
               matched = true;
               break;
@@ -373,8 +374,9 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
         {
           for (const auto& cur_pred : cur_preds)
           {
-            if (cur_pred.scanned.l.value == goal_excluded_it->scanned.l.value
-                && cur_pred.scanned.truth_value == goal_excluded_it->scanned.truth_value)
+            if (cur_pred.scanned.d.value == goal_excluded_it->scanned.d.value
+                && cur_pred.scanned.a.value == goal_excluded_it->scanned.a.value
+                && cur_pred.truth_value == goal_excluded_it->truth_value)
             {
               matched = true;
               break;
@@ -415,6 +417,92 @@ void KnowledgeBase::upsertPredicates(const std::vector<urs_wearable::Predicate>&
   {
     switch (new_pred.type)
     {
+      case urs_wearable::Predicate::TYPE_ABOVE:
+      {
+        if (!predicate_map_.update_fn(urs_wearable::Predicate::TYPE_ABOVE, [&new_pred](std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          bool existed = false;
+          std::vector<urs_wearable::Predicate>::iterator cur_preds_it = cur_preds.begin();
+
+          while (cur_preds_it != cur_preds.end())
+          {
+            // If the new predicate already existed, update the current predicate
+            if (new_pred.above.l0.value == cur_preds_it->above.l0.value
+                && new_pred.above.l1.value == cur_preds_it->above.l1.value)
+            {
+              if (new_pred.truth_value == false)
+              {
+                cur_preds.erase(cur_preds_it);
+              }
+              else  // Otherwise, just update its truth value
+              {
+                cur_preds_it->truth_value = new_pred.truth_value;
+              }
+
+              existed = true;
+              break;
+            }
+            cur_preds_it++;
+          }
+
+          // If the predicate does not exist, then add it to the knowledge base if its truth value is true
+          if (!existed && new_pred.truth_value == true)
+          {
+            cur_preds.push_back(new_pred);
+          }
+        }))
+        {
+          if (new_pred.truth_value == true)
+          {
+            predicate_map_.insert(urs_wearable::Predicate::TYPE_ABOVE, std::vector<urs_wearable::Predicate>{new_pred});
+          }
+        }
+      }
+      break;
+
+      case urs_wearable::Predicate::TYPE_ALIGNED:
+      {
+        if (!predicate_map_.update_fn(urs_wearable::Predicate::TYPE_ALIGNED, [&new_pred](std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          bool existed = false;
+          std::vector<urs_wearable::Predicate>::iterator cur_preds_it = cur_preds.begin();
+
+          while (cur_preds_it != cur_preds.end())
+          {
+            // If the new predicate already existed, update the current predicate
+            if (new_pred.aligned.l0.value == cur_preds_it->aligned.l0.value
+                && new_pred.aligned.l1.value == cur_preds_it->aligned.l1.value)
+            {
+              if (new_pred.truth_value == false)
+              {
+                cur_preds.erase(cur_preds_it);
+              }
+              else  // Otherwise, just update its truth value
+              {
+                cur_preds_it->truth_value = new_pred.truth_value;
+              }
+
+              existed = true;
+              break;
+            }
+            cur_preds_it++;
+          }
+
+          // If the predicate does not exist, then add it to the knowledge base if its truth value is true
+          if (!existed && new_pred.truth_value == true)
+          {
+            cur_preds.push_back(new_pred);
+          }
+        }))
+        {
+          if (new_pred.truth_value == true)
+          {
+            predicate_map_.insert(urs_wearable::Predicate::TYPE_ALIGNED, std::vector<urs_wearable::Predicate>{new_pred});
+          }
+        }
+      }
+      break;
+
       case urs_wearable::Predicate::TYPE_AT:
       {
         if (!predicate_map_.update_fn(urs_wearable::Predicate::TYPE_AT, [&new_pred](std::vector<urs_wearable::Predicate>& cur_preds)
@@ -428,13 +516,13 @@ void KnowledgeBase::upsertPredicates(const std::vector<urs_wearable::Predicate>&
             if (new_pred.at.d.value == cur_preds_it->at.d.value
                 && new_pred.at.l.value == cur_preds_it->at.l.value)
             {
-              if (new_pred.at.truth_value == false)
+              if (new_pred.truth_value == false)
               {
                 cur_preds.erase(cur_preds_it);
               }
               else  // Otherwise, just update its truth value
               {
-                cur_preds_it->at.truth_value = new_pred.at.truth_value;
+                cur_preds_it->truth_value = new_pred.truth_value;
               }
 
               existed = true;
@@ -444,15 +532,58 @@ void KnowledgeBase::upsertPredicates(const std::vector<urs_wearable::Predicate>&
           }
 
           // If the predicate does not exist, then add it to the knowledge base if its truth value is true
-          if (!existed && new_pred.at.truth_value == true)
+          if (!existed && new_pred.truth_value == true)
           {
             cur_preds.push_back(new_pred);
           }
         }))
         {
-          if (new_pred.at.truth_value == true)
+          if (new_pred.truth_value == true)
           {
             predicate_map_.insert(urs_wearable::Predicate::TYPE_AT, std::vector<urs_wearable::Predicate>{new_pred});
+          }
+        }
+      }
+      break;
+
+      case urs_wearable::Predicate::TYPE_COLLIDED:
+      {
+        if (!predicate_map_.update_fn(urs_wearable::Predicate::TYPE_COLLIDED, [&new_pred](std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          bool existed = false;
+          std::vector<urs_wearable::Predicate>::iterator cur_preds_it = cur_preds.begin();
+
+          while (cur_preds_it != cur_preds.end())
+          {
+            // If the new predicate already existed, update the current predicate
+            if (new_pred.collided.l0.value == cur_preds_it->collided.l0.value
+                && new_pred.collided.l1.value == cur_preds_it->collided.l1.value)
+            {
+              if (new_pred.truth_value == false)
+              {
+                cur_preds.erase(cur_preds_it);
+              }
+              else  // Otherwise, just update its truth value
+              {
+                cur_preds_it->truth_value = new_pred.truth_value;
+              }
+
+              existed = true;
+              break;
+            }
+            cur_preds_it++;
+          }
+
+          // If the predicate does not exist, then add it to the knowledge base if its truth value is true
+          if (!existed && new_pred.truth_value == true)
+          {
+            cur_preds.push_back(new_pred);
+          }
+        }))
+        {
+          if (new_pred.truth_value == true)
+          {
+            predicate_map_.insert(urs_wearable::Predicate::TYPE_COLLIDED, std::vector<urs_wearable::Predicate>{new_pred});
           }
         }
       }
@@ -470,21 +601,144 @@ void KnowledgeBase::upsertPredicates(const std::vector<urs_wearable::Predicate>&
             // If the new predicate already existed, update the current predicate
             if (new_pred.hovered.d.value == cur_preds_it->hovered.d.value)
             {
-              cur_preds_it->hovered.truth_value = new_pred.hovered.truth_value;
+              cur_preds_it->truth_value = new_pred.truth_value;
               existed = true;
               break;
             }
             cur_preds_it++;
           }
 
-          // If the predicate does not exist, then add it to the knowledge base
-          if (!existed)
+          // If the predicate does not exist, then add it to the knowledge base if its truth value is true
+          if (!existed && new_pred.truth_value == true)
           {
             cur_preds.push_back(new_pred);
           }
         }))
         {
-          predicate_map_.insert(urs_wearable::Predicate::TYPE_HOVERED, std::vector<urs_wearable::Predicate>{new_pred});
+          if (new_pred.truth_value == true)
+          {
+            predicate_map_.insert(urs_wearable::Predicate::TYPE_HOVERED, std::vector<urs_wearable::Predicate>{new_pred});
+          }
+        }
+      }
+      break;
+
+      case urs_wearable::Predicate::TYPE_IN:
+      {
+        if (!predicate_map_.update_fn(urs_wearable::Predicate::TYPE_IN, [&new_pred](std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          bool existed = false;
+          std::vector<urs_wearable::Predicate>::iterator cur_preds_it = cur_preds.begin();
+
+          while (cur_preds_it != cur_preds.end())
+          {
+            // If the new predicate already existed, update the current predicate
+            if (new_pred.in.l.value == cur_preds_it->in.l.value
+                && new_pred.in.a.value == cur_preds_it->in.a.value)
+            {
+              if (new_pred.truth_value == false)
+              {
+                cur_preds.erase(cur_preds_it);
+              }
+              else  // Otherwise, just update its truth value
+              {
+                cur_preds_it->truth_value = new_pred.truth_value;
+              }
+
+              existed = true;
+              break;
+            }
+            cur_preds_it++;
+          }
+
+          // If the predicate does not exist, then add it to the knowledge base if its truth value is true
+          if (!existed && new_pred.truth_value == true)
+          {
+            cur_preds.push_back(new_pred);
+          }
+        }))
+        {
+          if (new_pred.truth_value == true)
+          {
+            predicate_map_.insert(urs_wearable::Predicate::TYPE_IN, std::vector<urs_wearable::Predicate>{new_pred});
+          }
+        }
+      }
+      break;
+
+      case urs_wearable::Predicate::TYPE_LOW_BATTERY:
+      {
+        if (!predicate_map_.update_fn(urs_wearable::Predicate::TYPE_LOW_BATTERY, [&new_pred](std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          bool existed = false;
+          std::vector<urs_wearable::Predicate>::iterator cur_preds_it = cur_preds.begin();
+
+          while (cur_preds_it != cur_preds.end())
+          {
+            // If the new predicate already existed, update the current predicate
+            if (new_pred.low_battery.d.value == cur_preds_it->low_battery.d.value)
+            {
+              cur_preds_it->truth_value = new_pred.truth_value;
+              existed = true;
+              break;
+            }
+            cur_preds_it++;
+          }
+
+          // If the predicate does not exist, then add it to the knowledge base if its truth value is true
+          if (!existed && new_pred.truth_value == true)
+          {
+            cur_preds.push_back(new_pred);
+          }
+        }))
+        {
+          if (new_pred.truth_value == true)
+          {
+            predicate_map_.insert(urs_wearable::Predicate::TYPE_LOW_BATTERY, std::vector<urs_wearable::Predicate>{new_pred});
+          }
+        }
+      }
+      break;
+
+      case urs_wearable::Predicate::TYPE_SCANNED:
+      {
+        if (!predicate_map_.update_fn(urs_wearable::Predicate::TYPE_SCANNED, [&new_pred](std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          bool existed = false;
+          std::vector<urs_wearable::Predicate>::iterator cur_preds_it = cur_preds.begin();
+
+          while (cur_preds_it != cur_preds.end())
+          {
+            // If the new predicate already existed, update the current predicate
+            if (new_pred.scanned.d.value == cur_preds_it->scanned.d.value
+                && new_pred.scanned.a.value == cur_preds_it->scanned.a.value)
+            {
+              if (new_pred.truth_value == false)
+              {
+                cur_preds.erase(cur_preds_it);
+              }
+              else  // Otherwise, just update its truth value
+              {
+                cur_preds_it->truth_value = new_pred.truth_value;
+              }
+
+              existed = true;
+              break;
+            }
+            cur_preds_it++;
+          }
+
+          // If the predicate does not exist, then add it to the knowledge base if its truth value is true
+          if (!existed && new_pred.truth_value == true)
+          {
+            cur_preds.push_back(new_pred);
+          }
+        }))
+        {
+          if (new_pred.truth_value == true)
+          {
+            predicate_map_.insert(urs_wearable::Predicate::TYPE_SCANNED, std::vector<urs_wearable::Predicate>{new_pred});
+          }
         }
       }
       break;
@@ -590,15 +844,7 @@ std::string KnowledgeBase::getProblemDef(const std::vector<urs_wearable::Predica
 //        {
 //          current_predicates.push_back(goal_pred);
 //          urs_wearable::Predicate& p = current_predicates.back();
-//          p.above.truth_value
-//          = p.aligned.truth_value
-//          = p.at.truth_value
-//          = p.closest.truth_value
-//          = p.collided.truth_value
-//          = p.hovered.truth_value
-//          = p.oriented.truth_value
-//          = p.scanned.truth_value
-//          = false;
+//          p.truth_value = false;
 //        }
 //      }
 
@@ -611,38 +857,9 @@ std::string KnowledgeBase::getProblemDef(const std::vector<urs_wearable::Predica
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
-  // TODO
-  // Add auxiliary predicates
-  std::vector<urs_wearable::Predicate> aux_preds;
-  for (const auto& goal_pred : goal)
-  {
-    switch (goal_pred.type)
-    {
-      case urs_wearable::Predicate::TYPE_AT:
-        break;
-
-//      case urs_wearable::Predicate::TYPE_SCANNED:
-//      {
-//        for (const auto& pred : current_predicates)
-//        {
-//          if (pred.type == urs_wearable::Predicate::TYPE_AT)
-//          {
-//            urs_wearable::Predicate aux_pred;
-//            aux_pred.type = urs_wearable::Predicate::TYPE_CLOSEST;
-//            aux_pred.closest.d.value = pred.at.d.value;
-//            aux_pred.closest.l.value = goal_pred.scanned.l.value;
-//            aux_preds.push_back(aux_pred);
-//            break;
-//          }
-//        }
-//      }
-      break;
-    }
-  }
-  current_predicates.insert(current_predicates.end(), aux_preds.begin(), aux_preds.end());
-
   /**** Create PDDL problem definition ****/
   // Create an object set for every object type we have
+  std::set<std::uint8_t> object_area_id_set;
   std::set<std::uint8_t> object_drone_id_set;
   std::set<std::uint8_t> object_location_id_set;
 
@@ -677,7 +894,7 @@ std::string KnowledgeBase::getProblemDef(const std::vector<urs_wearable::Predica
             + " " + urs_wearable::ObjectLocation::TYPE + std::to_string(pred.above.l0.value)
             + " " + urs_wearable::ObjectLocation::TYPE + std::to_string(pred.above.l1.value)
             + ")";
-          *preds_string += (pred.above.truth_value) ? s : " (not" + s + ")";
+          *preds_string += (pred.truth_value) ? s : " (not" + s + ")";
 
           object_location_id_set.insert(pred.above.l0.value);
           object_location_id_set.insert(pred.above.l1.value);
@@ -688,7 +905,7 @@ std::string KnowledgeBase::getProblemDef(const std::vector<urs_wearable::Predica
             + " " + urs_wearable::ObjectLocation::TYPE + std::to_string(pred.aligned.l0.value)
             + " " + urs_wearable::ObjectLocation::TYPE + std::to_string(pred.aligned.l1.value)
             + ")";
-          *preds_string += (pred.aligned.truth_value) ? s : " (not" + s + ")";
+          *preds_string += (pred.truth_value) ? s : " (not" + s + ")";
 
           object_location_id_set.insert(pred.aligned.l0.value);
           object_location_id_set.insert(pred.aligned.l1.value);
@@ -699,21 +916,10 @@ std::string KnowledgeBase::getProblemDef(const std::vector<urs_wearable::Predica
             + " " + urs_wearable::ObjectDrone::TYPE + std::to_string(pred.at.d.value)
             + " " + urs_wearable::ObjectLocation::TYPE + std::to_string(pred.at.l.value)
             + ")";
-          *preds_string += (pred.at.truth_value) ? s : " (not" + s + ")";
+          *preds_string += (pred.truth_value) ? s : " (not" + s + ")";
 
           object_drone_id_set.insert(pred.at.d.value);
           object_location_id_set.insert(pred.at.l.value);
-          break;
-
-        case urs_wearable::Predicate::TYPE_CLOSEST:
-          s = " (" + urs_wearable::PredicateClosest::NAME
-            + " " + urs_wearable::ObjectDrone::TYPE + std::to_string(pred.closest.l0.value)
-            + " " + urs_wearable::ObjectLocation::TYPE + std::to_string(pred.closest.l1.value)
-            + ")";
-          *preds_string += (pred.closest.truth_value) ? s : " (not" + s + ")";
-
-          object_location_id_set.insert(pred.closest.l1.value);
-          object_location_id_set.insert(pred.closest.l1.value);
           break;
 
         case urs_wearable::Predicate::TYPE_COLLIDED:
@@ -721,7 +927,7 @@ std::string KnowledgeBase::getProblemDef(const std::vector<urs_wearable::Predica
             + " " + urs_wearable::ObjectLocation::TYPE + std::to_string(pred.collided.l0.value)
             + " " + urs_wearable::ObjectLocation::TYPE + std::to_string(pred.collided.l1.value)
             + ")";
-          *preds_string += (pred.collided.truth_value) ? s : " (not" + s + ")";
+          *preds_string += (pred.truth_value) ? s : " (not" + s + ")";
 
           object_location_id_set.insert(pred.collided.l0.value);
           object_location_id_set.insert(pred.collided.l1.value);
@@ -731,27 +937,40 @@ std::string KnowledgeBase::getProblemDef(const std::vector<urs_wearable::Predica
           s = " (" + urs_wearable::PredicateHovered::NAME
             + " " + urs_wearable::ObjectDrone::TYPE + std::to_string(pred.hovered.d.value)
             + ")";
-          *preds_string += (pred.hovered.truth_value) ? s : " (not" + s + ")";
+          *preds_string += (pred.truth_value) ? s : " (not" + s + ")";
 
           object_drone_id_set.insert(pred.hovered.d.value);
           break;
 
-        case urs_wearable::Predicate::TYPE_ORIENTED:
-          s = " (" + urs_wearable::PredicateOriented::NAME
-            + " " + urs_wearable::ObjectDrone::TYPE + std::to_string(pred.oriented.d.value)
+        case urs_wearable::Predicate::TYPE_IN:
+          s = " (" + urs_wearable::PredicateIn::NAME
+            + " " + urs_wearable::ObjectLocation::TYPE + std::to_string(pred.in.l.value)
+            + " " + urs_wearable::ObjectArea::TYPE + std::to_string(pred.in.a.value)
             + ")";
-          *preds_string += (pred.oriented.truth_value) ? s : " (not" + s + ")";
+          *preds_string += (pred.truth_value) ? s : " (not" + s + ")";
 
-          object_drone_id_set.insert(pred.oriented.d.value);
+          object_location_id_set.insert(pred.in.l.value);
+          object_area_id_set.insert(pred.in.a.value);
+          break;
+
+        case urs_wearable::Predicate::TYPE_LOW_BATTERY:
+          s = " (" + urs_wearable::PredicateLowBattery::NAME
+            + " " + urs_wearable::ObjectDrone::TYPE + std::to_string(pred.low_battery.d.value)
+            + ")";
+          *preds_string += (pred.truth_value) ? s : " (not" + s + ")";
+
+          object_drone_id_set.insert(pred.low_battery.d.value);
           break;
 
         case urs_wearable::Predicate::TYPE_SCANNED:
           s = " (" + urs_wearable::PredicateScanned::NAME
-            + " " + urs_wearable::ObjectLocation::TYPE + std::to_string(pred.scanned.l.value)
+            + " " + urs_wearable::ObjectDrone::TYPE + std::to_string(pred.scanned.d.value)
+            + " " + urs_wearable::ObjectArea::TYPE + std::to_string(pred.scanned.a.value)
             + ")";
-          *preds_string += (pred.scanned.truth_value) ? s : " (not" + s + ")";
+          *preds_string += (pred.truth_value) ? s : " (not" + s + ")";
 
-          object_drone_id_set.insert(pred.scanned.l.value);
+          object_drone_id_set.insert(pred.scanned.d.value);
+          object_area_id_set.insert(pred.scanned.a.value);
           break;
       }
     }
@@ -759,6 +978,19 @@ std::string KnowledgeBase::getProblemDef(const std::vector<urs_wearable::Predica
 
   // Create :objects string from all object sets we have
   std::string objects_str;
+  if (object_area_id_set.size())
+  {
+    for (const auto i : object_area_id_set)
+    {
+      objects_str += " " + urs_wearable::ObjectArea::TYPE + std::to_string(i);
+    }
+    objects_str += " - " + urs_wearable::ObjectArea::TYPE;
+  }
+  else  // Add a dummy object, otherwise CPA might have problem parsing the problem definition
+  {
+    objects_str += " " + urs_wearable::ObjectArea::TYPE + "_dummy - " + urs_wearable::ObjectArea::TYPE;
+  }
+
   if (object_drone_id_set.size())
   {
     for (const auto i : object_drone_id_set)
@@ -826,6 +1058,13 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
       action.descend.l0.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
       action.descend.l1.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
     }
+    else if (tokens[0] == urs_wearable::ActionGather::NAME)
+    {
+      action.type = urs_wearable::Action::TYPE_GATHER;
+      action.gather.d.value = std::stoi(tokens[1].erase(0, urs_wearable::ObjectDrone::TYPE.size()));
+      action.gather.l0.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.gather.l1.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+    }
     else if (tokens[0] == urs_wearable::ActionLand::NAME)
     {
       action.type = urs_wearable::Action::TYPE_LAND;
@@ -838,17 +1077,12 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
       action.move.l0.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
       action.move.l1.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
     }
-    else if (tokens[0] == urs_wearable::ActionRotate::NAME)
-    {
-      action.type = urs_wearable::Action::TYPE_ROTATE;
-      action.rotate.d.value = std::stoi(tokens[1].erase(0, urs_wearable::ObjectDrone::TYPE.size()));
-    }
     else if (tokens[0] == urs_wearable::ActionScan::NAME)
     {
       action.type = urs_wearable::Action::TYPE_SCAN;
       action.scan.d.value = std::stoi(tokens[1].erase(0, urs_wearable::ObjectDrone::TYPE.size()));
-      action.scan.l0.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
-      action.scan.l1.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.scan.l.value = std::stoi(tokens[2].erase(0, urs_wearable::ObjectLocation::TYPE.size()));
+      action.scan.a.value = std::stoi(tokens[3].erase(0, urs_wearable::ObjectArea::TYPE.size()));
     }
     else if (tokens[0] == urs_wearable::ActionTakeoff::NAME)
     {

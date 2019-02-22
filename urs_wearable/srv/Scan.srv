@@ -1,4 +1,0 @@
-uint8 uav_id
-geometry_msgs/Point position_sw
-geometry_msgs/Point position_ne
----

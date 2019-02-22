@@ -58,35 +58,36 @@ add_message_files(FILES
   Action.msg
   ActionAscend.msg
   ActionDescend.msg
+  ActionGather.msg
   ActionLand.msg
   ActionMove.msg
-  ActionRotate.msg
   ActionScan.msg
   ActionTakeoff.msg
   Feedback.msg
   Location.msg
+  ObjectArea.msg
   ObjectDrone.msg
   ObjectLocation.msg
   Predicate.msg
   PredicateAbove.msg
   PredicateAligned.msg
   PredicateAt.msg
-  PredicateClosest.msg
   PredicateCollided.msg
   PredicateHovered.msg
-  PredicateOriented.msg
+  PredicateIn.msg
+  PredicateLowBattery.msg
   PredicateScanned.msg
   State.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(FILES
+  AddArea.srv
   AddLocation.srv
-  Gather.srv
   GetDest.srv
   GetState.srv
+  RemoveArea.srv
   RemoveLocation.srv
-  Scan.srv
   SetAltitude.srv
   SetDouble.srv
   SetGoal.srv

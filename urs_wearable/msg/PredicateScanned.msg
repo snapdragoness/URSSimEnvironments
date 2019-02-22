@@ -1,5 +1,4 @@
 string NAME=scanned
 
-ObjectLocation l
-
-bool truth_value
+ObjectDrone d
+ObjectArea a

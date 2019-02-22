@@ -16,61 +16,56 @@
 class LocationTable
 {
 public:
-  // We use uint8_t here to match with the type of 'location_id' in
-  // Location.msg, ObjectLocationID.msg, LocationAdd.srv, LocationRemove.srv
-  typedef std::uint8_t location_id_type;
+  typedef std::uint8_t area_id_t; // This matches with its definition in ObjectArea.msg, AddArea.srv, RemoveArea.srv
+  typedef std::uint8_t loc_id_t;  // This matches with its definition in ObjectLocation.msg, AddLocation.srv, RemoveLocation.srv
 
-  cuckoohash_map<location_id_type, std::vector<geometry_msgs::Pose>> map_;
+  cuckoohash_map<area_id_t, std::vector<loc_id_t>> area_map_;
+  cuckoohash_map<loc_id_t, geometry_msgs::Pose> loc_map_;
 
-  location_id_type insert(const std::vector<geometry_msgs::Pose>& poses)
+  loc_id_t insert(const geometry_msgs::Pose& pose)
   {
     {
       std::lock_guard<std::mutex> lock(unused_id_set_mutex_);
       if (!unused_id_set_.empty())
       {
-        std::set<location_id_type>::iterator it = unused_id_set_.begin();
-        location_id_type id = *it;
+        std::set<loc_id_t>::iterator it = unused_id_set_.begin();
+        loc_id_t id = *it;
         unused_id_set_.erase(it);
-        map_.insert(id, poses);
+        loc_map_.insert(id, pose);
         return id;
       }
     }
 
-    location_id_type id_mutex = id_++;
+    loc_id_t id_mutex = id_++;
     if (id_mutex + 1 == 0)
     {
       throw std::length_error("Location table full. The size of location_id type should be increased.");
     }
-    map_.insert(id_mutex, poses);
+    loc_map_.insert(id_mutex, pose);
     return id_mutex;
   }
 
-  location_id_type insert(const geometry_msgs::Pose& pose)
-  {
-    return insert(std::vector<geometry_msgs::Pose>{pose});
-  }
-
-  bool erase(location_id_type id)
+  bool erase(loc_id_t id)
   {
     {
       std::lock_guard<std::mutex> lock(unused_id_set_mutex_);
       unused_id_set_.insert(id);
     }
-    return map_.erase(id);
+    return loc_map_.erase(id);
   }
 
-  bool update(location_id_type id, const std::vector<geometry_msgs::Pose>& poses)
+  bool update(loc_id_t id, const geometry_msgs::Pose& pose)
   {
-    return map_.update_fn(id, [&poses](std::vector<geometry_msgs::Pose> &p)
+    return loc_map_.update_fn(id, [&pose](geometry_msgs::Pose &p)
     {
-      p = poses;
+      p = pose;
     });
   }
 
 private:
-  std::atomic<location_id_type> id_ {0};
+  std::atomic<loc_id_t> id_ {0};
 
-  std::set<location_id_type> unused_id_set_;
+  std::set<loc_id_t> unused_id_set_;
   std::mutex unused_id_set_mutex_;
 };
 

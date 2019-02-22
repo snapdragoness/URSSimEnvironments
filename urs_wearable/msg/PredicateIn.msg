@@ -1,5 +1,4 @@
-string NAME=scan
+string NAME=in
 
-ObjectDrone d
 ObjectLocation l
 ObjectArea a
