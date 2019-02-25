@@ -36,18 +36,28 @@ void KnowledgeBase::publish()
     }
     predicate_map_lt.unlock();
 
-    // Get a vector of locations from location_map_
+    // Get a vector of locations from loc_map_
     auto loc_map_lt = loc_table_.loc_map_.lock_table();
     for (const auto& loc : loc_map_lt)
     {
       urs_wearable::Location l;
-      l.location_id = loc.first;
+      l.loc_id = loc.first;
       l.pose = loc.second;
       state.locations.push_back(l);
     }
     loc_map_lt.unlock();
 
-    // TODO: Add area
+    // Get a vector of areas from area_map_
+    auto area_map_lt = loc_table_.area_map_.lock_table();
+    for (const auto& area : area_map_lt)
+    {
+      urs_wearable::Area a;
+      a.area_id = area.first;
+      a.loc_id_left = area.second.loc_id_left;
+      a.loc_id_right = area.second.loc_id_right;
+      state.areas.push_back(a);
+    }
+    area_map_lt.unlock();
 
     // Publish
     state_pub_->publish(state);

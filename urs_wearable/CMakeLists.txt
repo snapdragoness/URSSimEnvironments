@@ -63,6 +63,7 @@ add_message_files(FILES
   ActionMove.msg
   ActionScan.msg
   ActionTakeoff.msg
+  Area.msg
   Feedback.msg
   Location.msg
   ObjectArea.msg
