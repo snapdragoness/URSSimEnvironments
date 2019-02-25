@@ -79,14 +79,14 @@ void KnowledgeBase::replan()
   {
     executor_map_.update_fn(id, [this](struct Executor& executor)
     {
-      std::vector<urs_wearable::Predicate> goal_excluded = excludeAlreadySatisfiedGoals(executor.goal);
+      std::vector<urs_wearable::Predicate> unsatisfied_goals = getUnsatisfiedGoals(executor.goal);
 
-      if (goal_excluded.size() > 0)
+      if (unsatisfied_goals.size() > 0)
       {
         std::ofstream ofs;
         std::string problem_file = tmp_path + "q" + std::to_string(executorReplanID++) + ".pddl";
         ofs.open(problem_file.c_str());
-        ofs << getProblemDef(goal_excluded);
+        ofs << getProblemDef(unsatisfied_goals);
         ofs.close();
 
         std::string command = planner_command + " -o " + domain_file + " -f " + problem_file;
@@ -111,14 +111,14 @@ void KnowledgeBase::replan()
 
 void KnowledgeBase::getPlan(executor_id_type executor_id, const std::vector<urs_wearable::Predicate>& goal, std::vector<std::string>& plan)
 {
-  std::vector<urs_wearable::Predicate> goal_excluded = excludeAlreadySatisfiedGoals(goal);
+  std::vector<urs_wearable::Predicate> unsatisfied_goals = getUnsatisfiedGoals(goal);
 
-  if (goal_excluded.size() > 0)
+  if (unsatisfied_goals.size() > 0)
   {
     std::ofstream ofs;
     std::string problem_file = tmp_path + "p" + std::to_string(executor_id) + ".pddl";
     ofs.open(problem_file.c_str());
-    ofs << getProblemDef(goal_excluded);
+    ofs << getProblemDef(unsatisfied_goals);
     ofs.close();
 
     std::string command = planner_command + " -o " + domain_file + " -f " + problem_file;
@@ -235,24 +235,23 @@ bool KnowledgeBase::getPlanIfPlanHasChanged(executor_id_type executor_id, std::v
 
 // This method needs to be modified if there is a change in
 // - predicate
-std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals(const std::vector<urs_wearable::Predicate>& goal)
+std::vector<urs_wearable::Predicate> KnowledgeBase::getUnsatisfiedGoals(const std::vector<urs_wearable::Predicate>& goals)
 {
-  std::vector<urs_wearable::Predicate> goal_excluded(goal);
-  std::vector<urs_wearable::Predicate>::iterator goal_excluded_it = goal_excluded.begin();
-  while (goal_excluded_it != goal_excluded.end())
+  std::vector<urs_wearable::Predicate> unsatisfied_goals;
+  for (const urs_wearable::Predicate& goal : goals)
   {
     bool matched = false;
-    switch (goal_excluded_it->type)
+    switch (goal.type)
     {
       case urs_wearable::Predicate::TYPE_ABOVE:
       {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_ABOVE, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_ABOVE, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
         {
           for (const auto& cur_pred : cur_preds)
           {
-            if (cur_pred.above.l0.value == goal_excluded_it->above.l0.value
-                && cur_pred.above.l1.value == goal_excluded_it->above.l1.value
-                && cur_pred.truth_value == goal_excluded_it->truth_value)
+            if (cur_pred.above.l0.value == goal.above.l0.value
+                && cur_pred.above.l1.value == goal.above.l1.value
+                && cur_pred.truth_value == goal.truth_value)
             {
               matched = true;
               break;
@@ -264,13 +263,13 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
 
       case urs_wearable::Predicate::TYPE_ALIGNED:
       {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_ALIGNED, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_ALIGNED, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
         {
           for (const auto& cur_pred : cur_preds)
           {
-            if (cur_pred.aligned.l0.value == goal_excluded_it->aligned.l0.value
-                && cur_pred.aligned.l1.value == goal_excluded_it->aligned.l1.value
-                && cur_pred.truth_value == goal_excluded_it->truth_value)
+            if (cur_pred.aligned.l0.value == goal.aligned.l0.value
+                && cur_pred.aligned.l1.value == goal.aligned.l1.value
+                && cur_pred.truth_value == goal.truth_value)
             {
               matched = true;
               break;
@@ -282,13 +281,13 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
 
       case urs_wearable::Predicate::TYPE_AT:
       {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_AT, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_AT, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
         {
           for (const auto& cur_pred : cur_preds)
           {
-            if (cur_pred.at.d.value == goal_excluded_it->at.d.value
-                && cur_pred.at.l.value == goal_excluded_it->at.l.value
-                && cur_pred.truth_value == goal_excluded_it->truth_value)
+            if (cur_pred.at.d.value == goal.at.d.value
+                && cur_pred.at.l.value == goal.at.l.value
+                && cur_pred.truth_value == goal.truth_value)
             {
               matched = true;
               break;
@@ -300,13 +299,13 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
 
       case urs_wearable::Predicate::TYPE_COLLIDED:
       {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_COLLIDED, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_COLLIDED, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
         {
           for (const auto& cur_pred : cur_preds)
           {
-            if (cur_pred.collided.l0.value == goal_excluded_it->collided.l0.value
-                && cur_pred.collided.l1.value == goal_excluded_it->collided.l1.value
-                && cur_pred.truth_value == goal_excluded_it->truth_value)
+            if (cur_pred.collided.l0.value == goal.collided.l0.value
+                && cur_pred.collided.l1.value == goal.collided.l1.value
+                && cur_pred.truth_value == goal.truth_value)
             {
               matched = true;
               break;
@@ -318,12 +317,12 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
 
       case urs_wearable::Predicate::TYPE_HOVERED:
       {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_HOVERED, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_HOVERED, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
         {
           for (const auto& cur_pred : cur_preds)
           {
-            if (cur_pred.hovered.d.value == goal_excluded_it->hovered.d.value
-                && cur_pred.truth_value == goal_excluded_it->truth_value)
+            if (cur_pred.hovered.d.value == goal.hovered.d.value
+                && cur_pred.truth_value == goal.truth_value)
             {
               matched = true;
               break;
@@ -335,13 +334,13 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
 
       case urs_wearable::Predicate::TYPE_IN:
       {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_IN, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_IN, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
         {
           for (const auto& cur_pred : cur_preds)
           {
-            if (cur_pred.in.l.value == goal_excluded_it->in.l.value
-                && cur_pred.in.a.value == goal_excluded_it->in.a.value
-                && cur_pred.truth_value == goal_excluded_it->truth_value)
+            if (cur_pred.in.l.value == goal.in.l.value
+                && cur_pred.in.a.value == goal.in.a.value
+                && cur_pred.truth_value == goal.truth_value)
             {
               matched = true;
               break;
@@ -353,12 +352,12 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
 
       case urs_wearable::Predicate::TYPE_LOW_BATTERY:
       {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_LOW_BATTERY, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_LOW_BATTERY, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
         {
           for (const auto& cur_pred : cur_preds)
           {
-            if (cur_pred.low_battery.d.value == goal_excluded_it->low_battery.d.value
-                && cur_pred.truth_value == goal_excluded_it->truth_value)
+            if (cur_pred.low_battery.d.value == goal.low_battery.d.value
+                && cur_pred.truth_value == goal.truth_value)
             {
               matched = true;
               break;
@@ -370,13 +369,13 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
 
       case urs_wearable::Predicate::TYPE_SCANNED:
       {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_SCANNED, [&goal_excluded_it, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
+        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_SCANNED, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
         {
           for (const auto& cur_pred : cur_preds)
           {
-            if (cur_pred.scanned.d.value == goal_excluded_it->scanned.d.value
-                && cur_pred.scanned.a.value == goal_excluded_it->scanned.a.value
-                && cur_pred.truth_value == goal_excluded_it->truth_value)
+            if (cur_pred.scanned.d.value == goal.scanned.d.value
+                && cur_pred.scanned.a.value == goal.scanned.a.value
+                && cur_pred.truth_value == goal.truth_value)
             {
               matched = true;
               break;
@@ -387,17 +386,13 @@ std::vector<urs_wearable::Predicate> KnowledgeBase::excludeAlreadySatisfiedGoals
       break;
     }
 
-    if (matched)
+    if (!matched)
     {
-      goal_excluded.erase(goal_excluded_it);
-    }
-    else
-    {
-      goal_excluded_it++;
+      unsatisfied_goals.push_back(goal);
     }
   }
 
-  return goal_excluded;
+  return unsatisfied_goals;
 }
 
 // This method needs to be modified if there is a change in

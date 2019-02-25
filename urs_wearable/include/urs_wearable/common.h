@@ -38,6 +38,43 @@ void writeFile(const std::string& path_name, const std::string& content)
   file.close();
 }
 
+std::vector<std::string> tokenizeString(const std::string& str, const std::string& delimiters)
+{
+  std::vector<std::string> tokens;
+  // Skip delimiters at beginning.
+  std::string::size_type lastPos = str.find_first_not_of(delimiters, 0);
+  // Find first "non-delimiter".
+  std::string::size_type pos = str.find_first_of(delimiters, lastPos);
+
+  while (std::string::npos != pos || std::string::npos != lastPos)
+  {
+    // Found a token, add it to the vector.
+    tokens.push_back(str.substr(lastPos, pos - lastPos));
+    // Skip delimiters.  Note the "not_of"
+    lastPos = str.find_first_not_of(delimiters, pos);
+    // Find next "non-delimiter"
+    pos = str.find_first_of(delimiters, lastPos);
+  }
+  return tokens;
+}
+
+std::string& ltrim(std::string& str, const std::string& chars = "\t\n\v\f\r ")
+{
+  str.erase(0, str.find_first_not_of(chars));
+  return str;
+}
+
+std::string& rtrim(std::string& str, const std::string& chars = "\t\n\v\f\r ")
+{
+  str.erase(str.find_last_not_of(chars) + 1);
+  return str;
+}
+
+std::string& trim(std::string& str, const std::string& chars = "\t\n\v\f\r ")
+{
+  return ltrim(rtrim(str, chars), chars);
+}
+
 void ros_info(const std::string& s)
 {
   ROS_INFO("%s: %s", ros::this_node::getName().c_str(), s.c_str());

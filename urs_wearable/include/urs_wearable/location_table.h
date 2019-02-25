@@ -19,42 +19,88 @@ public:
   typedef std::uint8_t area_id_t; // This matches with its definition in ObjectArea.msg, AddArea.srv, RemoveArea.srv
   typedef std::uint8_t loc_id_t;  // This matches with its definition in ObjectLocation.msg, AddLocation.srv, RemoveLocation.srv
 
-  cuckoohash_map<area_id_t, std::vector<loc_id_t>> area_map_;
+  typedef struct                  // This matches with its definition in AddArea.srv
+  {
+    loc_id_t loc_id_left;
+    loc_id_t loc_id_right;
+  } Area;
+
+  cuckoohash_map<area_id_t, Area> area_map_;
   cuckoohash_map<loc_id_t, geometry_msgs::Pose> loc_map_;
 
-  loc_id_t insert(const geometry_msgs::Pose& pose)
+  area_id_t insertArea(const Area& area)
   {
     {
-      std::lock_guard<std::mutex> lock(unused_id_set_mutex_);
-      if (!unused_id_set_.empty())
+      std::lock_guard<std::mutex> lock(unused_area_id_set_mutex_);
+      if (!unused_area_id_set_.empty())
       {
-        std::set<loc_id_t>::iterator it = unused_id_set_.begin();
+        std::set<area_id_t>::iterator it = unused_area_id_set_.begin();
+        area_id_t id = *it;
+        unused_area_id_set_.erase(it);
+        area_map_.insert(id, area);
+        return id;
+      }
+    }
+
+    area_id_t id_mutex = area_id_++;
+    if (id_mutex + 1 == 0)
+    {
+      throw std::length_error("location_table.area_map_ is full");
+    }
+    area_map_.insert(id_mutex, area);
+    return id_mutex;
+  }
+
+  bool eraseArea(area_id_t id)
+  {
+    {
+      std::lock_guard<std::mutex> lock(unused_area_id_set_mutex_);
+      unused_area_id_set_.insert(id);
+    }
+    return area_map_.erase(id);
+  }
+
+  bool updateArea(area_id_t id, const Area& area)
+  {
+    return area_map_.update_fn(id, [&area](Area &a)
+    {
+      a = area;
+    });
+  }
+
+  loc_id_t insertLocation(const geometry_msgs::Pose& pose)
+  {
+    {
+      std::lock_guard<std::mutex> lock(unused_loc_id_set_mutex_);
+      if (!unused_loc_id_set_.empty())
+      {
+        std::set<loc_id_t>::iterator it = unused_loc_id_set_.begin();
         loc_id_t id = *it;
-        unused_id_set_.erase(it);
+        unused_loc_id_set_.erase(it);
         loc_map_.insert(id, pose);
         return id;
       }
     }
 
-    loc_id_t id_mutex = id_++;
+    loc_id_t id_mutex = loc_id_++;
     if (id_mutex + 1 == 0)
     {
-      throw std::length_error("Location table full. The size of location_id type should be increased.");
+      throw std::length_error("location_table.loc_map_ is full");
     }
     loc_map_.insert(id_mutex, pose);
     return id_mutex;
   }
 
-  bool erase(loc_id_t id)
+  bool eraseLocation(loc_id_t id)
   {
     {
-      std::lock_guard<std::mutex> lock(unused_id_set_mutex_);
-      unused_id_set_.insert(id);
+      std::lock_guard<std::mutex> lock(unused_loc_id_set_mutex_);
+      unused_loc_id_set_.insert(id);
     }
     return loc_map_.erase(id);
   }
 
-  bool update(loc_id_t id, const geometry_msgs::Pose& pose)
+  bool updateLocation(loc_id_t id, const geometry_msgs::Pose& pose)
   {
     return loc_map_.update_fn(id, [&pose](geometry_msgs::Pose &p)
     {
@@ -62,11 +108,19 @@ public:
     });
   }
 
-private:
-  std::atomic<loc_id_t> id_ {0};
+  static bool within_area(const geometry_msgs::Pose& pose, const Area& area)
+  {
+    return true;
+  }
 
-  std::set<loc_id_t> unused_id_set_;
-  std::mutex unused_id_set_mutex_;
+private:
+  std::atomic<loc_id_t> area_id_ {0};
+  std::set<loc_id_t> unused_area_id_set_;
+  std::mutex unused_area_id_set_mutex_;
+
+  std::atomic<loc_id_t> loc_id_ {0};
+  std::set<loc_id_t> unused_loc_id_set_;
+  std::mutex unused_loc_id_set_mutex_;
 };
 
 #endif /* URS_WEARABLE_INCLUDE_URS_WEARABLE_LOCATION_TABLE_H_ */

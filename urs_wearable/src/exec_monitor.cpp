@@ -6,6 +6,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <libcuckoo/cuckoohash_map.hh>
 #include <ros/ros.h>
+#include <std_msgs/String.h>
 #include <urs_wearable/Action.h>
 #include <urs_wearable/AddArea.h>
 #include <urs_wearable/AddLocation.h>
@@ -27,7 +28,7 @@ KnowledgeBase g_kb("urs", "urs_problem");
 ros::Publisher g_feedback_pub;
 std::string g_uav_ns;
 
-void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal::Request req)
+void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal::Request req)
 {
   urs_wearable::Feedback feedback;
   feedback.executor_id = executor_id;
@@ -290,7 +291,7 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
 
           if (new_plan.empty())
           {
-            if (g_kb.excludeAlreadySatisfiedGoals(req.goal).empty())
+            if (g_kb.getUnsatisfiedGoals(req.goal).empty())
             {
               feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
               g_feedback_pub.publish(feedback);
@@ -341,7 +342,7 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
 
           if (new_plan.empty())
           {
-            if (g_kb.excludeAlreadySatisfiedGoals(req.goal).empty())
+            if (g_kb.getUnsatisfiedGoals(req.goal).empty())
             {
               feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
               g_feedback_pub.publish(feedback);
@@ -380,7 +381,7 @@ void executor(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal
     g_feedback_pub.publish(feedback);
     ros_warn("p" + std::to_string(executor_id) + ": SUCCEEDED");
   }
-  else if (g_kb.excludeAlreadySatisfiedGoals(req.goal).empty())
+  else if (g_kb.getUnsatisfiedGoals(req.goal).empty())
   {
     feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
     g_feedback_pub.publish(feedback);
@@ -404,8 +405,10 @@ bool getStateService(urs_wearable::GetState::Request& req, urs_wearable::GetStat
 
 LocationTable::loc_id_t addLocation(const geometry_msgs::Pose& pose)
 {
-  LocationTable::loc_id_t loc_id = g_kb.loc_table_.insert(pose);
+  LocationTable::loc_id_t loc_id = g_kb.loc_table_.insertLocation(pose);
   std::vector<urs_wearable::Predicate> aux_preds;
+  urs_wearable::Predicate pred;
+  pred.truth_value = true;
 
   // Generate auxiliary predicates
   auto loc_map_lt = g_kb.loc_table_.loc_map_.lock_table();
@@ -413,9 +416,6 @@ LocationTable::loc_id_t addLocation(const geometry_msgs::Pose& pose)
   {
     if (loc.first != loc_id)
     {
-      urs_wearable::Predicate pred;
-      pred.truth_value = true;
-
       // above(l0,l1)
       pred.type = urs_wearable::Predicate::TYPE_ABOVE;
       if (loc.second.position.z > pose.position.z)
@@ -465,10 +465,35 @@ LocationTable::loc_id_t addLocation(const geometry_msgs::Pose& pose)
   return loc_id;
 }
 
-// TODO
 bool addAreaService(urs_wearable::AddArea::Request& req, urs_wearable::AddArea::Response& res)
 {
-  // in(l,a)
+  LocationTable::Area area;
+  area.loc_id_left = req.loc_id_left;
+  area.loc_id_right = req.loc_id_right;
+
+  LocationTable::area_id_t area_id = g_kb.loc_table_.insertArea(area);
+  std::vector<urs_wearable::Predicate> aux_preds;
+  urs_wearable::Predicate pred;
+  pred.truth_value = true;
+  pred.type = urs_wearable::Predicate::TYPE_IN;
+
+  // Generate auxiliary predicates
+  auto loc_map_lt = g_kb.loc_table_.loc_map_.lock_table();
+  for (const auto& loc : loc_map_lt)
+  {
+    // in(l,a)
+    if (LocationTable::within_area(loc.second, area))
+    {
+      pred.in.l.value = loc.first;
+      pred.in.a.value = area_id;
+
+      aux_preds.push_back(pred);
+    }
+  }
+  loc_map_lt.unlock();
+  g_kb.upsertPredicates(aux_preds);
+
+  res.area_id = area_id;
 
   return true;
 }
@@ -499,7 +524,7 @@ bool removeLocationService(urs_wearable::RemoveLocation::Request& req, urs_weara
 bool setGoalService(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::Response& res)
 {
   res.executor_id = g_kb.registerExecutor();
-  std::thread thread_executor(executor, res.executor_id, req);
+  std::thread thread_executor(execute, res.executor_id, req);
   thread_executor.detach();
   return true;
 }
@@ -590,6 +615,39 @@ void scan(int uav_id, geometry_msgs::Point position_sw, geometry_msgs::Point pos
 //  return true;
 //}
 
+void battery(const std_msgs::StringConstPtr& s)
+{
+  std::vector<std::string> tokens = tokenizeString(s->data, ":");
+  try
+  {
+    std::vector<std::string> drone_id_tokens = tokenizeString(tokens[1], " ");
+    int drone_id = std::stoi(drone_id_tokens.back());
+    int battery_value = (tokens.size() == 3)? std::stoi(trim(tokens[2])): std::stoi(trim(tokens[3]));
+
+    // Update the KB and land the drone if its battery value is less than a specified value
+    if (battery_value < 10)
+    {
+      urs_wearable::Predicate pred;
+      pred.type = urs_wearable::Predicate::TYPE_LOW_BATTERY;
+      pred.truth_value = true;
+      pred.low_battery.d.value = drone_id;
+      g_kb.upsertPredicates(std::vector<urs_wearable::Predicate>{pred});
+
+      urs_wearable::DroneGoal goal;
+      goal.action_type = urs_wearable::DroneGoal::TYPE_LAND;
+      actionlib::SimpleActionClient<urs_wearable::DroneAction> ac("/uav" + std::to_string(drone_id) + "/action/drone", true);
+      ac.waitForServer();
+      ac.sendGoal(goal);
+
+      //TODO: Update at predicate after landing?
+    }
+  }
+  catch(std::exception& e)
+  {
+    ros_error("Error extracting battery level message: " + s->data);
+  }
+}
+
 int main(int argc, char **argv)
 {
   // Initialize ROS and sets up a node
@@ -630,6 +688,9 @@ int main(int argc, char **argv)
     initial_state.push_back(pred);
   }
   g_kb.upsertPredicates(initial_state);
+
+  // Subscribe to topics
+  ros::Subscriber battery_subscribe = nh.subscribe("/w_battery_value", 1, battery);
 
   // Advertise services
   ros::ServiceServer add_area_service = nh.advertiseService("urs_wearable/add_area", addAreaService);

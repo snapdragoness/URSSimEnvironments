@@ -192,13 +192,7 @@ int main(int argc, char **argv)
         if (keyboardInput.size())
         {
           // break the input into tokens
-          std::vector<std::string> tokens;
-          boost::char_separator<char> sep {" "};
-          boost::tokenizer<boost::char_separator<char>> tok {keyboardInput, sep};
-          for (const auto &token : tok)
-          {
-            tokens.push_back((std::string)token);
-          }
+          std::vector<std::string> tokens = tokenizeString(keyboardInput, " ");
 
           // check the input
           try
