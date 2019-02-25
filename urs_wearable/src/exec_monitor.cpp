@@ -5,6 +5,7 @@
 #include <actionlib/client/simple_action_client.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <libcuckoo/cuckoohash_map.hh>
+#include <ros/console.h>
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <urs_wearable/Action.h>
@@ -431,7 +432,7 @@ LocationTable::loc_id_t addLocation(const geometry_msgs::Pose& pose)
       aux_preds.push_back(pred);
 
       // aligned(l0,l1)
-      if (std::fabs(loc.second.position.z - pose.position.z) < 0.5)
+      if (pointDistance2D(loc.second.position, pose.position) < 0.5)
       {
         pred.type = urs_wearable::Predicate::TYPE_ALIGNED;
 
@@ -526,6 +527,12 @@ bool setGoalService(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::
   res.executor_id = g_kb.registerExecutor();
   std::thread thread_executor(execute, res.executor_id, req);
   thread_executor.detach();
+
+  // Log the request
+  ROS_INFO("From ROS INFO1");
+  ROS_INFO_STREAM("Received a set_goal request from player " << std::to_string(req.player_id) << ": " << KnowledgeBase::getPredicateString(req.goal));
+  ROS_INFO("From ROS INFO2");
+
   return true;
 }
 
