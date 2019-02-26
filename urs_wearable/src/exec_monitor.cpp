@@ -288,41 +288,38 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
                    + std::to_string(pose_right.position.x) + "," + std::to_string(pose_right.position.y) + "," + std::to_string(pose_right.position.z) + ")))");
 
           geometry_msgs::Pose pose_nw, pose_ne, pose_sw, pose_se;
+          pose_nw.position.z = 15.0;
+          pose_ne.position.z = 15.0;
+          pose_sw.position.z = 15.0;
+          pose_se.position.z = 15.0;
+
           if (pose_left.position.y > pose_right.position.y)
           {
             pose_nw.position.x = pose_left.position.x;
             pose_nw.position.y = pose_right.position.y;
-            pose_nw.position.z = 10.0;
 
             pose_ne.position.x = pose_right.position.x;
             pose_ne.position.y = pose_right.position.y;
-            pose_ne.position.z = 10.0;
 
             pose_sw.position.x = pose_left.position.x;
             pose_sw.position.y = pose_left.position.y;
-            pose_sw.position.z = 10.0;
 
             pose_se.position.x = pose_right.position.x;
             pose_se.position.y = pose_left.position.y;
-            pose_se.position.z = 10.0;
           }
           else
           {
             pose_nw.position.x = pose_left.position.x;
             pose_nw.position.y = pose_left.position.y;
-            pose_nw.position.z = 10.0;
 
             pose_ne.position.x = pose_right.position.x;
             pose_ne.position.y = pose_left.position.y;
-            pose_ne.position.z = 10.0;
 
             pose_sw.position.x = pose_left.position.x;
             pose_sw.position.y = pose_right.position.y;
-            pose_sw.position.z = 10.0;
 
             pose_se.position.x = pose_right.position.x;
             pose_se.position.y = pose_right.position.y;
-            pose_se.position.z = 10.0;
           }
 
           require_drone_action = true;
