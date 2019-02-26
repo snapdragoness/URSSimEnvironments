@@ -160,7 +160,6 @@ void KnowledgeBase::getPlan(executor_id_type executor_id, const std::vector<urs_
     {
       ros_error("Failed in calling " + command);
     }
-
   }
 }
 
