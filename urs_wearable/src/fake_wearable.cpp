@@ -22,14 +22,14 @@ int main(int argc, char **argv)
 
   ros::Subscriber feedback_sub = nh.subscribe("/urs_wearable/feedback", 1, feedbackCB);
 
-  ros::ServiceClient location_add_client = nh.serviceClient<urs_wearable::AddLocation>("urs_wearable/add_location");
+  ros::ServiceClient location_add_client = nh.serviceClient<urs_wearable::AddLocation>("/urs_wearable/add_location");
   urs_wearable::AddLocation add_location_srv;
 
   unsigned int loc_id;
   geometry_msgs::Pose pose;
-  pose.position.x = -10;
-  pose.position.y = 5;
-  pose.position.z = 5;
+  pose.position.x = 100;
+  pose.position.y = 100;
+  pose.position.z = 10;
   add_location_srv.request.pose = pose;
   if (location_add_client.call(add_location_srv))
   {
@@ -37,28 +37,25 @@ int main(int argc, char **argv)
   }
   else
   {
-    ros_error("error in calling /urs_wearable/location_add");
+    ros_error("Error in calling /urs_wearable/location_add");
   }
 
   urs_wearable::SetGoal set_goal_srv;
   urs_wearable::Predicate pred;
   pred.truth_value = true;
 
-  pred.type = urs_wearable::Predicate::TYPE_HOVERED;
-  pred.hovered.d.value = 0;
-  set_goal_srv.request.goal.push_back(pred);
-
-  pred.hovered.d.value = 1;
-  set_goal_srv.request.goal.push_back(pred);
-
   pred.type = urs_wearable::Predicate::TYPE_AT;
   pred.at.d.value = 0;
   pred.at.l.value = loc_id;
   set_goal_srv.request.goal.push_back(pred);
 
+  pred.type = urs_wearable::Predicate::TYPE_HOVERED;
+  pred.hovered.d.value = 1;
+  set_goal_srv.request.goal.push_back(pred);
+
   if (!ros::service::call(SET_GOAL_SERVICE_NAME, set_goal_srv))
   {
-    ros_error("error in calling " + SET_GOAL_SERVICE_NAME);
+    ros_error("Error in calling " + SET_GOAL_SERVICE_NAME);
   }
 
   ros::spin();

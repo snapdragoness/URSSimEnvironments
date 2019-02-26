@@ -21,7 +21,7 @@
     <arg name="port" value="9090"/>
   </include>
 
-  <node pkg="urs_wearable" type="exec_monitor" name="exec_monitor" output="screen">
+  <node pkg="urs_wearable" type="exec_monitor" name="exec_monitor" output="log">
     <param name="uav_total" value="$(arg uav_total)" type="int" />
 	  <param name="uav_ns" value="$(arg uav_ns)" type="str" />
 

@@ -13,6 +13,8 @@
 
 void KnowledgeBase::publish()
 {
+  std::string pred_string;
+
   std::lock_guard<std::mutex> lock(state_pub_mutex_);
   if (state_pub_)
   {
@@ -33,6 +35,15 @@ void KnowledgeBase::publish()
     for (const auto& pred : predicate_map_lt)
     {
       state.predicates.insert(state.predicates.end(), pred.second.begin(), pred.second.end());
+
+      if (pred_string.empty())
+      {
+        pred_string += KnowledgeBase::getPredicateString(pred.second);
+      }
+      else
+      {
+        pred_string += ", " + KnowledgeBase::getPredicateString(pred.second);
+      }
     }
     predicate_map_lt.unlock();
 
@@ -62,6 +73,9 @@ void KnowledgeBase::publish()
     // Publish
     state_pub_->publish(state);
   }
+
+  // Log the current state
+  ROS_INFO_STREAM("Current state: " << pred_string);
 }
 
 std::atomic<unsigned int> KnowledgeBase::executorReplanID {0};
@@ -1102,4 +1116,65 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
   }
 
   return actions;
+}
+
+// This method needs to be modified if there is a change in
+// - predicate
+std::string KnowledgeBase::getPredicateString(const std::vector<urs_wearable::Predicate>& preds)
+{
+  if (preds.empty())
+  {
+    return "";
+  }
+
+  std::string pred_string;
+  for (const auto& pred : preds)
+  {
+    switch (pred.type)
+    {
+      case urs_wearable::Predicate::TYPE_ABOVE:
+        pred_string += urs_wearable::PredicateAbove::NAME
+                    + "(" + std::to_string(pred.above.l0.value) + "," + std::to_string(pred.above.l1.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_ALIGNED:
+        pred_string += urs_wearable::PredicateAligned::NAME
+                    + "(" + std::to_string(pred.aligned.l0.value) + "," + std::to_string(pred.aligned.l1.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_AT:
+        pred_string += urs_wearable::PredicateAt::NAME
+                    + "(" + std::to_string(pred.at.d.value) + "," + std::to_string(pred.at.l.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_COLLIDED:
+        pred_string += urs_wearable::PredicateCollided::NAME
+                    + "(" + std::to_string(pred.collided.l0.value) + "," + std::to_string(pred.collided.l1.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_HOVERED:
+        pred_string += urs_wearable::PredicateHovered::NAME
+                    + "(" + std::to_string(pred.hovered.d.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_IN:
+        pred_string += urs_wearable::PredicateIn::NAME
+                    + "(" + std::to_string(pred.in.l.value) + "," + std::to_string(pred.in.a.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_LOW_BATTERY:
+        pred_string += urs_wearable::PredicateLowBattery::NAME
+                    + "(" + std::to_string(pred.low_battery.d.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_SCANNED:
+        pred_string += urs_wearable::PredicateScanned::NAME
+                    + "(" + std::to_string(pred.scanned.d.value) + "," + std::to_string(pred.scanned.a.value) + "), ";
+        break;
+    }
+  }
+
+  pred_string.pop_back();   // Remove a trailing space
+  pred_string.pop_back();   // Remove a comma
+  return pred_string;
 }

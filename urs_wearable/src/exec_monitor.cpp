@@ -28,6 +28,7 @@ typedef std::uint8_t drone_id_type;
 KnowledgeBase g_kb("urs", "urs_problem");
 ros::Publisher g_feedback_pub;
 std::string g_uav_ns;
+std::vector<int> g_battery_level;
 
 void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal::Request req)
 {
@@ -496,12 +497,22 @@ bool addAreaService(urs_wearable::AddArea::Request& req, urs_wearable::AddArea::
 
   res.area_id = area_id;
 
+  // Log the request
+  ROS_INFO_STREAM("Received an add_area request" << std::endl
+                  << "area_id: " << std::to_string(res.area_id) << std::endl
+                  << "loc_id_left: " << std::to_string(req.loc_id_left) << std::endl
+                  << "loc_id_right: " << std::to_string(req.loc_id_right));
   return true;
 }
 
 bool addLocationService(urs_wearable::AddLocation::Request& req, urs_wearable::AddLocation::Response& res)
 {
   res.loc_id = addLocation(req.pose);
+
+  // Log the request
+  ROS_INFO_STREAM("Received an add_location request" << std::endl
+                  << "loc_id: " << std::to_string(res.loc_id) << std::endl
+                  << req.pose);
   return true;
 }
 
@@ -529,10 +540,9 @@ bool setGoalService(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::
   thread_executor.detach();
 
   // Log the request
-  ROS_INFO("From ROS INFO1");
-  ROS_INFO_STREAM("Received a set_goal request from player " << std::to_string(req.player_id) << ": " << KnowledgeBase::getPredicateString(req.goal));
-  ROS_INFO("From ROS INFO2");
-
+  ROS_INFO_STREAM("Received a set_goal request" << std::endl
+                  << "player_id: " << std::to_string(req.player_id)
+                  << "goal: " << KnowledgeBase::getPredicateString(req.goal));
   return true;
 }
 
@@ -628,7 +638,7 @@ void battery(const std_msgs::StringConstPtr& s)
   try
   {
     std::vector<std::string> drone_id_tokens = tokenizeString(tokens[1], " ");
-    int drone_id = std::stoi(drone_id_tokens.back());
+    drone_id_type drone_id = std::stoi(drone_id_tokens.back());
     int battery_value = (tokens.size() == 3)? std::stoi(trim(tokens[2])): std::stoi(trim(tokens[3]));
 
     // Update the KB and land the drone if its battery value is less than a specified value
@@ -647,6 +657,16 @@ void battery(const std_msgs::StringConstPtr& s)
       ac.sendGoal(goal);
 
       //TODO: Update at predicate after landing?
+    }
+
+    if (g_battery_level[drone_id] != battery_value)
+    {
+      g_battery_level[drone_id] = battery_value;
+
+      // Log the change of battery level
+      ROS_INFO_STREAM("Battery" << std::endl
+                      << "drone_id: " << std::to_string(drone_id) << std::endl
+                      << "battery: " << std::to_string(battery_value));
     }
   }
   catch(std::exception& e)
@@ -693,6 +713,9 @@ int main(int argc, char **argv)
     pred.at.d.value = i;
     pred.at.l.value = addLocation(pose_stamped->pose);
     initial_state.push_back(pred);
+
+    // Set battery level vector to be used for logging purpose
+    g_battery_level.push_back(-1);
   }
   g_kb.upsertPredicates(initial_state);
 

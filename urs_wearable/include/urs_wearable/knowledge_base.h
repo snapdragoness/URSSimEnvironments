@@ -85,6 +85,8 @@ public:
   std::string problem_path;
   std::string tmp_path;
 
+  static std::string getPredicateString(const std::vector<urs_wearable::Predicate>&);
+
 private:
   struct Executor
   {
