@@ -29,7 +29,7 @@ int main(int argc, char **argv)
   geometry_msgs::Pose pose;
   pose.position.x = 100;
   pose.position.y = 100;
-  pose.position.z = 10;
+  pose.position.z = 15;
   add_location_srv.request.pose = pose;
   if (location_add_client.call(add_location_srv))
   {
