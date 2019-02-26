@@ -63,6 +63,16 @@
     :parameters (?d - drone ?l0 ?l1 - loc)
     :precondition (and
       (at ?d ?l0)
+      (exists (?x - drone ?y - loc)
+        (and
+          (not (= ?x ?d))
+          (at ?x ?y)
+          (or
+            (= ?y ?l1)
+            (collided ?y ?l1)
+          )
+        )
+      )
       (hovered ?d)
       (not (low_battery ?d))
     )
