@@ -18,8 +18,8 @@ Controller::Controller()
   orientator_sub = nh.subscribe("ground_truth_to_tf/pose", 1, &Controller::orientator, this);
   pose_sub_ = nh.subscribe("ground_truth_to_tf/pose", 1, &Controller::pidControl, this);
 //  depth_image_sub_ = nh.subscribe("camera/depth/image_raw", 1, &Controller::readDepthImage, this);
-  sonar_height_sub_ = nh.subscribe<sensor_msgs::Range>("sonar_height", 1, &Controller::readSonarHeight, this);
-  sonar_upward_sub_ = nh.subscribe<sensor_msgs::Range>("sonar_upward", 1, &Controller::readSonarUpward, this);
+//  sonar_height_sub_ = nh.subscribe("sonar_height", 1, &Controller::readSonarHeight, this);
+//  sonar_upward_sub_ = nh.subscribe("sonar_upward", 1, &Controller::readSonarUpward, this);
 
   get_dest_service_ = nh.advertiseService("get_dest", &Controller::getDestService, this);
   set_altitude_service_ = nh.advertiseService("set_altitude", &Controller::setAltitudeService, this);

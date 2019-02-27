@@ -4,6 +4,7 @@
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <hector_uav_msgs/EnableMotors.h>
+#include <sensor_msgs/Range.h>
 #include <std_srvs/Empty.h>
 #include <urs_wearable/DroneAction.h>
 #include <urs_wearable/SetPosition.h>
@@ -24,22 +25,27 @@ class DroneActionServer
   geometry_msgs::Pose pose_;
   std::mutex pose_mutex_;
 
-  double dist_tolerance_;
-  double frequency_;
-  double landing_height_;
-  double takeoff_height_;
+  ros::Subscriber sonar_height_sub_;
+  float sonar_height_;
+  std::mutex sonar_height_mutex_;
+
+//  ros::Subscriber sonar_upward_sub_;
+//  float sonar_upward_;
+//  std::mutex sonar_upward_mutex_;
+
+  const double MAX_POSITION_ERROR = 0.5;
+  const double GROUND_HEIGHT = 0.182464;   // The height reported when the drone is on the ground
+  const double SONAR_LANDING_HEIGHT = 0.3;
+  const double TAKEOFF_HEIGHT = 15.0;
 
 public:
   DroneActionServer(ros::NodeHandle& nh, const std::string& name) :
     as_(nh, name, boost::bind(&DroneActionServer::droneActionCb, this, _1), false), name_(name)
   {
-    dist_tolerance_ = 1.0;
-    frequency_ = 10.0;
-    landing_height_ = 0.3;
-    takeoff_height_ = 15.0;
-
     enable_motors_client_ = nh.serviceClient<hector_uav_msgs::EnableMotors>("enable_motors");
     pose_sub_ = nh.subscribe("ground_truth_to_tf/pose", 10, &DroneActionServer::poseCb, this);
+    sonar_height_sub_ = nh.subscribe("sonar_height", 1, &DroneActionServer::sonarHeightCb, this);
+//    sonar_upward_sub_ = nh.subscribe("sonar_upward", 1, &DroneActionServer::sonarUpwardCb, this);
 
     as_.start();
   }
@@ -54,6 +60,18 @@ public:
     std::lock_guard<std::mutex> lock(pose_mutex_);
     pose_ = pose_stamped->pose;
   }
+
+  void sonarHeightCb(const sensor_msgs::RangeConstPtr& msg)
+  {
+    std::lock_guard<std::mutex> lock(sonar_height_mutex_);
+    sonar_height_ = msg->range;
+  }
+
+//  void sonarUpwardCb(const sensor_msgs::RangeConstPtr& msg)
+//  {
+//    std::lock_guard<std::mutex> lock(sonar_upward_mutex_);
+//    sonar_upward_ = msg->range;
+//  }
 
   void droneActionCb(const urs_wearable::DroneGoalConstPtr& goal)
   {
@@ -78,11 +96,11 @@ public:
       std::lock_guard<std::mutex> lock(pose_mutex_);
       set_position_srv.request.position = pose_.position;
     }
-    set_position_srv.request.position.z = landing_height_;
+    set_position_srv.request.position.z = GROUND_HEIGHT;
 
     if (ros::service::call("set_position", set_position_srv))
     {
-      ros::Rate rate(frequency_);
+      ros::Rate rate(10);
       while (ros::ok() && as_.isActive())
       {
         if (as_.isPreemptRequested())
@@ -92,16 +110,16 @@ public:
             std_srvs::Empty stop_srv;
             ros::service::call("stop", stop_srv);
           }
-
           as_.setPreempted();
           return;
         }
 
         {
-          std::lock_guard<std::mutex> lock(pose_mutex_);
-
-          if (pointDistance3D(pose_.position, set_position_srv.request.position) < dist_tolerance_)
+          std::lock_guard<std::mutex> lock(sonar_height_mutex_);
+          if (sonar_height_ < SONAR_LANDING_HEIGHT)
           {
+            std_srvs::Empty stop_srv;
+            ros::service::call("stop", stop_srv);
             break;
           }
         }
@@ -112,7 +130,7 @@ public:
     }
     else
     {
-      ROS_WARN("%s: actionLanding called %s failed", name_.c_str(), ros::names::resolve("set_position").c_str());
+      ros_error("actionLanding called " + ros::names::resolve("enable_motors") + " failed");
       as_.setAborted();
       return;
     }
@@ -127,6 +145,7 @@ public:
     }
     else
     {
+      ros_error("actionLand called " + ros::names::resolve("set_position") + " failed");
       as_.setAborted();
     }
   }
@@ -140,7 +159,7 @@ public:
 
       if (ros::service::call("set_position", set_position_srv))
       {
-        ros::Rate rate(frequency_);
+        ros::Rate rate(10);
         while (ros::ok() && as_.isActive())
         {
           if (as_.isPreemptRequested())
@@ -158,7 +177,7 @@ public:
           {
             std::lock_guard<std::mutex> lock(pose_mutex_);
 
-            if (pointDistance3D(pose_.position, set_position_srv.request.position) < dist_tolerance_)
+            if (pointDistance3D(pose_.position, set_position_srv.request.position) < MAX_POSITION_ERROR)
             {
               break;
             }
@@ -170,7 +189,7 @@ public:
       }
       else
       {
-        ROS_ERROR("%s: actionPose called %s failed", name_.c_str(), ros::names::resolve("set_position").c_str());
+        ros_error("actionPose called " + ros::names::resolve("set_position") + " failed");
         as_.setAborted();
       }
     }
@@ -186,6 +205,7 @@ public:
 
     if (!enable_motors_client_.call(enable_motors_srv) || !enable_motors_srv.response.success)
     {
+      ros_error("actionTakeoff called " + ros::names::resolve("enable_motors") + " failed");
       as_.setAborted();
       return;
     }
@@ -195,7 +215,15 @@ public:
       std::lock_guard<std::mutex> lock(pose_mutex_);
       pose_goal.poses.push_back(pose_);
     }
-    pose_goal.poses.back().position.z = takeoff_height_;
+
+    if (pose_goal.poses.back().position.z > TAKEOFF_HEIGHT - 2.0)
+    {
+      pose_goal.poses.back().position.z += 2.0;
+    }
+    else
+    {
+      pose_goal.poses.back().position.z = TAKEOFF_HEIGHT;
+    }
 
     actionMove(boost::make_shared<urs_wearable::DroneGoal>(pose_goal));
   }
