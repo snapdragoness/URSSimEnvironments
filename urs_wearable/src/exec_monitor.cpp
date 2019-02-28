@@ -92,6 +92,45 @@ LocationTable::loc_id_t addLocation(const geometry_msgs::Pose& pose)
   return loc_id;
 }
 
+void getAreaBorders(const geometry_msgs::Pose& pose_left, const geometry_msgs::Pose& pose_right,
+                    geometry_msgs::Pose& pose_nw, geometry_msgs::Pose& pose_ne, geometry_msgs::Pose& pose_sw, geometry_msgs::Pose& pose_se)
+{
+  if (pose_left.position.y > pose_right.position.y)
+  {
+    pose_nw.position.x = pose_left.position.x;
+    pose_nw.position.y = pose_right.position.y;
+
+    pose_ne.position.x = pose_right.position.x;
+    pose_ne.position.y = pose_right.position.y;
+
+    pose_sw.position.x = pose_left.position.x;
+    pose_sw.position.y = pose_left.position.y;
+
+    pose_se.position.x = pose_right.position.x;
+    pose_se.position.y = pose_left.position.y;
+  }
+  else
+  {
+    pose_nw.position.x = pose_left.position.x;
+    pose_nw.position.y = pose_left.position.y;
+
+    pose_ne.position.x = pose_right.position.x;
+    pose_ne.position.y = pose_left.position.y;
+
+    pose_sw.position.x = pose_left.position.x;
+    pose_sw.position.y = pose_right.position.y;
+
+    pose_se.position.x = pose_right.position.x;
+    pose_se.position.y = pose_right.position.y;
+  }
+
+  pose_nw.position.z
+  = pose_ne.position.z
+  = pose_sw.position.z
+  = pose_se.position.z
+  = (pose_left.position.z > pose_right.position.z) ? pose_left.position.z : pose_right.position.z;
+}
+
 void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal::Request req)
 {
   urs_wearable::Feedback feedback;
@@ -272,6 +311,9 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
 
         case urs_wearable::Action::TYPE_SCAN:
         {
+          geometry_msgs::Pose pose_from;
+          g_kb.loc_table_.loc_map_.find(actions_it->scan.l.value, pose_from);
+
           LocationTable::Area area_to;
           g_kb.loc_table_.area_map_.find(actions_it->scan.a.value, area_to);
 
@@ -288,48 +330,61 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
                    + std::to_string(pose_right.position.x) + "," + std::to_string(pose_right.position.y) + "," + std::to_string(pose_right.position.z) + ")))");
 
           geometry_msgs::Pose pose_nw, pose_ne, pose_sw, pose_se;
-          pose_nw.position.z = 15.0;
-          pose_ne.position.z = 15.0;
-          pose_sw.position.z = 15.0;
-          pose_se.position.z = 15.0;
+          getAreaBorders(pose_left, pose_right, pose_nw, pose_ne, pose_sw, pose_se);
+          double dist[4];
+          dist[0] = pointDistance2D(pose_from.position, pose_nw.position);
+          dist[1] = pointDistance2D(pose_from.position, pose_ne.position);
+          dist[2] = pointDistance2D(pose_from.position, pose_sw.position);
+          dist[3] = pointDistance2D(pose_from.position, pose_se.position);
 
-          if (pose_left.position.y > pose_right.position.y)
+          double min_dist = std::numeric_limits<double>::max();
+          int min_dist_index = 0;
+          for (int i = 0; i < 4; i++)
           {
-            pose_nw.position.x = pose_left.position.x;
-            pose_nw.position.y = pose_right.position.y;
-
-            pose_ne.position.x = pose_right.position.x;
-            pose_ne.position.y = pose_right.position.y;
-
-            pose_sw.position.x = pose_left.position.x;
-            pose_sw.position.y = pose_left.position.y;
-
-            pose_se.position.x = pose_right.position.x;
-            pose_se.position.y = pose_left.position.y;
-          }
-          else
-          {
-            pose_nw.position.x = pose_left.position.x;
-            pose_nw.position.y = pose_left.position.y;
-
-            pose_ne.position.x = pose_right.position.x;
-            pose_ne.position.y = pose_left.position.y;
-
-            pose_sw.position.x = pose_left.position.x;
-            pose_sw.position.y = pose_right.position.y;
-
-            pose_se.position.x = pose_right.position.x;
-            pose_se.position.y = pose_right.position.y;
+            if (dist[0] < min_dist)
+            {
+              min_dist = dist[0];
+              min_dist_index = i;
+            }
           }
 
           require_drone_action = true;
           drone_id = actions_it->scan.d.value;
           goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
-          goal.poses.push_back(pose_nw);
-          goal.poses.push_back(pose_ne);
-          goal.poses.push_back(pose_sw);
-          goal.poses.push_back(pose_se);
-          goal.poses.push_back(pose_nw);
+          switch(min_dist_index)
+          {
+            case 0:
+              goal.poses.push_back(pose_nw);
+              goal.poses.push_back(pose_ne);
+              goal.poses.push_back(pose_se);
+              goal.poses.push_back(pose_sw);
+              goal.poses.push_back(pose_nw);
+              break;
+
+            case 1:
+              goal.poses.push_back(pose_ne);
+              goal.poses.push_back(pose_se);
+              goal.poses.push_back(pose_sw);
+              goal.poses.push_back(pose_nw);
+              goal.poses.push_back(pose_ne);
+              break;
+
+            case 2:
+              goal.poses.push_back(pose_sw);
+              goal.poses.push_back(pose_nw);
+              goal.poses.push_back(pose_ne);
+              goal.poses.push_back(pose_se);
+              goal.poses.push_back(pose_sw);
+              break;
+
+            case 3:
+              goal.poses.push_back(pose_se);
+              goal.poses.push_back(pose_sw);
+              goal.poses.push_back(pose_nw);
+              goal.poses.push_back(pose_ne);
+              goal.poses.push_back(pose_se);
+              break;
+          }
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
@@ -539,12 +594,22 @@ bool addAreaService(urs_wearable::AddArea::Request& req, urs_wearable::AddArea::
   pred.truth_value = true;
   pred.type = urs_wearable::Predicate::TYPE_IN;
 
+  geometry_msgs::Pose pose_left, pose_right, pose_nw, pose_ne, pose_sw, pose_se;
+  g_kb.loc_table_.loc_map_.find(req.loc_id_left, pose_left);
+  g_kb.loc_table_.loc_map_.find(req.loc_id_right, pose_right);
+  getAreaBorders(pose_left, pose_right, pose_nw, pose_ne, pose_sw, pose_se);
+
   // Generate auxiliary predicates
   auto loc_map_lt = g_kb.loc_table_.loc_map_.lock_table();
   for (const auto& loc : loc_map_lt)
   {
     // in(l,a)
-    if (LocationTable::within_area(loc.second, area))
+    if (loc.second.position.x >= pose_nw.position.x
+        && loc.second.position.x <= pose_ne.position.x
+        && loc.second.position.y >= pose_sw.position.y
+        && loc.second.position.y <= pose_nw.position.y
+        && loc.second.position.z >= pose_nw.position.z - 0.5
+        && loc.second.position.z >= pose_nw.position.z + 0.5)
     {
       pred.in.l.value = loc.first;
       pred.in.a.value = area_id;
@@ -606,92 +671,6 @@ bool setGoalService(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::
                   << "(returned) executor_id: " << std::to_string(res.executor_id));
   return true;
 }
-
-void scan(int uav_id, geometry_msgs::Point position_sw, geometry_msgs::Point position_ne)
-{
-  std::vector<geometry_msgs::Point> v;
-
-  int i = 0;
-  for (double y = position_sw.y; y < position_ne.y; y += 1.0, i++)
-  {
-    geometry_msgs::Point point;
-    if (i % 2 == 0)
-    {
-      point.x = position_sw.x;
-      point.y = y;
-      point.z = 4;
-      v.push_back(point);
-
-      point.x = position_ne.x;
-      point.y = y;
-      point.z = 4;
-      v.push_back(point);
-    }
-    else
-    {
-      point.x = position_ne.x;
-      point.y = y;
-      point.z = 4;
-      v.push_back(point);
-
-      point.x = position_sw.x;
-      point.y = y;
-      point.z = 4;
-      v.push_back(point);
-    }
-  }
-
-  urs_wearable::SetPosition set_position_srv;
-  std::cout << "%%%%SIZE:::  " << v.size() << std::endl;
-  for (i = 0; i < v.size(); i++)
-  {
-    set_position_srv.request.position = v[i];
-    ros::service::call(g_uav_ns + std::to_string(uav_id) + "/set_position", set_position_srv);
-
-    geometry_msgs::PoseStamped::ConstPtr pose_stamped;
-    do
-    {
-      pose_stamped = ros::topic::waitForMessage<geometry_msgs::PoseStamped>(g_uav_ns + std::to_string(uav_id) + "/ground_truth_to_tf/pose");
-    } while (pointDistance2D(pose_stamped->pose.position, v[i]) > 0.1);
-  }
-}
-
-//bool scanService(urs_wearable::Scan::Request& req, urs_wearable::Scan::Response& res)
-//{
-//  std::thread t(scan, req.uav_id, req.position_sw, req.position_ne);
-//  t.detach();
-//  return true;
-//}
-//
-//bool gatherService(urs_wearable::Gather::Request& req, urs_wearable::Gather::Response& res)
-//{
-//  for (int i = 0; i < req.uav_id.size(); i++)
-//  {
-//    geometry_msgs::Point target_position;
-//    target_position = req.position;
-//
-//    switch (req.uav_id[i])
-//    {
-//      case 0:
-//        target_position.x += 2;
-//        break;
-//      case 1:
-//        target_position.x -= 2;
-//        break;
-//      case 2:
-//        target_position.y += 2;
-//        break;
-//      case 3:
-//        target_position.y -= 2;
-//        break;
-//    }
-//
-//    urs_wearable::SetPosition set_position_srv;
-//    set_position_srv.request.position = target_position;
-//    ros::service::call(g_uav_ns + std::to_string(req.uav_id[i]) + "/set_position", set_position_srv);
-//  }
-//  return true;
-//}
 
 void battery(const std_msgs::StringConstPtr& s)
 {

@@ -114,13 +114,6 @@
     :parameters (?d  - drone ?l - loc ?a - area)
     :precondition (and
       (at ?d ?l)
-      (not (exists (?x - drone ?y - loc)
-        (and
-          (not (= ?x ?d))
-          (at ?x ?y)
-          (in ?y ?a)
-        )
-      ))
       (hovered ?d)
       (not (scanned ?d ?a))
     )

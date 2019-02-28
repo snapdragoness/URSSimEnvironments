@@ -108,11 +108,6 @@ public:
     });
   }
 
-  static bool within_area(const geometry_msgs::Pose& pose, const Area& area)
-  {
-    return true;
-  }
-
 private:
   std::atomic<loc_id_t> area_id_ {0};
   std::set<loc_id_t> unused_area_id_set_;
