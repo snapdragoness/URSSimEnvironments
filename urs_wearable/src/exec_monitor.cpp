@@ -323,7 +323,7 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
           }
 
           require_drone_action = true;
-          drone_id = actions_it->move.d.value;
+          drone_id = actions_it->scan.d.value;
           goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
           goal.poses.push_back(pose_nw);
           goal.poses.push_back(pose_ne);
