@@ -225,6 +225,9 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
 
         case urs_wearable::Action::TYPE_GATHER:
         {
+          geometry_msgs::PoseStamped::ConstPtr pose_stamped =
+              ros::topic::waitForMessage<geometry_msgs::PoseStamped>(g_uav_ns + std::to_string(actions_it->scan.d.value) + "/ground_truth_to_tf/pose");
+
           geometry_msgs::Pose pose_to;
           g_kb.loc_table_.loc_map_.find(actions_it->gather.l1.value, pose_to);
 
@@ -238,8 +241,13 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
           require_drone_action = true;
           drone_id = actions_it->gather.d.value;
           goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
-          pose_to.position.z += drone_id + 1;   // FIXME
-          goal.poses.push_back(pose_to);
+          pose_to.position.z += drone_id + 1.0;
+
+          geometry_msgs::Pose pose_tmp = pose_stamped->pose;
+          pose_tmp.position.z = pose_to.position.z;
+
+          goal.poses.push_back(pose_tmp);   // elevate the drone to help avoiding collision
+          goal.poses.push_back(pose_to);    // then move in 2D
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
@@ -311,8 +319,8 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
 
         case urs_wearable::Action::TYPE_SCAN:
         {
-          geometry_msgs::Pose pose_from;
-          g_kb.loc_table_.loc_map_.find(actions_it->scan.l.value, pose_from);
+          geometry_msgs::PoseStamped::ConstPtr pose_stamped =
+              ros::topic::waitForMessage<geometry_msgs::PoseStamped>(g_uav_ns + std::to_string(actions_it->scan.d.value) + "/ground_truth_to_tf/pose");
 
           LocationTable::Area area_to;
           g_kb.loc_table_.area_map_.find(actions_it->scan.a.value, area_to);
@@ -332,10 +340,10 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
           geometry_msgs::Pose pose_nw, pose_ne, pose_sw, pose_se;
           getAreaBorders(pose_left, pose_right, pose_nw, pose_ne, pose_sw, pose_se);
           double dist[4];
-          dist[0] = pointDistance2D(pose_from.position, pose_nw.position);
-          dist[1] = pointDistance2D(pose_from.position, pose_ne.position);
-          dist[2] = pointDistance2D(pose_from.position, pose_sw.position);
-          dist[3] = pointDistance2D(pose_from.position, pose_se.position);
+          dist[0] = pointDistance2D(pose_stamped->pose.position, pose_nw.position);
+          dist[1] = pointDistance2D(pose_stamped->pose.position, pose_ne.position);
+          dist[2] = pointDistance2D(pose_stamped->pose.position, pose_sw.position);
+          dist[3] = pointDistance2D(pose_stamped->pose.position, pose_se.position);
 
           double min_dist = std::numeric_limits<double>::max();
           int min_dist_index = 0;

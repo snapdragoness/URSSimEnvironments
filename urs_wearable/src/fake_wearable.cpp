@@ -29,9 +29,9 @@ int main(int argc, char **argv)
 
   std::vector<std::uint8_t> loc_ids;
   urs_wearable::AddLocation add_location_srv;
-  add_location_srv.request.pose.position.x = 0;
-  add_location_srv.request.pose.position.y = 0;
-  add_location_srv.request.pose.position.z = 15;
+  add_location_srv.request.pose.position.x = 10;
+  add_location_srv.request.pose.position.y = 10;
+  add_location_srv.request.pose.position.z = 5;
   if (add_location_client.call(add_location_srv))
   {
     loc_ids.push_back(add_location_srv.response.loc_id);
@@ -41,8 +41,8 @@ int main(int argc, char **argv)
     ros_error("Error in calling /urs_wearable/add_location");
   }
 
-  add_location_srv.request.pose.position.x = 10;
-  add_location_srv.request.pose.position.y = 10;
+  add_location_srv.request.pose.position.x = 20;
+  add_location_srv.request.pose.position.y = 20;
   if (add_location_client.call(add_location_srv))
   {
     loc_ids.push_back(add_location_srv.response.loc_id);
