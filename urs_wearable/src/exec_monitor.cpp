@@ -30,6 +30,45 @@ ros::Publisher g_feedback_pub;
 std::string g_uav_ns;
 std::vector<int> g_battery_level;
 
+void getAreaBorders(const geometry_msgs::Pose& pose_left, const geometry_msgs::Pose& pose_right,
+                    geometry_msgs::Pose& pose_nw, geometry_msgs::Pose& pose_ne, geometry_msgs::Pose& pose_sw, geometry_msgs::Pose& pose_se)
+{
+  if (pose_left.position.y > pose_right.position.y)
+  {
+    pose_nw.position.x = pose_left.position.x;
+    pose_nw.position.y = pose_right.position.y;
+
+    pose_ne.position.x = pose_right.position.x;
+    pose_ne.position.y = pose_right.position.y;
+
+    pose_sw.position.x = pose_left.position.x;
+    pose_sw.position.y = pose_left.position.y;
+
+    pose_se.position.x = pose_right.position.x;
+    pose_se.position.y = pose_left.position.y;
+  }
+  else
+  {
+    pose_nw.position.x = pose_left.position.x;
+    pose_nw.position.y = pose_left.position.y;
+
+    pose_ne.position.x = pose_right.position.x;
+    pose_ne.position.y = pose_left.position.y;
+
+    pose_sw.position.x = pose_left.position.x;
+    pose_sw.position.y = pose_right.position.y;
+
+    pose_se.position.x = pose_right.position.x;
+    pose_se.position.y = pose_right.position.y;
+  }
+
+  pose_nw.position.z
+  = pose_ne.position.z
+  = pose_sw.position.z
+  = pose_se.position.z
+  = (pose_left.position.z > pose_right.position.z) ? pose_left.position.z : pose_right.position.z;
+}
+
 LocationTable::loc_id_t addLocation(const geometry_msgs::Pose& pose)
 {
   LocationTable::loc_id_t loc_id = g_kb.loc_table_.insertLocation(pose);
@@ -87,48 +126,35 @@ LocationTable::loc_id_t addLocation(const geometry_msgs::Pose& pose)
     }
   }
   loc_map_lt.unlock();
+
+  pred.type = urs_wearable::Predicate::TYPE_IN;
+  auto area_map_lt = g_kb.loc_table_.area_map_.lock_table();
+  for (const auto& area : area_map_lt)
+  {
+    geometry_msgs::Pose pose_left, pose_right, pose_nw, pose_ne, pose_sw, pose_se;
+    g_kb.loc_table_.loc_map_.find(area.second.loc_id_left, pose_left);
+    g_kb.loc_table_.loc_map_.find(area.second.loc_id_right, pose_right);
+    getAreaBorders(pose_left, pose_right, pose_nw, pose_ne, pose_sw, pose_se);
+
+    // in(l,a)
+    if (pose.position.x >= pose_nw.position.x
+        && pose.position.x <= pose_ne.position.x
+        && pose.position.y >= pose_sw.position.y
+        && pose.position.y <= pose_nw.position.y
+        && pose.position.z >= pose_nw.position.z - 0.5
+        && pose.position.z >= pose_nw.position.z + 0.5)
+    {
+      pred.in.l.value = loc_id;
+      pred.in.a.value = area.first;
+
+      aux_preds.push_back(pred);
+    }
+  }
+  area_map_lt.unlock();
+
   g_kb.upsertPredicates(aux_preds);
 
   return loc_id;
-}
-
-void getAreaBorders(const geometry_msgs::Pose& pose_left, const geometry_msgs::Pose& pose_right,
-                    geometry_msgs::Pose& pose_nw, geometry_msgs::Pose& pose_ne, geometry_msgs::Pose& pose_sw, geometry_msgs::Pose& pose_se)
-{
-  if (pose_left.position.y > pose_right.position.y)
-  {
-    pose_nw.position.x = pose_left.position.x;
-    pose_nw.position.y = pose_right.position.y;
-
-    pose_ne.position.x = pose_right.position.x;
-    pose_ne.position.y = pose_right.position.y;
-
-    pose_sw.position.x = pose_left.position.x;
-    pose_sw.position.y = pose_left.position.y;
-
-    pose_se.position.x = pose_right.position.x;
-    pose_se.position.y = pose_left.position.y;
-  }
-  else
-  {
-    pose_nw.position.x = pose_left.position.x;
-    pose_nw.position.y = pose_left.position.y;
-
-    pose_ne.position.x = pose_right.position.x;
-    pose_ne.position.y = pose_left.position.y;
-
-    pose_sw.position.x = pose_left.position.x;
-    pose_sw.position.y = pose_right.position.y;
-
-    pose_se.position.x = pose_right.position.x;
-    pose_se.position.y = pose_right.position.y;
-  }
-
-  pose_nw.position.z
-  = pose_ne.position.z
-  = pose_sw.position.z
-  = pose_se.position.z
-  = (pose_left.position.z > pose_right.position.z) ? pose_left.position.z : pose_right.position.z;
 }
 
 void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal::Request req)
@@ -682,12 +708,27 @@ bool setGoalService(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::
 
 void battery(const std_msgs::StringConstPtr& s)
 {
-  std::vector<std::string> tokens = tokenizeString(s->data, ":");
+  std::vector<std::string> tokens = tokenizeString(s->data, " {':,}");
   try
   {
-    std::vector<std::string> drone_id_tokens = tokenizeString(tokens[1], " ");
-    drone_id_type drone_id = std::stoi(drone_id_tokens.back());
-    int battery_value = (tokens.size() == 3)? std::stoi(trim(tokens[2])): std::stoi(trim(tokens[3]));
+//    drone_id_type drone_id = -1;
+//    int battery_value = -1;
+//    for (size_t i = 0; i < tokens.size(); i++)
+//    {
+//      if (tokens[i] == "drone_id")
+//      {
+//        ros_warn("drone_id index: " + std::to_string(i));
+//        drone_id = std::stoi(tokens[i + 1]);
+//      }
+//      else if (tokens[i] == "battery_value")
+//      {
+//        ros_warn("battery_value index: " + std::to_string(i));
+//        battery_value = std::stoi(tokens[i + 1]);
+//      }
+//    }
+
+    drone_id_type drone_id = std::stoi(tokens[11]);
+    int battery_value = std::stoi(tokens[13]);
 
     // Update the KB and land the drone if its battery value is less than a specified value
     if (battery_value < 10)

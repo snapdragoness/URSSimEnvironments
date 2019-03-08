@@ -1,4 +1,4 @@
 uint8 player_id
 Predicate[] goal
 ---
-uint8 executor_id
+uint32 executor_id

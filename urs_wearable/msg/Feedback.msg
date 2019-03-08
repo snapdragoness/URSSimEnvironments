@@ -9,7 +9,7 @@ uint8 STATUS_PREEMPTED=4  # The plan was being executed, but was interrupted by 
 uint8 STATUS_ABORTED=5    # The plan was being executed, but some errors have occurred
 uint8 STATUS_SUCCEEDED=6  # The plan was executed successfully
 
-uint8 executor_id
+uint32 executor_id
 uint8 status
 Action current_action
 string message

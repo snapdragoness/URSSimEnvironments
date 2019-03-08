@@ -16,10 +16,10 @@
 class LocationTable
 {
 public:
-  typedef std::uint8_t area_id_t; // This matches with its definition in Area.msg, ObjectArea.msg, AddArea.srv, RemoveArea.srv
-  typedef std::uint8_t loc_id_t;  // This matches with its definition in Location.msg, ObjectLocation.msg, AddLocation.srv, RemoveLocation.srv
+  typedef std::uint32_t area_id_t;  // This matches with its definition in Area.msg, ObjectArea.msg, AddArea.srv, RemoveArea.srv
+  typedef std::uint32_t loc_id_t;   // This matches with its definition in Location.msg, ObjectLocation.msg, AddLocation.srv, RemoveLocation.srv
 
-  typedef struct                  // This matches with its definition in Area.msg, AddArea.srv
+  typedef struct                    // This matches with its definition in Area.msg, AddArea.srv
   {
     loc_id_t loc_id_left;
     loc_id_t loc_id_right;

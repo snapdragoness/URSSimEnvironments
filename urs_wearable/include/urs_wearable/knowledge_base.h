@@ -20,8 +20,8 @@ public:
   // We use uint8_t here to match with the type of 'type' in Predicate.msg
   typedef std::uint8_t predicate_type;
 
-  // We use uint8_t here to match with the type of 'executor_id' in Feedback.msg
-  typedef std::uint8_t executor_id_type;
+  // We use uint8_t here to match with the type of 'executor_id' in Feedback.msg, SetGoal.srv
+  typedef std::uint32_t executor_id_type;
 
   LocationTable loc_table_;
 

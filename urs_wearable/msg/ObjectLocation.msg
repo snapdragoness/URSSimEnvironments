@@ -1,3 +1,3 @@
 string TYPE=loc
 
-uint8 value
+uint32 value

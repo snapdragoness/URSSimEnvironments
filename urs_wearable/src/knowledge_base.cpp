@@ -98,6 +98,7 @@ void KnowledgeBase::replan()
   }
   executor_map_lt.unlock();
 
+  // TODO: Compare only part of the plan of the executor that update the predicates
   // Do the re-planning for each executor
   for (const auto id : executor_id_list)
   {
@@ -148,17 +149,14 @@ void KnowledgeBase::getPlan(executor_id_type executor_id, const std::vector<urs_
     std::string command = planner_command + " -o " + domain_file + " -f " + problem_file;
     plan = parseFF(exec(command.c_str()));
 
-    if (!plan.empty())
+    struct Executor executor = {goal, plan, false};
+    if (executor_map_.insert(executor_id, executor))
     {
-      struct Executor executor = {goal, plan, false};
-      if (executor_map_.insert(executor_id, executor))
-      {
-        plan = executor.plan;
-      }
+      plan = executor.plan;
     }
     else
     {
-      ros_error("Failed in calling " + command);
+      ros_error("Failed in executor_map_.insert");
     }
   }
 }
