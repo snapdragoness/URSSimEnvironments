@@ -5,9 +5,10 @@ uint8 TYPE_TAKEOFF=2
 
 uint8 action_type
 
+uint32 executor_id
 geometry_msgs/Pose[] poses
 ---
 # Result Definition
-
+bool success
 ---
 # Feedback

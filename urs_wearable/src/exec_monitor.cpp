@@ -10,6 +10,7 @@
 #include <std_msgs/String.h>
 #include <urs_wearable/Action.h>
 #include <urs_wearable/AddArea.h>
+#include <urs_wearable/AddDroneGoal.h>
 #include <urs_wearable/AddLocation.h>
 #include <urs_wearable/DroneAction.h>
 #include <urs_wearable/Feedback.h>
@@ -28,7 +29,9 @@ typedef std::uint8_t drone_id_type;
 KnowledgeBase g_kb("urs", "urs_problem");
 ros::Publisher g_feedback_pub;
 std::string g_uav_ns;
+
 std::vector<int> g_battery_level;
+std::vector<bool> g_emergency_landed;
 
 void getAreaBorders(const geometry_msgs::Pose& pose_left, const geometry_msgs::Pose& pose_right,
                     geometry_msgs::Pose& pose_nw, geometry_msgs::Pose& pose_ne, geometry_msgs::Pose& pose_sw, geometry_msgs::Pose& pose_se)
@@ -340,6 +343,18 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
           effect.at.l.value = actions_it->move.l1.value;
           effect.truth_value = true;
           effects.push_back(effect);
+
+
+          ///////////////////////////////////////////////////////////////////////////////////////////////////////
+          urs_wearable::DroneGoal drone_goal;
+          drone_goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
+          drone_goal.executor_id = executor_id;
+          drone_goal.poses.push_back(pose_to);
+
+          urs_wearable::AddDroneGoal add_drone_goal_srv;
+          add_drone_goal_srv.request.drone_goals.push_back(drone_goal);
+          ros::service::call("uav" + std::to_string(drone_id) + "/add_drone_goal", add_drone_goal_srv);
+
         }
         break;
 
@@ -459,6 +474,15 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
           effect.hovered.d.value = actions_it->takeoff.d.value;
           effect.truth_value = true;
           effects.push_back(effect);
+
+          ///////////////////////////////////////////////////////////////////////////////////////////////////////
+          urs_wearable::DroneGoal drone_goal;
+          drone_goal.action_type = urs_wearable::DroneGoal::TYPE_TAKEOFF;
+          drone_goal.executor_id = executor_id;
+
+          urs_wearable::AddDroneGoal add_drone_goal_srv;
+          add_drone_goal_srv.request.drone_goals.push_back(drone_goal);
+          ros::service::call("uav" + std::to_string(drone_id) + "/add_drone_goal", add_drone_goal_srv);
         }
         break;
 
@@ -691,12 +715,11 @@ bool removeLocationService(urs_wearable::RemoveLocation::Request& req, urs_weara
   return true;
 }
 
-
 bool setGoalService(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::Response& res)
 {
   res.executor_id = g_kb.registerExecutor();
-  std::thread thread_executor(execute, res.executor_id, req);
-  thread_executor.detach();
+  std::thread executor_thread(execute, res.executor_id, req);
+  executor_thread.detach();
 
   // Log the request
   ROS_INFO_STREAM("Received a set_goal request" << std::endl
@@ -706,46 +729,61 @@ bool setGoalService(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::
   return true;
 }
 
+void land(drone_id_type drone_id)
+{
+  urs_wearable::Predicate pred;
+  pred.type = urs_wearable::Predicate::TYPE_LOW_BATTERY;
+  pred.truth_value = true;
+  pred.low_battery.d.value = drone_id;
+  g_kb.upsertPredicates(std::vector<urs_wearable::Predicate>{pred});
+
+  // FIXME (need to be changed after updating drone_action)
+  urs_wearable::DroneGoal goal;
+  goal.action_type = urs_wearable::DroneGoal::TYPE_LAND;
+  actionlib::SimpleActionClient<urs_wearable::DroneAction> ac("/uav" + std::to_string(drone_id) + "/action/drone", true);
+  ac.waitForServer();
+  ac.sendGoal(goal);
+
+  if (ac.waitForResult() && ac.getResult()->success)
+  {
+    pred.type = urs_wearable::Predicate::TYPE_HOVERED;
+    pred.truth_value = false;
+    pred.hovered.d.value = drone_id;
+    g_kb.upsertPredicates(std::vector<urs_wearable::Predicate>{pred});
+  }
+}
+
 void battery(const std_msgs::StringConstPtr& s)
 {
   std::vector<std::string> tokens = tokenizeString(s->data, " {':,}");
   try
   {
-//    drone_id_type drone_id = -1;
-//    int battery_value = -1;
-//    for (size_t i = 0; i < tokens.size(); i++)
-//    {
-//      if (tokens[i] == "drone_id")
-//      {
-//        ros_warn("drone_id index: " + std::to_string(i));
-//        drone_id = std::stoi(tokens[i + 1]);
-//      }
-//      else if (tokens[i] == "battery_value")
-//      {
-//        ros_warn("battery_value index: " + std::to_string(i));
-//        battery_value = std::stoi(tokens[i + 1]);
-//      }
-//    }
+    drone_id_type drone_id = -1;
+    int battery_value = -1;
+    for (size_t i = 0; i < tokens.size(); i++)
+    {
+      if (tokens[i] == "drone_id")
+      {
+        ros_warn("drone_id index: " + std::to_string(i));
+        drone_id = std::stoi(tokens[i + 1]);
+      }
+      else if (tokens[i] == "battery_value")
+      {
+        ros_warn("battery_value index: " + std::to_string(i));
+        battery_value = std::stoi(tokens[i + 1]);
+      }
+    }
 
-    drone_id_type drone_id = std::stoi(tokens[11]);
-    int battery_value = std::stoi(tokens[13]);
+//    drone_id_type drone_id = std::stoi(tokens[11]);
+//    int battery_value = std::stoi(tokens[13]);
 
     // Update the KB and land the drone if its battery value is less than a specified value
-    if (battery_value < 10)
+    if (battery_value < 10 && !g_emergency_landed[drone_id])
     {
-      urs_wearable::Predicate pred;
-      pred.type = urs_wearable::Predicate::TYPE_LOW_BATTERY;
-      pred.truth_value = true;
-      pred.low_battery.d.value = drone_id;
-      g_kb.upsertPredicates(std::vector<urs_wearable::Predicate>{pred});
+      g_emergency_landed[drone_id] = true;
 
-      urs_wearable::DroneGoal goal;
-      goal.action_type = urs_wearable::DroneGoal::TYPE_LAND;
-      actionlib::SimpleActionClient<urs_wearable::DroneAction> ac("/uav" + std::to_string(drone_id) + "/action/drone", true);
-      ac.waitForServer();
-      ac.sendGoal(goal);
-
-      //TODO: Update at predicate after landing?
+      std::thread land_thread(land, drone_id);
+      land_thread.detach();
     }
 
     if (g_battery_level[drone_id] != battery_value)
@@ -805,6 +843,7 @@ int main(int argc, char **argv)
 
     // Set battery level vector to be used for logging purpose
     g_battery_level.push_back(-1);
+    g_emergency_landed.push_back(false);
   }
   g_kb.upsertPredicates(initial_state);
 

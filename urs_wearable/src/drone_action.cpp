@@ -1,15 +1,18 @@
 #include <atomic>
+#include <list>
 #include <mutex>
 
+#include <actionlib/client/simple_action_client.h>
 #include <actionlib/server/simple_action_server.h>
 #include <ros/ros.h>
+
 #include <geometry_msgs/PoseStamped.h>
 #include <hector_uav_msgs/EnableMotors.h>
 #include <sensor_msgs/Range.h>
 #include <std_srvs/Empty.h>
+#include <urs_wearable/AddDroneGoal.h>
 #include <urs_wearable/DroneAction.h>
 #include <urs_wearable/SetPosition.h>
-
 
 #include "urs_wearable/common.h"
 
@@ -23,10 +26,14 @@ class DroneActionServer
   actionlib::SimpleActionServer<urs_wearable::DroneAction> as_;
   std::string name_;
 
-  urs_wearable::DroneFeedback feedback_;
+//  urs_wearable::DroneFeedback feedback_;
   urs_wearable::DroneResult result_;
 
   ros::ServiceClient enable_motors_client_;
+
+  ros::ServiceServer add_drone_goal_service_;       // add goals to the queue
+  ros::ServiceServer remove_drone_goal_service_;    // remove goals from a particular executor from the queue
+  ros::ServiceServer clear_drone_goal_service_;     // clear all goals from the queue
 
   ros::Subscriber pose_sub_;
   geometry_msgs::Pose pose_;
@@ -38,6 +45,9 @@ class DroneActionServer
 //  ros::Subscriber sonar_upward_sub_;
 //  std::atomic<float> sonar_upward_;
 
+  std::list<urs_wearable::DroneGoal> drone_goal_queue_;
+  std::mutex drone_goal_queue_mutex_;
+
 public:
   DroneActionServer(ros::NodeHandle& nh, const std::string& name) :
     as_(nh, name, boost::bind(&DroneActionServer::droneActionCb, this, _1), false), name_(name)
@@ -47,12 +57,31 @@ public:
     sonar_height_sub_ = nh.subscribe("sonar_height", 1, &DroneActionServer::sonarHeightCb, this);
 //    sonar_upward_sub_ = nh.subscribe("sonar_upward", 1, &DroneActionServer::sonarUpwardCb, this);
 
+    add_drone_goal_service_ = nh.advertiseService("add_drone_goal", &DroneActionServer::addDroneGoalService, this);
+
     as_.start();
   }
 
   ~DroneActionServer()
   {
+    enable_motors_client_.shutdown();
     pose_sub_.shutdown();
+    sonar_height_sub_.shutdown();
+//    sonar_upward_sub_.shutdown();
+  }
+
+  bool addDroneGoalService(urs_wearable::AddDroneGoal::Request& req, urs_wearable::AddDroneGoal::Response& res)
+  {
+    ros_error("received drone goal");
+    {
+      std::lock_guard<std::mutex> lock(drone_goal_queue_mutex_);
+      for (const auto& drone_goal : req.drone_goals)
+      {
+        drone_goal_queue_.push_back(drone_goal);
+      }
+    }
+
+    return true;
   }
 
   void poseCb(const geometry_msgs::PoseStampedConstPtr& pose_stamped)
@@ -110,6 +139,8 @@ public:
             std_srvs::Empty stop_srv;
             ros::service::call("stop", stop_srv);
           }
+
+          result_.success = false;
           as_.setPreempted();
           return;
         }
@@ -128,6 +159,7 @@ public:
     else
     {
       ros_error("actionLanding called " + ros::names::resolve("enable_motors") + " failed");
+      result_.success = false;
       as_.setAborted();
       return;
     }
@@ -138,11 +170,13 @@ public:
 
     if (enable_motors_client_.call(enable_motors_srv) && enable_motors_srv.response.success)
     {
+      result_.success = true;
       as_.setSucceeded();
     }
     else
     {
       ros_error("actionLand called " + ros::names::resolve("set_position") + " failed");
+      result_.success = false;
       as_.setAborted();
     }
   }
@@ -167,6 +201,7 @@ public:
               ros::service::call("stop", stop_srv);
             }
 
+            result_.success = false;
             as_.setPreempted();
             return;
           }
@@ -187,10 +222,12 @@ public:
       else
       {
         ros_error("actionPose called " + ros::names::resolve("set_position") + " failed");
+        result_.success = false;
         as_.setAborted();
       }
     }
 
+    result_.success = true;
     as_.setSucceeded();
   }
 
@@ -203,6 +240,7 @@ public:
     if (!enable_motors_client_.call(enable_motors_srv) || !enable_motors_srv.response.success)
     {
       ros_error("actionTakeoff called " + ros::names::resolve("enable_motors") + " failed");
+      result_.success = false;
       as_.setAborted();
       return;
     }
@@ -237,6 +275,7 @@ public:
             ros::service::call("stop", stop_srv);
           }
 
+          result_.success = false;
           as_.setPreempted();
           return;
         }
@@ -256,9 +295,11 @@ public:
     else
     {
       ros_error("actionTakeoff called " + ros::names::resolve("set_position") + " failed");
+      result_.success = false;
       as_.setAborted();
     }
 
+    result_.success = true;
     as_.setSucceeded();
   }
 };

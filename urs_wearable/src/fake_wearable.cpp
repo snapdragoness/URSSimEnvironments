@@ -2,6 +2,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
+#include <std_msgs/String.h>
 
 #include "urs_wearable/common.h"
 
@@ -27,11 +28,23 @@ int main(int argc, char **argv)
   ros::ServiceClient add_location_client = nh.serviceClient<urs_wearable::AddLocation>("/urs_wearable/add_location");
   ros::ServiceClient add_area_client = nh.serviceClient<urs_wearable::AddArea>("/urs_wearable/add_area");
 
+//  ros::Publisher battery_pub = nh.advertise<std_msgs::String>("/w_battery_value", 1);
+//  ros::Rate r(1);
+//  while (ros::ok())
+//  {
+//    std_msgs::String s;
+//    s.data = " {'longitude':0.0,'latitude':0.0,'player_id':0,'building_number':0,'drone_clue_value':0,'drone_id':3,'battery_value':100}";
+//    battery_pub.publish(s);
+//
+//    ros::spinOnce();
+//    r.sleep();
+//  }
+
   std::vector<std::uint8_t> loc_ids;
   urs_wearable::AddLocation add_location_srv;
   add_location_srv.request.pose.position.x = 10;
   add_location_srv.request.pose.position.y = 10;
-  add_location_srv.request.pose.position.z = 5;
+  add_location_srv.request.pose.position.z = 15;
   if (add_location_client.call(add_location_srv))
   {
     loc_ids.push_back(add_location_srv.response.loc_id);
@@ -40,7 +53,6 @@ int main(int argc, char **argv)
   {
     ros_error("Error in calling /urs_wearable/add_location");
   }
-
   add_location_srv.request.pose.position.x = 20;
   add_location_srv.request.pose.position.y = 20;
   if (add_location_client.call(add_location_srv))
@@ -69,13 +81,18 @@ int main(int argc, char **argv)
   urs_wearable::Predicate pred;
   pred.truth_value = true;
 
-  pred.type = urs_wearable::Predicate::TYPE_SCANNED;
-  pred.scanned.d.value = 0;
-  pred.scanned.a.value = area_ids[0];
+  pred.type = urs_wearable::Predicate::TYPE_AT;
+  pred.at.d.value = 0;
+  pred.at.l.value = loc_ids[0];
   set_goal_srv.request.goal.push_back(pred);
 
-  pred.type = urs_wearable::Predicate::TYPE_HOVERED;
-  pred.hovered.d.value = 1;
+  pred.at.d.value = 1;
+  pred.at.l.value = loc_ids[1];
+  set_goal_srv.request.goal.push_back(pred);
+
+  pred.type = urs_wearable::Predicate::TYPE_SCANNED;
+  pred.scanned.d.value = 2;
+  pred.scanned.a.value = area_ids[0];
   set_goal_srv.request.goal.push_back(pred);
 
   if (!ros::service::call(SET_GOAL_SERVICE_NAME, set_goal_srv))
