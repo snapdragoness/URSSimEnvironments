@@ -13,6 +13,7 @@
 #include <std_srvs/Empty.h>
 #include <urs_wearable/AddDroneGoal.h>
 #include <urs_wearable/DroneAction.h>
+#include <urs_wearable/SetDroneActionResult.h>
 #include <urs_wearable/SetPosition.h>
 
 #include "urs_wearable/common.h"
@@ -31,6 +32,7 @@ class DroneActionServer
   urs_wearable::DroneResult result_;
 
   ros::ServiceClient enable_motors_client_;
+  ros::ServiceClient set_drone_action_result_client_;
 
   ros::ServiceServer add_drone_goal_service_;       // add goals to the queue
   ros::ServiceServer remove_drone_goal_service_;    // remove goals from a particular executor from the queue
@@ -43,9 +45,6 @@ class DroneActionServer
   ros::Subscriber sonar_height_sub_;
   std::atomic<float> sonar_height_;
 
-//  ros::Subscriber sonar_upward_sub_;
-//  std::atomic<float> sonar_upward_;
-
   std::list<urs_wearable::DroneGoal> drone_goal_queue_;
   std::mutex drone_goal_queue_mutex_;
 
@@ -54,21 +53,14 @@ public:
     as_(nh, name, boost::bind(&DroneActionServer::droneActionCb, this, _1), false), name_(name)
   {
     enable_motors_client_ = nh.serviceClient<hector_uav_msgs::EnableMotors>("enable_motors");
+    set_drone_action_result_client_ = nh.serviceClient<urs_wearable::SetDroneActionResult>("/urs_wearable/set_drone_action_result");
+
     pose_sub_ = nh.subscribe("ground_truth_to_tf/pose", 10, &DroneActionServer::poseCb, this);
     sonar_height_sub_ = nh.subscribe("sonar_height", 1, &DroneActionServer::sonarHeightCb, this);
-//    sonar_upward_sub_ = nh.subscribe("sonar_upward", 1, &DroneActionServer::sonarUpwardCb, this);
 
     add_drone_goal_service_ = nh.advertiseService("add_drone_goal", &DroneActionServer::addDroneGoalService, this);
 
     as_.start();
-  }
-
-  ~DroneActionServer()
-  {
-    enable_motors_client_.shutdown();
-    pose_sub_.shutdown();
-    sonar_height_sub_.shutdown();
-//    sonar_upward_sub_.shutdown();
   }
 
   void execute()
@@ -131,11 +123,6 @@ public:
   {
     sonar_height_ = msg->range;
   }
-
-//  void sonarUpwardCb(const sensor_msgs::RangeConstPtr& msg)
-//  {
-//    sonar_upward_ = msg->range;
-//  }
 
   void droneActionCb(const urs_wearable::DroneGoalConstPtr& goal)
   {

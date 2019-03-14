@@ -920,6 +920,10 @@ int main(int argc, char **argv)
   pred_hovered.type = urs_wearable::Predicate::TYPE_HOVERED;
   pred_hovered.truth_value = false;
 
+  urs_wearable::Predicate pred_low_battery;
+  pred_low_battery.type = urs_wearable::Predicate::TYPE_LOW_BATTERY;
+  pred_low_battery.truth_value = false;
+
   for (int i = 0; i < uav_total; i++)
   {
     geometry_msgs::PoseStamped::ConstPtr pose_stamped =
@@ -931,6 +935,9 @@ int main(int argc, char **argv)
 
     pred_hovered.hovered.d.value = i;
     initial_state.push_back(pred_hovered);
+
+    pred_low_battery.low_battery.d.value = i;
+    initial_state.push_back(pred_low_battery);
 
     // Set battery level vector to be used for logging purpose
     g_battery_level.push_back(-1);

@@ -607,32 +607,32 @@ void KnowledgeBase::upsertPredicates(const std::vector<urs_wearable::Predicate>&
 
       case urs_wearable::Predicate::TYPE_HOVERED:
       {
-        if (!predicate_map_.update_fn(urs_wearable::Predicate::TYPE_HOVERED, [&new_pred](std::vector<urs_wearable::Predicate>& cur_preds)
-        {
-          bool existed = false;
-          std::vector<urs_wearable::Predicate>::iterator cur_preds_it = cur_preds.begin();
-
-          while (cur_preds_it != cur_preds.end())
-          {
-            // If the new predicate already existed, update the current predicate
-            if (new_pred.hovered.d.value == cur_preds_it->hovered.d.value)
-            {
-              cur_preds_it->truth_value = new_pred.truth_value;
-              existed = true;
-              break;
-            }
-            cur_preds_it++;
-          }
-
-          // If the predicate does not exist, then add it to the knowledge base
-          if (!existed)
-          {
-            cur_preds.push_back(new_pred);
-          }
-        }))
-        {
-          predicate_map_.insert(urs_wearable::Predicate::TYPE_HOVERED, std::vector<urs_wearable::Predicate>{new_pred});
-        }
+//        if (!predicate_map_.update_fn(urs_wearable::Predicate::TYPE_HOVERED, [&new_pred](std::vector<urs_wearable::Predicate>& cur_preds)
+//        {
+//          bool existed = false;
+//          std::vector<urs_wearable::Predicate>::iterator cur_preds_it = cur_preds.begin();
+//
+//          while (cur_preds_it != cur_preds.end())
+//          {
+//            // If the new predicate already existed, update the current predicate
+//            if (new_pred.hovered.d.value == cur_preds_it->hovered.d.value)
+//            {
+//              cur_preds_it->truth_value = new_pred.truth_value;
+//              existed = true;
+//              break;
+//            }
+//            cur_preds_it++;
+//          }
+//
+//          // If the predicate does not exist, then add it to the knowledge base
+//          if (!existed)
+//          {
+//            cur_preds.push_back(new_pred);
+//          }
+//        }))
+//        {
+//          predicate_map_.insert(urs_wearable::Predicate::TYPE_HOVERED, std::vector<urs_wearable::Predicate>{new_pred});
+//        }
       }
       break;
 
@@ -1113,59 +1113,65 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
 // - predicate
 std::string KnowledgeBase::getPredicateString(const std::vector<urs_wearable::Predicate>& preds)
 {
-  if (preds.empty())
-  {
-    return "";
-  }
-
   std::string pred_string;
+
   for (const auto& pred : preds)
   {
-    switch (pred.type)
+    if (pred.truth_value == true)
     {
-      case urs_wearable::Predicate::TYPE_ABOVE:
-        pred_string += urs_wearable::PredicateAbove::NAME
-                    + "(" + std::to_string(pred.above.l0.value) + "," + std::to_string(pred.above.l1.value) + "), ";
-        break;
+      switch (pred.type)
+      {
+        case urs_wearable::Predicate::TYPE_ABOVE:
+          pred_string += urs_wearable::PredicateAbove::NAME
+                      + "(" + std::to_string(pred.above.l0.value) + "," + std::to_string(pred.above.l1.value) + "), ";
+          break;
 
-      case urs_wearable::Predicate::TYPE_ALIGNED:
-        pred_string += urs_wearable::PredicateAligned::NAME
-                    + "(" + std::to_string(pred.aligned.l0.value) + "," + std::to_string(pred.aligned.l1.value) + "), ";
-        break;
+        case urs_wearable::Predicate::TYPE_ALIGNED:
+          pred_string += urs_wearable::PredicateAligned::NAME
+                      + "(" + std::to_string(pred.aligned.l0.value) + "," + std::to_string(pred.aligned.l1.value) + "), ";
+          break;
 
-      case urs_wearable::Predicate::TYPE_AT:
-        pred_string += urs_wearable::PredicateAt::NAME
-                    + "(" + std::to_string(pred.at.d.value) + "," + std::to_string(pred.at.l.value) + "), ";
-        break;
+        case urs_wearable::Predicate::TYPE_AT:
+          pred_string += urs_wearable::PredicateAt::NAME
+                      + "(" + std::to_string(pred.at.d.value) + "," + std::to_string(pred.at.l.value) + "), ";
+          break;
 
-      case urs_wearable::Predicate::TYPE_COLLIDED:
-        pred_string += urs_wearable::PredicateCollided::NAME
-                    + "(" + std::to_string(pred.collided.l0.value) + "," + std::to_string(pred.collided.l1.value) + "), ";
-        break;
+        case urs_wearable::Predicate::TYPE_COLLIDED:
+          pred_string += urs_wearable::PredicateCollided::NAME
+                      + "(" + std::to_string(pred.collided.l0.value) + "," + std::to_string(pred.collided.l1.value) + "), ";
+          break;
 
-      case urs_wearable::Predicate::TYPE_HOVERED:
-        pred_string += urs_wearable::PredicateHovered::NAME
-                    + "(" + std::to_string(pred.hovered.d.value) + "), ";
-        break;
+        case urs_wearable::Predicate::TYPE_HOVERED:
+          pred_string += urs_wearable::PredicateHovered::NAME
+                      + "(" + std::to_string(pred.hovered.d.value) + "), ";
+          break;
 
-      case urs_wearable::Predicate::TYPE_IN:
-        pred_string += urs_wearable::PredicateIn::NAME
-                    + "(" + std::to_string(pred.in.l.value) + "," + std::to_string(pred.in.a.value) + "), ";
-        break;
+        case urs_wearable::Predicate::TYPE_IN:
+          pred_string += urs_wearable::PredicateIn::NAME
+                      + "(" + std::to_string(pred.in.l.value) + "," + std::to_string(pred.in.a.value) + "), ";
+          break;
 
-      case urs_wearable::Predicate::TYPE_LOW_BATTERY:
-        pred_string += urs_wearable::PredicateLowBattery::NAME
-                    + "(" + std::to_string(pred.low_battery.d.value) + "), ";
-        break;
+        case urs_wearable::Predicate::TYPE_LOW_BATTERY:
+          pred_string += urs_wearable::PredicateLowBattery::NAME
+                      + "(" + std::to_string(pred.low_battery.d.value) + "), ";
+          break;
 
-      case urs_wearable::Predicate::TYPE_SCANNED:
-        pred_string += urs_wearable::PredicateScanned::NAME
-                    + "(" + std::to_string(pred.scanned.d.value) + "," + std::to_string(pred.scanned.a.value) + "), ";
-        break;
+        case urs_wearable::Predicate::TYPE_SCANNED:
+          pred_string += urs_wearable::PredicateScanned::NAME
+                      + "(" + std::to_string(pred.scanned.d.value) + "," + std::to_string(pred.scanned.a.value) + "), ";
+          break;
+
+        default:
+          ros_error("getPredicateString(): Unrecognized predicate type");
+      }
     }
   }
 
-  pred_string.pop_back();   // Remove a trailing space
-  pred_string.pop_back();   // Remove a comma
+  if (pred_string.size() > 1)
+  {
+    pred_string.pop_back();   // Remove a trailing space
+    pred_string.pop_back();   // Remove a comma
+  }
+
   return pred_string;
 }
