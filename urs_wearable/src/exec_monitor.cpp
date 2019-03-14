@@ -912,18 +912,25 @@ int main(int argc, char **argv)
   // Set initial state
   std::vector<urs_wearable::Predicate> initial_state;
 
-  urs_wearable::Predicate pred;
-  pred.type = urs_wearable::Predicate::TYPE_AT;
-  pred.truth_value = true;
+  urs_wearable::Predicate pred_at;
+  pred_at.type = urs_wearable::Predicate::TYPE_AT;
+  pred_at.truth_value = true;
+
+  urs_wearable::Predicate pred_hovered;
+  pred_hovered.type = urs_wearable::Predicate::TYPE_HOVERED;
+  pred_hovered.truth_value = false;
 
   for (int i = 0; i < uav_total; i++)
   {
     geometry_msgs::PoseStamped::ConstPtr pose_stamped =
         ros::topic::waitForMessage<geometry_msgs::PoseStamped>(g_uav_ns + std::to_string(i) + "/ground_truth_to_tf/pose");
 
-    pred.at.d.value = i;
-    pred.at.l.value = addLocation(pose_stamped->pose);
-    initial_state.push_back(pred);
+    pred_at.at.d.value = i;
+    pred_at.at.l.value = addLocation(pose_stamped->pose);
+    initial_state.push_back(pred_at);
+
+    pred_hovered.hovered.d.value = i;
+    initial_state.push_back(pred_hovered);
 
     // Set battery level vector to be used for logging purpose
     g_battery_level.push_back(-1);

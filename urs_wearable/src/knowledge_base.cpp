@@ -624,17 +624,14 @@ void KnowledgeBase::upsertPredicates(const std::vector<urs_wearable::Predicate>&
             cur_preds_it++;
           }
 
-          // If the predicate does not exist, then add it to the knowledge base if its truth value is true
-          if (!existed && new_pred.truth_value == true)
+          // If the predicate does not exist, then add it to the knowledge base
+          if (!existed)
           {
             cur_preds.push_back(new_pred);
           }
         }))
         {
-          if (new_pred.truth_value == true)
-          {
-            predicate_map_.insert(urs_wearable::Predicate::TYPE_HOVERED, std::vector<urs_wearable::Predicate>{new_pred});
-          }
+          predicate_map_.insert(urs_wearable::Predicate::TYPE_HOVERED, std::vector<urs_wearable::Predicate>{new_pred});
         }
       }
       break;
@@ -701,17 +698,14 @@ void KnowledgeBase::upsertPredicates(const std::vector<urs_wearable::Predicate>&
             cur_preds_it++;
           }
 
-          // If the predicate does not exist, then add it to the knowledge base if its truth value is true
-          if (!existed && new_pred.truth_value == true)
+          // If the predicate does not exist, then add it to the knowledge base
+          if (!existed)
           {
             cur_preds.push_back(new_pred);
           }
         }))
         {
-          if (new_pred.truth_value == true)
-          {
-            predicate_map_.insert(urs_wearable::Predicate::TYPE_LOW_BATTERY, std::vector<urs_wearable::Predicate>{new_pred});
-          }
+          predicate_map_.insert(urs_wearable::Predicate::TYPE_LOW_BATTERY, std::vector<urs_wearable::Predicate>{new_pred});
         }
       }
       break;
