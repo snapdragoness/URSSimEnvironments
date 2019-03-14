@@ -1,6 +1,7 @@
 #include <atomic>
 #include <list>
 #include <mutex>
+#include <thread>
 
 #include <actionlib/client/simple_action_client.h>
 #include <actionlib/server/simple_action_server.h>
@@ -70,15 +71,51 @@ public:
 //    sonar_upward_sub_.shutdown();
   }
 
+  void execute()
+  {
+    std::lock_guard<std::mutex> lock(drone_goal_queue_mutex_);
+    if (!drone_goal_queue_.empty())
+    {
+//      droneActionCb(boost::make_shared<urs_wearable::DroneGoal const>(drone_goal_queue_.front()));
+      actionlib::SimpleActionClient<urs_wearable::DroneAction> ac("action/drone", true);
+      ac.waitForServer();
+      ac.sendGoal(drone_goal_queue_.front());
+
+      ac.waitForResult();
+//      actionlib::SimpleClientGoalState::StateEnum state;
+//      do {
+//        ros::Duration(0.1).sleep();
+//        state = ac.getState().state_;
+//      } while (state == actionlib::SimpleClientGoalState::PENDING || state == actionlib::SimpleClientGoalState::ACTIVE);
+
+      ros_error("action done, success: " + std::to_string(ac.getResult()->success));
+
+      drone_goal_queue_.pop_front();
+
+      // TODO: Return executing status to exec monitor
+
+      // Execute the next drone goal
+      std::thread executor_thread(&DroneActionServer::execute, this);
+      executor_thread.detach();
+    }
+  }
+
   bool addDroneGoalService(urs_wearable::AddDroneGoal::Request& req, urs_wearable::AddDroneGoal::Response& res)
   {
-    ros_error("received drone goal");
+    bool has_goal_executing;
     {
       std::lock_guard<std::mutex> lock(drone_goal_queue_mutex_);
+      has_goal_executing = drone_goal_queue_.empty();
       for (const auto& drone_goal : req.drone_goals)
       {
         drone_goal_queue_.push_back(drone_goal);
       }
+    }
+
+    if (!has_goal_executing)
+    {
+      std::thread executor_thread(&DroneActionServer::execute, this);
+      executor_thread.detach();
     }
 
     return true;
@@ -141,7 +178,7 @@ public:
           }
 
           result_.success = false;
-          as_.setPreempted();
+          as_.setPreempted(result_);
           return;
         }
 
@@ -160,7 +197,7 @@ public:
     {
       ros_error("actionLanding called " + ros::names::resolve("enable_motors") + " failed");
       result_.success = false;
-      as_.setAborted();
+      as_.setAborted(result_);
       return;
     }
 
@@ -171,13 +208,13 @@ public:
     if (enable_motors_client_.call(enable_motors_srv) && enable_motors_srv.response.success)
     {
       result_.success = true;
-      as_.setSucceeded();
+      as_.setSucceeded(result_);
     }
     else
     {
       ros_error("actionLand called " + ros::names::resolve("set_position") + " failed");
       result_.success = false;
-      as_.setAborted();
+      as_.setAborted(result_);
     }
   }
 
@@ -202,7 +239,7 @@ public:
             }
 
             result_.success = false;
-            as_.setPreempted();
+            as_.setPreempted(result_);
             return;
           }
 
@@ -223,12 +260,12 @@ public:
       {
         ros_error("actionPose called " + ros::names::resolve("set_position") + " failed");
         result_.success = false;
-        as_.setAborted();
+        as_.setAborted(result_);
       }
     }
 
     result_.success = true;
-    as_.setSucceeded();
+    as_.setSucceeded(result_);
   }
 
   void actionTakeoff(const urs_wearable::DroneGoalConstPtr& goal)
@@ -241,7 +278,7 @@ public:
     {
       ros_error("actionTakeoff called " + ros::names::resolve("enable_motors") + " failed");
       result_.success = false;
-      as_.setAborted();
+      as_.setAborted(result_);
       return;
     }
 
@@ -276,7 +313,7 @@ public:
           }
 
           result_.success = false;
-          as_.setPreempted();
+          as_.setPreempted(result_);
           return;
         }
 
@@ -296,11 +333,11 @@ public:
     {
       ros_error("actionTakeoff called " + ros::names::resolve("set_position") + " failed");
       result_.success = false;
-      as_.setAborted();
+      as_.setAborted(result_);
     }
 
     result_.success = true;
-    as_.setSucceeded();
+    as_.setSucceeded(result_);
   }
 };
 

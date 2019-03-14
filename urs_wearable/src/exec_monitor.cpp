@@ -17,6 +17,7 @@
 #include <urs_wearable/GetState.h>
 #include <urs_wearable/RemoveArea.h>
 #include <urs_wearable/RemoveLocation.h>
+#include <urs_wearable/SetDroneActionResult.h>
 #include <urs_wearable/SetGoal.h>
 #include <urs_wearable/SetPosition.h>
 
@@ -99,7 +100,7 @@ LocationTable::loc_id_t addLocation(const geometry_msgs::Pose& pose)
       }
       aux_preds.push_back(pred);
 
-      // aligned(l0,l1)
+      // alignedpush_back(l0,l1)
       if (pointDistance2D(loc.second.position, pose.position) < 0.5)
       {
         pred.type = urs_wearable::Predicate::TYPE_ALIGNED;
@@ -145,7 +146,7 @@ LocationTable::loc_id_t addLocation(const geometry_msgs::Pose& pose)
         && pose.position.y >= pose_sw.position.y
         && pose.position.y <= pose_nw.position.y
         && pose.position.z >= pose_nw.position.z - 0.5
-        && pose.position.z >= pose_nw.position.z + 0.5)
+        && pose.position.z <= pose_nw.position.z + 0.5)
     {
       pred.in.l.value = loc_id;
       pred.in.a.value = area.first;
@@ -200,10 +201,16 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
                    + actions_it->ascend.NAME + "(" + std::to_string(actions_it->ascend.d.value) + ",("
                    + std::to_string(pose_to.position.x) + "," + std::to_string(pose_to.position.y) + "," + std::to_string(pose_to.position.z) + "))");
 
-          require_drone_action = true;
+//          require_drone_action = true;
           drone_id = actions_it->ascend.d.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
-          goal.poses.push_back(pose_to);
+//          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
+//          goal.poses.push_back(pose_to);
+
+          ///////////////////////////////////////////////////////////////////////////////////////////////////////
+          urs_wearable::DroneGoal drone_goal;
+          drone_goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
+          drone_goal.executor_id = executor_id;
+          drone_goal.poses.push_back(pose_to);
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
@@ -232,10 +239,16 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
                    + actions_it->descend.NAME + "(" + std::to_string(actions_it->descend.d.value) + ",("
                    + std::to_string(pose_to.position.x) + "," + std::to_string(pose_to.position.y) + "," + std::to_string(pose_to.position.z) + "))");
 
-          require_drone_action = true;
+//          require_drone_action = true;
           drone_id = actions_it->descend.d.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
-          goal.poses.push_back(pose_to);
+//          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
+//          goal.poses.push_back(pose_to);
+
+          ///////////////////////////////////////////////////////////////////////////////////////////////////////
+          urs_wearable::DroneGoal drone_goal;
+          drone_goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
+          drone_goal.executor_id = executor_id;
+          drone_goal.poses.push_back(pose_to);
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
@@ -267,16 +280,27 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
                    + actions_it->gather.NAME + "(" + std::to_string(actions_it->gather.d.value) + ",("
                    + std::to_string(pose_to.position.x) + "," + std::to_string(pose_to.position.y) + "," + std::to_string(pose_to.position.z) + "))");
 
-          require_drone_action = true;
+//          require_drone_action = true;
           drone_id = actions_it->gather.d.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
+//          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
           pose_to.position.z += drone_id + 1.0;
 
           geometry_msgs::Pose pose_tmp = pose_stamped->pose;
           pose_tmp.position.z = pose_to.position.z;
 
-          goal.poses.push_back(pose_tmp);   // elevate the drone to help avoiding collision
-          goal.poses.push_back(pose_to);    // then move in 2D
+//          goal.poses.push_back(pose_tmp);   // elevate the drone to help avoiding collision
+//          goal.poses.push_back(pose_to);    // then move in 2D
+
+          ///////////////////////////////////////////////////////////////////////////////////////////////////////
+          urs_wearable::DroneGoal drone_goal;
+          drone_goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
+          drone_goal.executor_id = executor_id;
+          drone_goal.poses.push_back(pose_tmp);
+          drone_goal.poses.push_back(pose_to);
+
+          urs_wearable::AddDroneGoal add_drone_goal_srv;
+          add_drone_goal_srv.request.drone_goals.push_back(drone_goal);
+          ros::service::call("uav" + std::to_string(drone_id) + "/add_drone_goal", add_drone_goal_srv);
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
@@ -301,9 +325,18 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
           ros_warn("p" + std::to_string(executor_id) + ": ACTIVE "
                    + actions_it->land.NAME + "(" + std::to_string(actions_it->land.d.value) + ")");
 
-          require_drone_action = true;
+//          require_drone_action = true;
           drone_id = actions_it->land.d.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_LAND;
+//          goal.action_type = urs_wearable::DroneGoal::TYPE_LAND;
+
+          ///////////////////////////////////////////////////////////////////////////////////////////////////////
+          urs_wearable::DroneGoal drone_goal;
+          drone_goal.action_type = urs_wearable::DroneGoal::TYPE_LAND;
+          drone_goal.executor_id = executor_id;
+
+          urs_wearable::AddDroneGoal add_drone_goal_srv;
+          add_drone_goal_srv.request.drone_goals.push_back(drone_goal);
+          ros::service::call("uav" + std::to_string(drone_id) + "/add_drone_goal", add_drone_goal_srv);
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
@@ -326,10 +359,20 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
                    + actions_it->move.NAME + "(" + std::to_string(actions_it->move.d.value) + ",("
                    + std::to_string(pose_to.position.x) + "," + std::to_string(pose_to.position.y) + "," + std::to_string(pose_to.position.z) + "))");
 
-          require_drone_action = true;
+//          require_drone_action = true;
           drone_id = actions_it->move.d.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
-          goal.poses.push_back(pose_to);
+//          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
+//          goal.poses.push_back(pose_to);
+
+          ///////////////////////////////////////////////////////////////////////////////////////////////////////
+          urs_wearable::DroneGoal drone_goal;
+          drone_goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
+          drone_goal.executor_id = executor_id;
+          drone_goal.poses.push_back(pose_to);
+
+          urs_wearable::AddDroneGoal add_drone_goal_srv;
+          add_drone_goal_srv.request.drone_goals.push_back(drone_goal);
+          ros::service::call("uav" + std::to_string(drone_id) + "/add_drone_goal", add_drone_goal_srv);
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
@@ -343,18 +386,6 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
           effect.at.l.value = actions_it->move.l1.value;
           effect.truth_value = true;
           effects.push_back(effect);
-
-
-          ///////////////////////////////////////////////////////////////////////////////////////////////////////
-          urs_wearable::DroneGoal drone_goal;
-          drone_goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
-          drone_goal.executor_id = executor_id;
-          drone_goal.poses.push_back(pose_to);
-
-          urs_wearable::AddDroneGoal add_drone_goal_srv;
-          add_drone_goal_srv.request.drone_goals.push_back(drone_goal);
-          ros::service::call("uav" + std::to_string(drone_id) + "/add_drone_goal", add_drone_goal_srv);
-
         }
         break;
 
@@ -397,43 +428,87 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
             }
           }
 
-          require_drone_action = true;
+//          require_drone_action = true;
           drone_id = actions_it->scan.d.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
+//          goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
+//          switch(min_dist_index)
+//          {
+//            case 0:
+//              goal.poses.push_back(pose_nw);
+//              goal.poses.push_back(pose_ne);
+//              goal.poses.push_back(pose_se);
+//              goal.poses.push_back(pose_sw);
+//              goal.poses.push_back(pose_nw);
+//              break;
+//
+//            case 1:
+//              goal.poses.push_back(pose_ne);
+//              goal.poses.push_back(pose_se);
+//              goal.poses.push_back(pose_sw);
+//              goal.poses.push_back(pose_nw);
+//              goal.poses.push_back(pose_ne);
+//              break;
+//
+//            case 2:
+//              goal.poses.push_back(pose_sw);
+//              goal.poses.push_back(pose_nw);
+//              goal.poses.push_back(pose_ne);
+//              goal.poses.push_back(pose_se);
+//              goal.poses.push_back(pose_sw);
+//              break;
+//
+//            case 3:
+//              goal.poses.push_back(pose_se);
+//              goal.poses.push_back(pose_sw);
+//              goal.poses.push_back(pose_nw);
+//              goal.poses.push_back(pose_ne);
+//              goal.poses.push_back(pose_se);
+//              break;
+//          }
+
+          ///////////////////////////////////////////////////////////////////////////////////////////////////////
+          urs_wearable::DroneGoal drone_goal;
+          drone_goal.action_type = urs_wearable::DroneGoal::TYPE_MOVE;
+          drone_goal.executor_id = executor_id;
+
           switch(min_dist_index)
           {
             case 0:
-              goal.poses.push_back(pose_nw);
-              goal.poses.push_back(pose_ne);
-              goal.poses.push_back(pose_se);
-              goal.poses.push_back(pose_sw);
-              goal.poses.push_back(pose_nw);
+              drone_goal.poses.push_back(pose_nw);
+              drone_goal.poses.push_back(pose_ne);
+              drone_goal.poses.push_back(pose_se);
+              drone_goal.poses.push_back(pose_sw);
+              drone_goal.poses.push_back(pose_nw);
               break;
 
             case 1:
-              goal.poses.push_back(pose_ne);
-              goal.poses.push_back(pose_se);
-              goal.poses.push_back(pose_sw);
-              goal.poses.push_back(pose_nw);
-              goal.poses.push_back(pose_ne);
+              drone_goal.poses.push_back(pose_ne);
+              drone_goal.poses.push_back(pose_se);
+              drone_goal.poses.push_back(pose_sw);
+              drone_goal.poses.push_back(pose_nw);
+              drone_goal.poses.push_back(pose_ne);
               break;
 
             case 2:
-              goal.poses.push_back(pose_sw);
-              goal.poses.push_back(pose_nw);
-              goal.poses.push_back(pose_ne);
-              goal.poses.push_back(pose_se);
-              goal.poses.push_back(pose_sw);
+              drone_goal.poses.push_back(pose_sw);
+              drone_goal.poses.push_back(pose_nw);
+              drone_goal.poses.push_back(pose_ne);
+              drone_goal.poses.push_back(pose_se);
+              drone_goal.poses.push_back(pose_sw);
               break;
 
             case 3:
-              goal.poses.push_back(pose_se);
-              goal.poses.push_back(pose_sw);
-              goal.poses.push_back(pose_nw);
-              goal.poses.push_back(pose_ne);
-              goal.poses.push_back(pose_se);
+              drone_goal.poses.push_back(pose_se);
+              drone_goal.poses.push_back(pose_sw);
+              drone_goal.poses.push_back(pose_nw);
+              drone_goal.poses.push_back(pose_ne);
+              drone_goal.poses.push_back(pose_se);
               break;
           }
+
+          urs_wearable::AddDroneGoal add_drone_goal_srv;
+          add_drone_goal_srv.request.drone_goals.push_back(drone_goal);
+          ros::service::call("uav" + std::to_string(drone_id) + "/add_drone_goal", add_drone_goal_srv);
 
           // Add the effects of the action to the list
           urs_wearable::Predicate effect;
@@ -464,16 +539,9 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
           ros_warn("p" + std::to_string(executor_id) + ": ACTIVE "
                    + actions_it->takeoff.NAME + "(" + std::to_string(actions_it->takeoff.d.value) + ")");
 
-          require_drone_action = true;
+//          require_drone_action = true;
           drone_id = actions_it->takeoff.d.value;
-          goal.action_type = urs_wearable::DroneGoal::TYPE_TAKEOFF;
-
-          // Add the effects of the action to the list
-          urs_wearable::Predicate effect;
-          effect.type = urs_wearable::Predicate::TYPE_HOVERED;
-          effect.hovered.d.value = actions_it->takeoff.d.value;
-          effect.truth_value = true;
-          effects.push_back(effect);
+//          goal.action_type = urs_wearable::DroneGoal::TYPE_TAKEOFF;
 
           ///////////////////////////////////////////////////////////////////////////////////////////////////////
           urs_wearable::DroneGoal drone_goal;
@@ -483,6 +551,13 @@ void execute(KnowledgeBase::executor_id_type executor_id, urs_wearable::SetGoal:
           urs_wearable::AddDroneGoal add_drone_goal_srv;
           add_drone_goal_srv.request.drone_goals.push_back(drone_goal);
           ros::service::call("uav" + std::to_string(drone_id) + "/add_drone_goal", add_drone_goal_srv);
+
+          // Add the effects of the action to the list
+          urs_wearable::Predicate effect;
+          effect.type = urs_wearable::Predicate::TYPE_HOVERED;
+          effect.hovered.d.value = drone_id;
+          effect.truth_value = true;
+          effects.push_back(effect);
         }
         break;
 
@@ -667,12 +742,14 @@ bool addAreaService(urs_wearable::AddArea::Request& req, urs_wearable::AddArea::
         && loc.second.position.y >= pose_sw.position.y
         && loc.second.position.y <= pose_nw.position.y
         && loc.second.position.z >= pose_nw.position.z - 0.5
-        && loc.second.position.z >= pose_nw.position.z + 0.5)
+        && loc.second.position.z <= pose_nw.position.z + 0.5)
     {
       pred.in.l.value = loc.first;
       pred.in.a.value = area_id;
 
       aux_preds.push_back(pred);
+
+      ros_error("Predicated in/2 added");
     }
   }
   loc_map_lt.unlock();
@@ -764,12 +841,12 @@ void battery(const std_msgs::StringConstPtr& s)
     {
       if (tokens[i] == "drone_id")
       {
-        ros_warn("drone_id index: " + std::to_string(i));
+//        ros_warn("drone_id index: " + std::to_string(i));
         drone_id = std::stoi(tokens[i + 1]);
       }
       else if (tokens[i] == "battery_value")
       {
-        ros_warn("battery_value index: " + std::to_string(i));
+//        ros_warn("battery_value index: " + std::to_string(i));
         battery_value = std::stoi(tokens[i + 1]);
       }
     }
@@ -800,6 +877,13 @@ void battery(const std_msgs::StringConstPtr& s)
   {
     ros_error("Error extracting battery level message: " + s->data);
   }
+}
+
+bool setDroneActionResultService(urs_wearable::SetDroneActionResult::Request& req, urs_wearable::SetDroneActionResult::Response& res)
+{
+
+
+  return true;
 }
 
 int main(int argc, char **argv)
@@ -856,6 +940,7 @@ int main(int argc, char **argv)
   ros::ServiceServer get_state_service = nh.advertiseService("urs_wearable/get_state", getStateService);
   ros::ServiceServer remove_area_service = nh.advertiseService("urs_wearable/remove_area",removeAreaService);
   ros::ServiceServer remove_location_service = nh.advertiseService("urs_wearable/remove_location", removeLocationService);
+  ros::ServiceServer set_drone_action_result_service = nh.advertiseService("urs_wearable/set_drone_action_result", setDroneActionResultService);
   ros::ServiceServer set_goal_service = nh.advertiseService("urs_wearable/set_goal", setGoalService);
 
   ros_info("Waiting for connections from wearable devices...");

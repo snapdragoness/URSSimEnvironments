@@ -92,6 +92,7 @@ add_service_files(FILES
   RemoveLocation.srv
   SetAltitude.srv
   SetDouble.srv
+  SetDroneActionResult.srv
   SetGoal.srv
   SetOrientation.srv
   SetPosition.srv
