@@ -1,0 +1,5 @@
+uint32 executor_id
+uint8 status          # Use statuses from Feedback.msg
+uint32 action_index
+string message
+---

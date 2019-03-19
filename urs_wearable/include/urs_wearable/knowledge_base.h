@@ -10,9 +10,20 @@
 #include <ros/ros.h>
 
 #include "urs_wearable/location_table.h"
-#include "urs_wearable/Action.h"
-#include "urs_wearable/Predicate.h"
-#include "urs_wearable/State.h"
+#include <urs_wearable/Action.h>
+#include <urs_wearable/Predicate.h>
+#include <urs_wearable/SetDroneActionStatus.h>
+#include <urs_wearable/State.h>
+
+struct Executor
+{
+  std::vector<urs_wearable::Predicate> goals;
+  std::vector<std::string> plan;
+  std::vector<urs_wearable::Action> actions;
+  std::vector<bool> executed;
+  unsigned int executed_total;
+  unsigned int replan_id;
+};
 
 class KnowledgeBase
 {
@@ -20,7 +31,7 @@ public:
   // We use uint8_t here to match with the type of 'type' in Predicate.msg
   typedef std::uint8_t predicate_type;
 
-  // We use uint8_t here to match with the type of 'executor_id' in Feedback.msg, SetGoal.srv
+  // We use uint8_t here to match with the type of 'executor_id' in Feedback.msg, SetGoal.srv, RemoveDroneGoal.srv
   typedef std::uint32_t executor_id_type;
 
   LocationTable loc_table_;
@@ -28,21 +39,24 @@ public:
   KnowledgeBase(const std::string& domain_name, const std::string& problem_name)
   : DOMAIN_NAME(domain_name), PROBLEM_NAME(problem_name)
   {
+    set_drone_action_status_client_ = nullptr;
     state_pub_ = nullptr;
   }
 
-  ~KnowledgeBase()
+  void setStatePub(ros::Publisher* state_pub)
   {
-    if (state_pub_)
-    {
-      state_pub_->shutdown();
-    }
+    state_pub_ = state_pub;
+  }
+
+  void setDroneActionStatusClient(ros::ServiceClient* set_drone_action_status_client)
+  {
+    set_drone_action_status_client_ = set_drone_action_status_client;
   }
 
   executor_id_type registerExecutor()
   {
     executor_id_type id = executor_id_++;
-    while (executor_map_.contains(id))
+    while (executor_map_.contains(id) || id == 0)
     {
       id = executor_id_++;
     }
@@ -55,7 +69,7 @@ public:
   }
 
   // Insert or update predicates, may also erase depending on the ERASE_WHEN_FALSE constant defined in Predicate*.msg
-  void upsertPredicates(const std::vector<urs_wearable::Predicate>&);
+  void upsertPredicates(executor_id_type, const std::vector<urs_wearable::Predicate>&);
 
   std::vector<urs_wearable::Predicate> getPredicateList(predicate_type type)
   {
@@ -64,20 +78,7 @@ public:
     return v;
   }
 
-  std::vector<urs_wearable::Predicate> getUnsatisfiedGoals(const std::vector<urs_wearable::Predicate>&);
-
-  // getPlan can only be called once from the same executor, the subsequent calls will return an empty plan
-  void getPlan(executor_id_type, const std::vector<urs_wearable::Predicate>&, std::vector<std::string>&);
-  bool getPlanIfPlanHasChanged(executor_id_type, std::vector<std::string>&);
-
-  // Throw std::invalid_argument if there is an unrecognized action
-  std::vector<urs_wearable::Action> parsePlan(const std::vector<std::string>&);
-
-  void setStatePub(ros::Publisher* state_pub)
-  {
-    state_pub_ = state_pub;
-  }
-
+  void plan(executor_id_type, const std::vector<urs_wearable::Predicate>&, std::vector<std::string>&);
   void publish();
 
   std::string domain_file;
@@ -86,17 +87,12 @@ public:
   std::string tmp_path;
 
   static std::string getPredicateString(const std::vector<urs_wearable::Predicate>&);
+  static std::vector<urs_wearable::Action> parsePlan(const std::vector<std::string>&);
+
+  cuckoohash_map<executor_id_type, struct Executor> executor_map_;
 
 private:
-  struct Executor
-  {
-    std::vector<urs_wearable::Predicate> goal;
-    std::vector<std::string> plan;
-    bool plan_has_changed;
-  };
-
-  std::atomic<executor_id_type> executor_id_{0};
-  cuckoohash_map<executor_id_type, struct Executor> executor_map_;
+  std::atomic<executor_id_type> executor_id_{1};
 
   cuckoohash_map<predicate_type, std::vector<urs_wearable::Predicate>> predicate_map_;
   std::atomic<unsigned int> updating_instances_ {0};
@@ -104,14 +100,16 @@ private:
   const std::string PROBLEM_NAME;
   const std::string DOMAIN_NAME;
 
+  ros::ServiceClient* set_drone_action_status_client_;
+  std::mutex set_drone_action_status_client_mutex_;
+
   ros::Publisher* state_pub_;
   std::mutex state_pub_mutex_;
 
-  void replan();
+  void replan(executor_id_type);
 
   std::string getProblemDef(const std::vector<urs_wearable::Predicate>&);
 
-  static std::atomic<unsigned int> executorReplanID;
   static std::string exec(const char*);
   static std::vector<std::string> parseFF(std::string);
 };

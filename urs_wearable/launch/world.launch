@@ -5,7 +5,7 @@
   <arg name="reference_latitude" default="49.860246" />
   <arg name="reference_longitude" default="8.687077" />
   <arg name="uav_total" default="4" />
-  <arg name="uav_ns" default="/uav" />
+  <arg name="uav_ns" default="/uav" />  <!-- This has to match with <group ns> in spawn_quadrotors.launch -->
 
   <include file="$(find hector_gazebo_worlds)/launch/start.launch">
     <arg name="world" value="$(arg world)" />

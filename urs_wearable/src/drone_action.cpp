@@ -1,4 +1,5 @@
 #include <atomic>
+#include <future>
 #include <list>
 #include <mutex>
 #include <thread>
@@ -7,16 +8,19 @@
 #include <actionlib/server/simple_action_server.h>
 #include <ros/ros.h>
 
+#include "urs_wearable/common.h"
+#include "urs_wearable/knowledge_base.h"
+
 #include <geometry_msgs/PoseStamped.h>
 #include <hector_uav_msgs/EnableMotors.h>
 #include <sensor_msgs/Range.h>
 #include <std_srvs/Empty.h>
 #include <urs_wearable/AddDroneGoal.h>
 #include <urs_wearable/DroneAction.h>
-#include <urs_wearable/SetDroneActionResult.h>
+#include <urs_wearable/Feedback.h>
+#include <urs_wearable/SetDroneActionStatus.h>
 #include <urs_wearable/SetPosition.h>
-
-#include "urs_wearable/common.h"
+#include <urs_wearable/RemoveDroneGoal.h>
 
 class DroneActionServer
 {
@@ -28,15 +32,17 @@ class DroneActionServer
   actionlib::SimpleActionServer<urs_wearable::DroneAction> as_;
   std::string name_;
 
-//  urs_wearable::DroneFeedback feedback_;
-  urs_wearable::DroneResult result_;
+  actionlib::SimpleActionClient<urs_wearable::DroneAction> ac_;
+
+  std::list<urs_wearable::DroneGoal> drone_goal_queue_;
+  std::mutex drone_goal_queue_mutex_;
 
   ros::ServiceClient enable_motors_client_;
-  ros::ServiceClient set_drone_action_result_client_;
+  ros::ServiceClient set_drone_action_status_client_;
 
-  ros::ServiceServer add_drone_goal_service_;       // add goals to the queue
-  ros::ServiceServer remove_drone_goal_service_;    // remove goals from a particular executor from the queue
-  ros::ServiceServer clear_drone_goal_service_;     // clear all goals from the queue
+  ros::ServiceServer add_drone_goal_service_;
+  ros::ServiceServer clear_drone_goal_service_;
+  ros::ServiceServer remove_drone_goal_service_;
 
   ros::Subscriber pose_sub_;
   geometry_msgs::Pose pose_;
@@ -45,69 +51,152 @@ class DroneActionServer
   ros::Subscriber sonar_height_sub_;
   std::atomic<float> sonar_height_;
 
-  std::list<urs_wearable::DroneGoal> drone_goal_queue_;
-  std::mutex drone_goal_queue_mutex_;
+  std::thread executor_thread_;
+  std::promise<void> executor_thread_exit_signal_;
 
 public:
   DroneActionServer(ros::NodeHandle& nh, const std::string& name) :
-    as_(nh, name, boost::bind(&DroneActionServer::droneActionCb, this, _1), false), name_(name)
+    as_(nh, name, boost::bind(&DroneActionServer::droneActionCb, this, _1), false), name_(name),
+    ac_(nh, name, true),
+    executor_thread_(&DroneActionServer::execute, this)
   {
     enable_motors_client_ = nh.serviceClient<hector_uav_msgs::EnableMotors>("enable_motors");
-    set_drone_action_result_client_ = nh.serviceClient<urs_wearable::SetDroneActionResult>("/urs_wearable/set_drone_action_result");
+    set_drone_action_status_client_ = nh.serviceClient<urs_wearable::SetDroneActionStatus>("/urs_wearable/set_drone_action_status");
+
+    add_drone_goal_service_ = nh.advertiseService("add_drone_goal", &DroneActionServer::addDroneGoalService, this);
+    clear_drone_goal_service_ = nh.advertiseService("clear_drone_goal", &DroneActionServer::clearDroneGoalService, this);
+    remove_drone_goal_service_ = nh.advertiseService("remove_drone_goal", &DroneActionServer::removeDroneGoalService, this);
 
     pose_sub_ = nh.subscribe("ground_truth_to_tf/pose", 10, &DroneActionServer::poseCb, this);
     sonar_height_sub_ = nh.subscribe("sonar_height", 1, &DroneActionServer::sonarHeightCb, this);
 
-    add_drone_goal_service_ = nh.advertiseService("add_drone_goal", &DroneActionServer::addDroneGoalService, this);
-
     as_.start();
+    ac_.waitForServer();
+  }
+
+  ~DroneActionServer()
+  {
+    executor_thread_exit_signal_.set_value();
+    executor_thread_.join();
   }
 
   void execute()
   {
-    std::lock_guard<std::mutex> lock(drone_goal_queue_mutex_);
-    if (!drone_goal_queue_.empty())
+    std::future<void> future_obj = executor_thread_exit_signal_.get_future();
+
+    while (future_obj.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout)
     {
-//      droneActionCb(boost::make_shared<urs_wearable::DroneGoal const>(drone_goal_queue_.front()));
-      actionlib::SimpleActionClient<urs_wearable::DroneAction> ac("action/drone", true);
-      ac.waitForServer();
-      ac.sendGoal(drone_goal_queue_.front());
+      KnowledgeBase::executor_id_type executor_id;
+      unsigned int action_index;
+      bool has_goal = false;
+      {
+        std::lock_guard<std::mutex> lock(drone_goal_queue_mutex_);
+        if (!drone_goal_queue_.empty())
+        {
+          ac_.sendGoal(drone_goal_queue_.front());
 
-      ac.waitForResult();
-//      actionlib::SimpleClientGoalState::StateEnum state;
-//      do {
-//        ros::Duration(0.1).sleep();
-//        state = ac.getState().state_;
-//      } while (state == actionlib::SimpleClientGoalState::PENDING || state == actionlib::SimpleClientGoalState::ACTIVE);
+          executor_id = drone_goal_queue_.front().executor_id;
+          action_index = drone_goal_queue_.front().action_index;
+          has_goal = true;
 
-      ros_error("action done, success: " + std::to_string(ac.getResult()->success));
+          drone_goal_queue_.pop_front();
+        }
+      }
 
-      drone_goal_queue_.pop_front();
+      if (has_goal)
+      {
+        // Tell the execution monitor what action it is executing
+        urs_wearable::SetDroneActionStatus set_drone_action_status_srv;
+        set_drone_action_status_srv.request.executor_id = executor_id;
+        set_drone_action_status_srv.request.action_index = action_index;
+        set_drone_action_status_srv.request.status = urs_wearable::Feedback::STATUS_ACTIVE;
 
-      // TODO: Return executing status to exec monitor
+        if (!set_drone_action_status_client_.call(set_drone_action_status_srv))
+        {
+          ros_error("Cannot call service " + ros::names::resolve("/urs_wearable/set_drone_action_status"));
+        }
 
-      // Execute the next drone goal
-      std::thread executor_thread(&DroneActionServer::execute, this);
-      executor_thread.detach();
+        // Wait for execution result
+        ac_.waitForResult();
+
+        // Return the result to the execution monitor
+        switch (ac_.getState().state_)
+        {
+          case actionlib::SimpleClientGoalState::ABORTED:
+            set_drone_action_status_srv.request.status = urs_wearable::Feedback::STATUS_ABORTED;
+            break;
+
+          case actionlib::SimpleClientGoalState::PREEMPTED:
+            set_drone_action_status_srv.request.status = urs_wearable::Feedback::STATUS_PREEMPTED;
+            break;
+
+          case actionlib::SimpleClientGoalState::SUCCEEDED:
+            set_drone_action_status_srv.request.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
+            break;
+
+          default:
+            set_drone_action_status_srv.request.status = urs_wearable::Feedback::STATUS_ABORTED;
+            ros_error("Unexpected return in action result");
+        }
+
+        if (!set_drone_action_status_client_.call(set_drone_action_status_srv))
+        {
+          ros_error("Cannot call service " + ros::names::resolve("/urs_wearable/set_drone_action_status"));
+        }
+      }
+      else
+      {
+        ros::Duration(0.1).sleep();
+      }
     }
   }
 
   bool addDroneGoalService(urs_wearable::AddDroneGoal::Request& req, urs_wearable::AddDroneGoal::Response& res)
   {
-    bool has_goal_executing;
+    if (!req.drone_goals.empty())
     {
-      std::lock_guard<std::mutex> lock(drone_goal_queue_mutex_);
-      has_goal_executing = drone_goal_queue_.empty();
-      for (const auto& drone_goal : req.drone_goals)
+      // New drone goals will replace the previous ones
+      if (as_.isActive())
       {
-        drone_goal_queue_.push_back(drone_goal);
+        ac_.cancelGoal();
       }
+
+      std::lock_guard<std::mutex> lock(drone_goal_queue_mutex_);
+      drone_goal_queue_.clear();
+      drone_goal_queue_.insert(drone_goal_queue_.end(), req.drone_goals.begin(), req.drone_goals.end());
+
+      return true;
     }
 
-    if (!has_goal_executing)
+    return false;
+  }
+
+  bool clearDroneGoalService(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
+  {
+    if (as_.isActive())
     {
-      std::thread executor_thread(&DroneActionServer::execute, this);
-      executor_thread.detach();
+      ac_.cancelGoal();
+    }
+
+    std::lock_guard<std::mutex> lock(drone_goal_queue_mutex_);
+    drone_goal_queue_.clear();
+
+    return true;
+  }
+
+  bool removeDroneGoalService(urs_wearable::RemoveDroneGoal::Request& req, urs_wearable::RemoveDroneGoal::Response& res)
+  {
+    // Assumption: There can be only actions from one executor_id at a time
+    std::lock_guard<std::mutex> lock(drone_goal_queue_mutex_);
+    if (!drone_goal_queue_.empty()
+        && drone_goal_queue_.front().executor_id == req.executor_id)
+    {
+      if (as_.isActive())
+      {
+        ac_.cancelGoal();
+      }
+
+      drone_goal_queue_.clear();
     }
 
     return true;
@@ -163,9 +252,7 @@ public:
             std_srvs::Empty stop_srv;
             ros::service::call("stop", stop_srv);
           }
-
-          result_.success = false;
-          as_.setPreempted(result_);
+          as_.setPreempted();
           return;
         }
 
@@ -183,8 +270,7 @@ public:
     else
     {
       ros_error("actionLanding called " + ros::names::resolve("enable_motors") + " failed");
-      result_.success = false;
-      as_.setAborted(result_);
+      as_.setAborted();
       return;
     }
 
@@ -194,14 +280,12 @@ public:
 
     if (enable_motors_client_.call(enable_motors_srv) && enable_motors_srv.response.success)
     {
-      result_.success = true;
-      as_.setSucceeded(result_);
+      as_.setSucceeded();
     }
     else
     {
       ros_error("actionLand called " + ros::names::resolve("set_position") + " failed");
-      result_.success = false;
-      as_.setAborted(result_);
+      as_.setAborted();
     }
   }
 
@@ -224,9 +308,7 @@ public:
               std_srvs::Empty stop_srv;
               ros::service::call("stop", stop_srv);
             }
-
-            result_.success = false;
-            as_.setPreempted(result_);
+            as_.setPreempted();
             return;
           }
 
@@ -246,13 +328,11 @@ public:
       else
       {
         ros_error("actionPose called " + ros::names::resolve("set_position") + " failed");
-        result_.success = false;
-        as_.setAborted(result_);
+        as_.setAborted();
       }
     }
 
-    result_.success = true;
-    as_.setSucceeded(result_);
+    as_.setSucceeded();
   }
 
   void actionTakeoff(const urs_wearable::DroneGoalConstPtr& goal)
@@ -264,8 +344,7 @@ public:
     if (!enable_motors_client_.call(enable_motors_srv) || !enable_motors_srv.response.success)
     {
       ros_error("actionTakeoff called " + ros::names::resolve("enable_motors") + " failed");
-      result_.success = false;
-      as_.setAborted(result_);
+      as_.setAborted();
       return;
     }
 
@@ -298,9 +377,7 @@ public:
             std_srvs::Empty stop_srv;
             ros::service::call("stop", stop_srv);
           }
-
-          result_.success = false;
-          as_.setPreempted(result_);
+          as_.setPreempted();
           return;
         }
 
@@ -319,12 +396,10 @@ public:
     else
     {
       ros_error("actionTakeoff called " + ros::names::resolve("set_position") + " failed");
-      result_.success = false;
-      as_.setAborted(result_);
+      as_.setAborted();
     }
 
-    result_.success = true;
-    as_.setSucceeded(result_);
+    as_.setSucceeded();
   }
 };
 

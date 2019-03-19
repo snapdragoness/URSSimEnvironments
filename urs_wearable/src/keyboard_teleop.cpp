@@ -1,10 +1,13 @@
-#include <boost/tokenizer.hpp>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <termios.h>
 
+#include <boost/tokenizer.hpp>
 #include <ros/ros.h>
+
+#include "urs_wearable/common.h"
+
 #include <geometry_msgs/Pose.h>
 #include <hector_uav_msgs/EnableMotors.h>
 #include <std_srvs/Empty.h>
@@ -13,8 +16,6 @@
 #include <urs_wearable/SetDouble.h>
 #include <urs_wearable/SetOrientation.h>
 #include <urs_wearable/SetPosition.h>
-
-#include "urs_wearable/common.h"
 
 struct termios old_t, new_t;
 

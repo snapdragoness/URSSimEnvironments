@@ -11,79 +11,70 @@
 #include "urs_wearable/common.h"
 #include "urs_wearable/knowledge_base.h"
 
+#include <urs_wearable/Feedback.h>
+
 void KnowledgeBase::publish()
 {
-  std::string pred_string;
-
-  std::lock_guard<std::mutex> lock(state_pub_mutex_);
-  if (state_pub_)
+  // If there is any updating instances running, exit the function because it will be called later anyway
+  if (updating_instances_)
   {
-    urs_wearable::State state;
+    return;
+  }
 
-    auto predicate_map_lt = predicate_map_.lock_table();
+  std::string pred_string;
+  urs_wearable::State state;
 
-    // If there are updating instances running,
-    // we exit the function because it will be called by some updating instant anyway.
-    if (updating_instances_)
-    {
-      predicate_map_lt.unlock();
-      return;
-    }
+  auto predicate_map_lt = predicate_map_.lock_table();
 
-    // Get a vector of predicates from predicate_map_
-    state.predicates.reserve(predicate_map_lt.size());
-    for (const auto& pred : predicate_map_lt)
-    {
-      state.predicates.insert(state.predicates.end(), pred.second.begin(), pred.second.end());
+  // Get a vector of predicates from predicate_map_
+  state.predicates.reserve(predicate_map_lt.size());
+  for (const auto& pred : predicate_map_lt)
+  {
+    state.predicates.insert(state.predicates.end(), pred.second.begin(), pred.second.end());
+    pred_string += KnowledgeBase::getPredicateString(pred.second) + ", ";
+  }
+  predicate_map_lt.unlock();
 
-      if (pred_string.empty())
-      {
-        pred_string += KnowledgeBase::getPredicateString(pred.second);
-      }
-      else
-      {
-        pred_string += ", " + KnowledgeBase::getPredicateString(pred.second);
-      }
-    }
-    predicate_map_lt.unlock();
+  // Get a vector of locations from loc_map_
+  auto loc_map_lt = loc_table_.loc_map_.lock_table();
+  for (const auto& loc : loc_map_lt)
+  {
+    urs_wearable::Location l;
+    l.loc_id = loc.first;
+    l.pose = loc.second;
+    state.locations.push_back(l);
+  }
+  loc_map_lt.unlock();
 
-    // Get a vector of locations from loc_map_
-    auto loc_map_lt = loc_table_.loc_map_.lock_table();
-    for (const auto& loc : loc_map_lt)
-    {
-      urs_wearable::Location l;
-      l.loc_id = loc.first;
-      l.pose = loc.second;
-      state.locations.push_back(l);
-    }
-    loc_map_lt.unlock();
+  // Get a vector of areas from area_map_
+  auto area_map_lt = loc_table_.area_map_.lock_table();
+  for (const auto& area : area_map_lt)
+  {
+    urs_wearable::Area a;
+    a.area_id = area.first;
+    a.loc_id_left = area.second.loc_id_left;
+    a.loc_id_right = area.second.loc_id_right;
+    state.areas.push_back(a);
+  }
+  area_map_lt.unlock();
 
-    // Get a vector of areas from area_map_
-    auto area_map_lt = loc_table_.area_map_.lock_table();
-    for (const auto& area : area_map_lt)
-    {
-      urs_wearable::Area a;
-      a.area_id = area.first;
-      a.loc_id_left = area.second.loc_id_left;
-      a.loc_id_right = area.second.loc_id_right;
-      state.areas.push_back(a);
-    }
-    area_map_lt.unlock();
-
-    // Publish
-    state_pub_->publish(state);
+  if (pred_string.size() > 1)
+  {
+    pred_string.pop_back();   // Remove a trailing space
+    pred_string.pop_back();   // Remove a comma
   }
 
   // Log the current state
   ROS_INFO_STREAM("Current state: " << pred_string);
+
+  // Publish
+  std::lock_guard<std::mutex> lock(state_pub_mutex_);
+  state_pub_->publish(state);
 }
 
-std::atomic<unsigned int> KnowledgeBase::executorReplanID {0};
-
-void KnowledgeBase::replan()
+void KnowledgeBase::replan(executor_id_type executor_id)
 {
-  // If there are updating instances running,
-  // we exit the function because it will be called by some updating instant anyway.
+  // If there is any updating instances running, exit the function because it will be called later anyway
   if (updating_instances_)
   {
     return;
@@ -94,70 +85,100 @@ void KnowledgeBase::replan()
   auto executor_map_lt = executor_map_.lock_table();
   for (const auto& m : executor_map_lt)
   {
-    executor_id_list.push_back(m.first);
+    if (m.first != executor_id)
+    {
+      executor_id_list.push_back(m.first);
+    }
   }
   executor_map_lt.unlock();
 
-  // TODO: Compare only part of the plan of the executor that update the predicates
-  // Do the re-planning for each executor
+  // Do the re-planning for each executor except the one that calls
   for (const auto id : executor_id_list)
   {
-    executor_map_.update_fn(id, [this](struct Executor& executor)
+    executor_map_.update_fn(id, [this, id](struct Executor& executor)
     {
-      std::vector<urs_wearable::Predicate> unsatisfied_goals = getUnsatisfiedGoals(executor.goal);
+      std::ofstream ofs;
+      std::string problem_file = tmp_path + "p" + std::to_string(id) + "r" + std::to_string(executor.replan_id++) + ".pddl";
+      ofs.open(problem_file.c_str());
+      ofs << getProblemDef(executor.goals);
+      ofs.close();
 
-      if (unsatisfied_goals.size() > 0)
+      std::string command = planner_command + " -o " + domain_file + " -f " + problem_file;
+      std::vector<std::string> plan = parseFF(exec(command.c_str()));
+
+      std::size_t cur_plan_index = 0;
+      std::size_t new_plan_index = 0;
+
+      while (cur_plan_index < executor.plan.size() && new_plan_index < plan.size())
       {
-        std::ofstream ofs;
-        std::string problem_file = tmp_path + "q" + std::to_string(executorReplanID++) + ".pddl";
-        ofs.open(problem_file.c_str());
-        ofs << getProblemDef(unsatisfied_goals);
-        ofs.close();
-
-        std::string command = planner_command + " -o " + domain_file + " -f " + problem_file;
-        std::vector<std::string> plan = parseFF(exec(command.c_str()));
-
-        if (!plan.empty())
+        if (executor.plan[cur_plan_index] == plan[new_plan_index])
         {
-          if (executor.plan != plan)
-          {
-            executor.plan = plan;
-            executor.plan_has_changed = true;
-          }
+          cur_plan_index++;
+          new_plan_index++;
+        }
+        else if (executor.executed[cur_plan_index] == true)
+        {
+          cur_plan_index++;
         }
         else
         {
-          ros_error("Failed in calling " + command);
+          break;
+        }
+      }
+
+      if (cur_plan_index < executor.plan.size() || new_plan_index < plan.size())
+      {
+        executor.plan = plan;
+        executor.actions = KnowledgeBase::parsePlan(plan);
+        executor.executed.clear();
+        executor.executed.reserve(plan.size());
+        for (std::size_t i = 0; i < plan.size(); i++)
+        {
+          executor.executed.push_back(false);
+        }
+        executor.executed_total = 0;
+        executor.replan_id = 1;
+
+        urs_wearable::SetDroneActionStatus set_drone_action_status_srv;
+        set_drone_action_status_srv.request.executor_id = id;
+        set_drone_action_status_srv.request.status = urs_wearable::Feedback::STATUS_REPLANNED;
+
+        std::lock_guard<std::mutex> lock(set_drone_action_status_client_mutex_);
+        if (!set_drone_action_status_client_->call(set_drone_action_status_srv))
+        {
+          ros_error("Cannot call service " + ros::names::resolve("urs_wearable/set_drone_action_status"));
         }
       }
     });
   }
 }
 
-void KnowledgeBase::getPlan(executor_id_type executor_id, const std::vector<urs_wearable::Predicate>& goal, std::vector<std::string>& plan)
+void KnowledgeBase::plan(executor_id_type executor_id, const std::vector<urs_wearable::Predicate>& goals, std::vector<std::string>& plan)
 {
-  std::vector<urs_wearable::Predicate> unsatisfied_goals = getUnsatisfiedGoals(goal);
+  std::ofstream ofs;
+  std::string problem_file = tmp_path + "p" + std::to_string(executor_id) + ".pddl";
+  ofs.open(problem_file.c_str());
+  ofs << getProblemDef(goals);
+  ofs.close();
 
-  if (unsatisfied_goals.size() > 0)
+  std::string command = planner_command + " -o " + domain_file + " -f " + problem_file;
+  plan = parseFF(exec(command.c_str()));
+
+  struct Executor executor;
+  executor.goals = goals;
+  executor.plan = plan;
+  executor.actions = KnowledgeBase::parsePlan(plan);
+  executor.executed.reserve(plan.size());
+  for (std::size_t i = 0; i < plan.size(); i++)
   {
-    std::ofstream ofs;
-    std::string problem_file = tmp_path + "p" + std::to_string(executor_id) + ".pddl";
-    ofs.open(problem_file.c_str());
-    ofs << getProblemDef(unsatisfied_goals);
-    ofs.close();
+    executor.executed.push_back(false);
+  }
+  executor.executed_total = 0;
+  executor.replan_id = 1;
 
-    std::string command = planner_command + " -o " + domain_file + " -f " + problem_file;
-    plan = parseFF(exec(command.c_str()));
-
-    struct Executor executor = {goal, plan, false};
-    if (executor_map_.insert(executor_id, executor))
-    {
-      plan = executor.plan;
-    }
-    else
-    {
-      ros_error("Failed in executor_map_.insert");
-    }
+  if (!executor_map_.insert(executor_id, executor))
+  {
+    ros_error("Inserting to executor_map failed");
   }
 }
 
@@ -233,22 +254,22 @@ std::vector<std::string> KnowledgeBase::parseFF(std::string s)
   return plan;
 }
 
-bool KnowledgeBase::getPlanIfPlanHasChanged(executor_id_type executor_id, std::vector<std::string>& plan)
-{
-  bool ret(false);
-
-  executor_map_.update_fn(executor_id, [&plan, &ret](struct Executor& executor)
-  {
-    ret = executor.plan_has_changed;
-    if (executor.plan_has_changed)
-    {
-      plan = executor.plan;
-      executor.plan_has_changed = false;
-    }
-  });
-
-  return ret;
-}
+//bool KnowledgeBase::getPlanIfPlanHasChanged(executor_id_type executor_id, std::vector<std::string>& plan)
+//{
+//  bool ret(false);
+//
+//  executor_map_.update_fn(executor_id, [&plan, &ret](struct Executor& executor)
+//  {
+//    ret = executor.plan_has_changed;
+//    if (executor.plan_has_changed)
+//    {
+//      plan = executor.plan;
+//      executor.plan_has_changed = false;
+//    }
+//  });
+//
+//  return ret;
+//}
 
 /***************************************************************************************************/
 /**** The methods below need modifications if predicates, objects, or actions have been changed ****/
@@ -256,170 +277,13 @@ bool KnowledgeBase::getPlanIfPlanHasChanged(executor_id_type executor_id, std::v
 
 // This method needs to be modified if there is a change in
 // - predicate
-std::vector<urs_wearable::Predicate> KnowledgeBase::getUnsatisfiedGoals(const std::vector<urs_wearable::Predicate>& goals)
+void KnowledgeBase::upsertPredicates(executor_id_type executor_id, const std::vector<urs_wearable::Predicate>& new_preds)
 {
-  std::vector<urs_wearable::Predicate> unsatisfied_goals;
-  for (const urs_wearable::Predicate& goal : goals)
+  if (new_preds.empty())
   {
-    bool matched = false;
-    switch (goal.type)
-    {
-      case urs_wearable::Predicate::TYPE_ABOVE:
-      {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_ABOVE, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
-        {
-          for (const auto& cur_pred : cur_preds)
-          {
-            if (cur_pred.above.l0.value == goal.above.l0.value
-                && cur_pred.above.l1.value == goal.above.l1.value
-                && cur_pred.truth_value == goal.truth_value)
-            {
-              matched = true;
-              break;
-            }
-          }
-        });
-      }
-      break;
-
-      case urs_wearable::Predicate::TYPE_ALIGNED:
-      {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_ALIGNED, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
-        {
-          for (const auto& cur_pred : cur_preds)
-          {
-            if (cur_pred.aligned.l0.value == goal.aligned.l0.value
-                && cur_pred.aligned.l1.value == goal.aligned.l1.value
-                && cur_pred.truth_value == goal.truth_value)
-            {
-              matched = true;
-              break;
-            }
-          }
-        });
-      }
-      break;
-
-      case urs_wearable::Predicate::TYPE_AT:
-      {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_AT, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
-        {
-          for (const auto& cur_pred : cur_preds)
-          {
-            if (cur_pred.at.d.value == goal.at.d.value
-                && cur_pred.at.l.value == goal.at.l.value
-                && cur_pred.truth_value == goal.truth_value)
-            {
-              matched = true;
-              break;
-            }
-          }
-        });
-      }
-      break;
-
-      case urs_wearable::Predicate::TYPE_COLLIDED:
-      {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_COLLIDED, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
-        {
-          for (const auto& cur_pred : cur_preds)
-          {
-            if (cur_pred.collided.l0.value == goal.collided.l0.value
-                && cur_pred.collided.l1.value == goal.collided.l1.value
-                && cur_pred.truth_value == goal.truth_value)
-            {
-              matched = true;
-              break;
-            }
-          }
-        });
-      }
-      break;
-
-      case urs_wearable::Predicate::TYPE_HOVERED:
-      {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_HOVERED, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
-        {
-          for (const auto& cur_pred : cur_preds)
-          {
-            if (cur_pred.hovered.d.value == goal.hovered.d.value
-                && cur_pred.truth_value == goal.truth_value)
-            {
-              matched = true;
-              break;
-            }
-          }
-        });
-      }
-      break;
-
-      case urs_wearable::Predicate::TYPE_IN:
-      {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_IN, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
-        {
-          for (const auto& cur_pred : cur_preds)
-          {
-            if (cur_pred.in.l.value == goal.in.l.value
-                && cur_pred.in.a.value == goal.in.a.value
-                && cur_pred.truth_value == goal.truth_value)
-            {
-              matched = true;
-              break;
-            }
-          }
-        });
-      }
-      break;
-
-      case urs_wearable::Predicate::TYPE_LOW_BATTERY:
-      {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_LOW_BATTERY, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
-        {
-          for (const auto& cur_pred : cur_preds)
-          {
-            if (cur_pred.low_battery.d.value == goal.low_battery.d.value
-                && cur_pred.truth_value == goal.truth_value)
-            {
-              matched = true;
-              break;
-            }
-          }
-        });
-      }
-      break;
-
-      case urs_wearable::Predicate::TYPE_SCANNED:
-      {
-        predicate_map_.find_fn(urs_wearable::Predicate::TYPE_SCANNED, [&goal, &matched](const std::vector<urs_wearable::Predicate>& cur_preds)
-        {
-          for (const auto& cur_pred : cur_preds)
-          {
-            if (cur_pred.scanned.d.value == goal.scanned.d.value
-                && cur_pred.scanned.a.value == goal.scanned.a.value
-                && cur_pred.truth_value == goal.truth_value)
-            {
-              matched = true;
-              break;
-            }
-          }
-        });
-      }
-      break;
-    }
-
-    if (!matched)
-    {
-      unsatisfied_goals.push_back(goal);
-    }
+    return;
   }
 
-  return unsatisfied_goals;
-}
-
-// This method needs to be modified if there is a change in
-// - predicate
-void KnowledgeBase::upsertPredicates(const std::vector<urs_wearable::Predicate>& new_preds)
-{
   updating_instances_++;
 
   // Verdict: if + update_fn is faster than upsert especially when there are a large number of objects
@@ -607,32 +471,32 @@ void KnowledgeBase::upsertPredicates(const std::vector<urs_wearable::Predicate>&
 
       case urs_wearable::Predicate::TYPE_HOVERED:
       {
-//        if (!predicate_map_.update_fn(urs_wearable::Predicate::TYPE_HOVERED, [&new_pred](std::vector<urs_wearable::Predicate>& cur_preds)
-//        {
-//          bool existed = false;
-//          std::vector<urs_wearable::Predicate>::iterator cur_preds_it = cur_preds.begin();
-//
-//          while (cur_preds_it != cur_preds.end())
-//          {
-//            // If the new predicate already existed, update the current predicate
-//            if (new_pred.hovered.d.value == cur_preds_it->hovered.d.value)
-//            {
-//              cur_preds_it->truth_value = new_pred.truth_value;
-//              existed = true;
-//              break;
-//            }
-//            cur_preds_it++;
-//          }
-//
-//          // If the predicate does not exist, then add it to the knowledge base
-//          if (!existed)
-//          {
-//            cur_preds.push_back(new_pred);
-//          }
-//        }))
-//        {
-//          predicate_map_.insert(urs_wearable::Predicate::TYPE_HOVERED, std::vector<urs_wearable::Predicate>{new_pred});
-//        }
+        if (!predicate_map_.update_fn(urs_wearable::Predicate::TYPE_HOVERED, [&new_pred](std::vector<urs_wearable::Predicate>& cur_preds)
+        {
+          bool existed = false;
+          std::vector<urs_wearable::Predicate>::iterator cur_preds_it = cur_preds.begin();
+
+          while (cur_preds_it != cur_preds.end())
+          {
+            // If the new predicate already existed, update the current predicate
+            if (new_pred.hovered.d.value == cur_preds_it->hovered.d.value)
+            {
+              cur_preds_it->truth_value = new_pred.truth_value;
+              existed = true;
+              break;
+            }
+            cur_preds_it++;
+          }
+
+          // If the predicate does not exist, then add it to the knowledge base
+          if (!existed)
+          {
+            cur_preds.push_back(new_pred);
+          }
+        }))
+        {
+          predicate_map_.insert(urs_wearable::Predicate::TYPE_HOVERED, std::vector<urs_wearable::Predicate>{new_pred});
+        }
       }
       break;
 
@@ -770,11 +634,83 @@ void KnowledgeBase::upsertPredicates(const std::vector<urs_wearable::Predicate>&
     /*****************************************************/
 
     std::thread thread_publish(&KnowledgeBase::publish, this);
-    std::thread thread_replan(&KnowledgeBase::replan, this);
-
     thread_publish.detach();
-    thread_replan.detach();
+
+    if (executor_id != 0)
+    {
+      std::thread thread_replan(&KnowledgeBase::replan, this, executor_id);
+      thread_replan.detach();
+    }
   }
+}
+
+// This method needs to be modified if there is a change in
+// - predicate
+std::string KnowledgeBase::getPredicateString(const std::vector<urs_wearable::Predicate>& preds)
+{
+  std::string pred_string;
+
+  for (const auto& pred : preds)
+  {
+    if (pred.truth_value == false)
+    {
+      pred_string += "-";
+    }
+
+    switch (pred.type)
+    {
+      case urs_wearable::Predicate::TYPE_ABOVE:
+        pred_string += urs_wearable::PredicateAbove::NAME
+                    + "(" + std::to_string(pred.above.l0.value) + "," + std::to_string(pred.above.l1.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_ALIGNED:
+        pred_string += urs_wearable::PredicateAligned::NAME
+                    + "(" + std::to_string(pred.aligned.l0.value) + "," + std::to_string(pred.aligned.l1.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_AT:
+        pred_string += urs_wearable::PredicateAt::NAME
+                    + "(" + std::to_string(pred.at.d.value) + "," + std::to_string(pred.at.l.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_COLLIDED:
+        pred_string += urs_wearable::PredicateCollided::NAME
+                    + "(" + std::to_string(pred.collided.l0.value) + "," + std::to_string(pred.collided.l1.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_HOVERED:
+        pred_string += urs_wearable::PredicateHovered::NAME
+                    + "(" + std::to_string(pred.hovered.d.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_IN:
+        pred_string += urs_wearable::PredicateIn::NAME
+                    + "(" + std::to_string(pred.in.l.value) + "," + std::to_string(pred.in.a.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_LOW_BATTERY:
+        pred_string += urs_wearable::PredicateLowBattery::NAME
+                    + "(" + std::to_string(pred.low_battery.d.value) + "), ";
+        break;
+
+      case urs_wearable::Predicate::TYPE_SCANNED:
+        pred_string += urs_wearable::PredicateScanned::NAME
+                    + "(" + std::to_string(pred.scanned.d.value) + "," + std::to_string(pred.scanned.a.value) + "), ";
+        break;
+
+      default:
+        ros_error("getPredicateString(): Unrecognized predicate type");
+    }
+  }
+
+  if (pred_string.size() > 1)
+  {
+    pred_string.pop_back();   // Remove a trailing space
+    pred_string.pop_back();   // Remove a comma
+  }
+
+  return pred_string;
 }
 
 // This method needs to be modified if there is a change in
@@ -1101,77 +1037,11 @@ std::vector<urs_wearable::Action>KnowledgeBase::parsePlan(const std::vector<std:
     }
     else
     {
-      throw std::invalid_argument("Unrecognized action: " + tokens[0]);
+      ros_error("parsePlan(): Unrecognized action " + tokens[0]);
+      return std::vector<urs_wearable::Action>();
     }
     actions.push_back(action);
   }
 
   return actions;
-}
-
-// This method needs to be modified if there is a change in
-// - predicate
-std::string KnowledgeBase::getPredicateString(const std::vector<urs_wearable::Predicate>& preds)
-{
-  std::string pred_string;
-
-  for (const auto& pred : preds)
-  {
-    if (pred.truth_value == true)
-    {
-      switch (pred.type)
-      {
-        case urs_wearable::Predicate::TYPE_ABOVE:
-          pred_string += urs_wearable::PredicateAbove::NAME
-                      + "(" + std::to_string(pred.above.l0.value) + "," + std::to_string(pred.above.l1.value) + "), ";
-          break;
-
-        case urs_wearable::Predicate::TYPE_ALIGNED:
-          pred_string += urs_wearable::PredicateAligned::NAME
-                      + "(" + std::to_string(pred.aligned.l0.value) + "," + std::to_string(pred.aligned.l1.value) + "), ";
-          break;
-
-        case urs_wearable::Predicate::TYPE_AT:
-          pred_string += urs_wearable::PredicateAt::NAME
-                      + "(" + std::to_string(pred.at.d.value) + "," + std::to_string(pred.at.l.value) + "), ";
-          break;
-
-        case urs_wearable::Predicate::TYPE_COLLIDED:
-          pred_string += urs_wearable::PredicateCollided::NAME
-                      + "(" + std::to_string(pred.collided.l0.value) + "," + std::to_string(pred.collided.l1.value) + "), ";
-          break;
-
-        case urs_wearable::Predicate::TYPE_HOVERED:
-          pred_string += urs_wearable::PredicateHovered::NAME
-                      + "(" + std::to_string(pred.hovered.d.value) + "), ";
-          break;
-
-        case urs_wearable::Predicate::TYPE_IN:
-          pred_string += urs_wearable::PredicateIn::NAME
-                      + "(" + std::to_string(pred.in.l.value) + "," + std::to_string(pred.in.a.value) + "), ";
-          break;
-
-        case urs_wearable::Predicate::TYPE_LOW_BATTERY:
-          pred_string += urs_wearable::PredicateLowBattery::NAME
-                      + "(" + std::to_string(pred.low_battery.d.value) + "), ";
-          break;
-
-        case urs_wearable::Predicate::TYPE_SCANNED:
-          pred_string += urs_wearable::PredicateScanned::NAME
-                      + "(" + std::to_string(pred.scanned.d.value) + "," + std::to_string(pred.scanned.a.value) + "), ";
-          break;
-
-        default:
-          ros_error("getPredicateString(): Unrecognized predicate type");
-      }
-    }
-  }
-
-  if (pred_string.size() > 1)
-  {
-    pred_string.pop_back();   // Remove a trailing space
-    pred_string.pop_back();   // Remove a comma
-  }
-
-  return pred_string;
 }

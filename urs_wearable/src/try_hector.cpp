@@ -1,7 +1,7 @@
-#include <ros/ros.h>
 #include <actionlib/client/simple_action_client.h>
-#include <hector_uav_msgs/EnableMotors.h>
+#include <ros/ros.h>
 
+#include <hector_uav_msgs/EnableMotors.h>
 #include <hector_uav_msgs/LandingAction.h>
 #include <hector_uav_msgs/PoseAction.h>
 #include <hector_uav_msgs/TakeoffAction.h>

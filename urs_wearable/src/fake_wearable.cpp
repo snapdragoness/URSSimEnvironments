@@ -1,11 +1,11 @@
 #include <vector>
 
 #include <ros/ros.h>
-#include <geometry_msgs/Pose.h>
-#include <std_msgs/String.h>
 
 #include "urs_wearable/common.h"
 
+#include <geometry_msgs/Pose.h>
+#include <std_msgs/String.h>
 #include <urs_wearable/AddArea.h>
 #include <urs_wearable/AddLocation.h>
 #include <urs_wearable/Feedback.h>
@@ -24,7 +24,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "fake_wearable");
   ros::NodeHandle nh;
 
-  ros::Subscriber feedback_sub = nh.subscribe("/urs_wearable/feedback", 1, feedbackCB);
+  ros::Subscriber feedback_sub = nh.subscribe("/urs_wearable/feedback", 100, feedbackCB);
   ros::ServiceClient add_location_client = nh.serviceClient<urs_wearable::AddLocation>("/urs_wearable/add_location");
   ros::ServiceClient add_area_client = nh.serviceClient<urs_wearable::AddArea>("/urs_wearable/add_area");
 
@@ -95,6 +95,12 @@ int main(int argc, char **argv)
   pred.scanned.a.value = area_ids[0];
   set_goal_srv.request.goal.push_back(pred);
 
+  if (!ros::service::call(SET_GOAL_SERVICE_NAME, set_goal_srv))
+  {
+    ros_error("Error in calling " + SET_GOAL_SERVICE_NAME);
+  }
+
+  ros::Duration(1.0).sleep();
   if (!ros::service::call(SET_GOAL_SERVICE_NAME, set_goal_srv))
   {
     ros_error("Error in calling " + SET_GOAL_SERVICE_NAME);
