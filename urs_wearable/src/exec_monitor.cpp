@@ -2,6 +2,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <utility>
 
 #include <actionlib/client/simple_action_client.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -36,8 +37,7 @@ std::mutex g_feedback_pub_mutex_;
 std::string g_uav_ns;
 int g_uav_total;
 
-std::vector<int> g_battery_level;
-std::vector<bool> g_emergency_landed;
+std::vector<std::pair<int, bool>> g_drone_battery;
 
 int g_unity_drone_id_index = -1;
 int g_unity_battery_value_index = -1;
@@ -888,17 +888,27 @@ void batteryCB(const std_msgs::StringConstPtr& s)
     int battery_value = std::stoi(tokens[g_unity_battery_value_index]);
 
     // Update the KB and land the drone if its battery value is less than a specified value
-    if (battery_value < 10 && !g_emergency_landed[drone_id])
+    if (battery_value < 10 && !g_drone_battery[drone_id].second)
     {
-      g_emergency_landed[drone_id] = true;
+      g_drone_battery[drone_id].second = true;
 
       std::thread land_thread(land, drone_id);
       land_thread.detach();
     }
-
-    if (g_battery_level[drone_id] != battery_value)
+    else if (battery_value >= 10 && g_drone_battery[drone_id].second)
     {
-      g_battery_level[drone_id] = battery_value;
+      g_drone_battery[drone_id].second = false;
+
+      urs_wearable::Predicate pred;
+      pred.type = urs_wearable::Predicate::TYPE_LOW_BATTERY;
+      pred.truth_value = false;
+      pred.low_battery.d.value = drone_id;
+      g_kb.upsertPredicates(0, std::vector<urs_wearable::Predicate>{pred});
+    }
+
+    if (battery_value != g_drone_battery[drone_id].first)
+    {
+      g_drone_battery[drone_id].first = battery_value;
 
       // Log the change of battery level
       ROS_INFO_STREAM("Battery" << std::endl
@@ -951,8 +961,7 @@ int main(int argc, char **argv)
   pred_low_battery.type = urs_wearable::Predicate::TYPE_LOW_BATTERY;
   pred_low_battery.truth_value = false;
 
-  g_battery_level.reserve(g_uav_total);
-  g_emergency_landed.reserve(g_uav_total);
+  g_drone_battery.reserve(g_uav_total);
 
   for (int i = 0; i < g_uav_total; i++)
   {
@@ -970,8 +979,7 @@ int main(int argc, char **argv)
     initial_state.push_back(pred_low_battery);
 
     // Set battery level vector to be used for logging purpose
-    g_battery_level.push_back(-1);
-    g_emergency_landed.push_back(false);
+    g_drone_battery.push_back(std::make_pair(100, false));
   }
   g_kb.upsertPredicates(0, initial_state);
 
