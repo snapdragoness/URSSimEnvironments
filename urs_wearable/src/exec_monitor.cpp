@@ -400,15 +400,6 @@ void planAndExecute(KnowledgeBase::executor_id_type executor_id, const std::vect
   std::vector<std::string> plan;
   g_kb.plan(executor_id, goals, plan);
 
-  // Print plan
-  std::string s = "p" + std::to_string(executor_id) + ": plan = ";
-  for (const auto& action : plan)
-  {
-    s += action + " ";
-  }
-  s.pop_back();
-  ros_warn(s);
-
   if (plan.empty())
   {
     g_kb.unregisterExecutor(executor_id);
@@ -420,6 +411,14 @@ void planAndExecute(KnowledgeBase::executor_id_type executor_id, const std::vect
   }
   else
   {
+    std::string s = "p" + std::to_string(executor_id) + ": Plan = ";
+    for (const auto& action : plan)
+    {
+      s += action + " ";
+    }
+    s.pop_back();
+    ros_warn(s);
+
     execute(executor_id);
   }
 }

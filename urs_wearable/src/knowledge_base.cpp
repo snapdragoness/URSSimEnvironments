@@ -209,42 +209,32 @@ std::vector<std::string> KnowledgeBase::parseFF(std::string s)
   std::string line;
   while (std::getline(f, line))
   {
-    std::vector<std::string> tokens;
-    boost::char_separator<char> sep {" "};
-    boost::tokenizer<boost::char_separator<char>> tok{line, sep};
-    for (const auto& t : tok)
-    {
-      tokens.push_back((std::string)t);
-    }
-
+    std::vector<std::string> tokens(tokenizeString(line, " "));
     if (tokens.size() > 0 && tokens[0] == "step")
     {
-      bool first_step = true;
+      if (tokens.size() == 1)
+      {
+        break;    // empty plan
+      }
+
+      int start_token_index = 2;
       do
       {
-        boost::algorithm::to_lower(line); // modifies string in-place
-
-        std::vector<std::string> tokens;
-        boost::tokenizer<boost::char_separator<char>> tok{line, sep};
-        for (const auto& t : tok)
-        {
-          tokens.push_back((std::string)t);
-        }
-
+        std::vector<std::string> tokens(tokenizeString(line, " "));
         if (tokens.empty())
         {
           break;
         }
 
-        int start_token_index = (first_step)? 2 : 1;
         std::string plan_step(tokens[start_token_index++]);
         while (start_token_index < tokens.size())
         {
           plan_step += " " + tokens[start_token_index++];
         }
 
+        boost::algorithm::to_lower(plan_step);    // modifies string in-place
         plan.push_back(plan_step);
-        first_step = false;
+        start_token_index = 1;
       } while (std::getline(f, line));
 
       break;
