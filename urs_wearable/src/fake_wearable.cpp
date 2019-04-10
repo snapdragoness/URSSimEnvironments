@@ -24,21 +24,10 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "fake_wearable");
   ros::NodeHandle nh;
 
+  ros::Publisher battery_pub = nh.advertise<std_msgs::String>("/w_battery_value", 1);
   ros::Subscriber feedback_sub = nh.subscribe("/urs_wearable/feedback", 100, feedbackCB);
   ros::ServiceClient add_location_client = nh.serviceClient<urs_wearable::AddLocation>("/urs_wearable/add_location");
   ros::ServiceClient add_area_client = nh.serviceClient<urs_wearable::AddArea>("/urs_wearable/add_area");
-
-//  ros::Publisher battery_pub = nh.advertise<std_msgs::String>("/w_battery_value", 1);
-//  ros::Rate r(1);
-//  while (ros::ok())
-//  {
-//    std_msgs::String s;
-//    s.data = " {'longitude':0.0,'latitude':0.0,'player_id':0,'building_number':0,'drone_clue_value':0,'drone_id':3,'battery_value':100}";
-//    battery_pub.publish(s);
-//
-//    ros::spinOnce();
-//    r.sleep();
-//  }
 
   std::vector<std::uint8_t> loc_ids;
   urs_wearable::AddLocation add_location_srv;
@@ -86,6 +75,7 @@ int main(int argc, char **argv)
   pred.at.l.value = loc_ids[0];
   set_goal_srv.request.goal.push_back(pred);
 
+  pred.type = urs_wearable::Predicate::TYPE_AT;
   pred.at.d.value = 1;
   pred.at.l.value = loc_ids[1];
   set_goal_srv.request.goal.push_back(pred);
@@ -100,10 +90,22 @@ int main(int argc, char **argv)
     ros_error("Error in calling " + SET_GOAL_SERVICE_NAME);
   }
 
-  ros::Duration(1.0).sleep();
-  if (!ros::service::call(SET_GOAL_SERVICE_NAME, set_goal_srv))
+  int battery_level = 100;
+  while (ros::ok() && battery_level >= 0)
   {
-    ros_error("Error in calling " + SET_GOAL_SERVICE_NAME);
+    std_msgs::String s;
+    s.data = " {'longitude':0.0,'latitude':0.0,'player_id':0,'building_number':0,'drone_clue_value':0,'drone_id':0,'battery_value':"
+             + std::to_string(battery_level) + "}";
+    battery_pub.publish(s);
+    ros::Duration(0.1).sleep();
+
+    s.data = " {'longitude':0.0,'latitude':0.0,'player_id':0,'building_number':0,'drone_clue_value':0,'drone_id':2,'battery_value':"
+             + std::to_string(battery_level) + "}";
+    battery_pub.publish(s);
+    ros::Duration(0.1).sleep();
+
+    battery_level--;
+    ros::spinOnce();
   }
 
   ros::spin();

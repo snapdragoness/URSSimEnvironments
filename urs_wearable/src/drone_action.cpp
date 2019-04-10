@@ -14,6 +14,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <hector_uav_msgs/EnableMotors.h>
 #include <sensor_msgs/Range.h>
+#include <sensor_msgs/LaserScan.h>
 #include <std_srvs/Empty.h>
 #include <urs_wearable/AddDroneGoal.h>
 #include <urs_wearable/DroneAction.h>
@@ -48,6 +49,8 @@ class DroneActionServer
   geometry_msgs::Pose pose_;
   std::mutex pose_mutex_;
 
+  ros::Subscriber laser_scan_sub_;
+
   ros::Subscriber sonar_height_sub_;
   std::atomic<float> sonar_height_;
 
@@ -68,6 +71,7 @@ public:
     remove_drone_goal_service_ = nh.advertiseService("remove_drone_goal", &DroneActionServer::removeDroneGoalService, this);
 
     pose_sub_ = nh.subscribe("ground_truth_to_tf/pose", 10, &DroneActionServer::poseCb, this);
+    laser_scan_sub_ = nh.subscribe("scan", 1, &DroneActionServer::laserScanCB, this);
     sonar_height_sub_ = nh.subscribe("sonar_height", 1, &DroneActionServer::sonarHeightCb, this);
 
     as_.start();
@@ -164,11 +168,9 @@ public:
       std::lock_guard<std::mutex> lock(drone_goal_queue_mutex_);
       drone_goal_queue_.clear();
       drone_goal_queue_.insert(drone_goal_queue_.end(), req.drone_goals.begin(), req.drone_goals.end());
-
-      return true;
     }
 
-    return false;
+    return true;
   }
 
   bool clearDroneGoalService(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
@@ -206,6 +208,16 @@ public:
   {
     std::lock_guard<std::mutex> lock(pose_mutex_);
     pose_ = pose_stamped->pose;
+  }
+
+  void laserScanCB(const sensor_msgs::LaserScanConstPtr& msg)
+  {
+    float center = msg->ranges[540];
+    if (center >= msg->range_min
+      && center <= msg->range_max)
+    {
+      // TODO
+    }
   }
 
   void sonarHeightCb(const sensor_msgs::RangeConstPtr& msg)

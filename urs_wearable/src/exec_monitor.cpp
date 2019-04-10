@@ -819,15 +819,16 @@ bool removeLocationService(urs_wearable::RemoveLocation::Request& req, urs_weara
 
 bool setGoalService(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::Response& res)
 {
-  res.executor_id = g_kb.registerExecutor();
-  std::thread plan_and_execute_thread(planAndExecute, res.executor_id, std::move(req.goal));
-  plan_and_execute_thread.detach();
-
   // Log the request
   ROS_INFO_STREAM("Received a set_goal request" << std::endl
                   << "player_id: " << std::to_string(req.player_id) << std::endl
                   << "goal: " << KnowledgeBase::getPredicateString(req.goal) << std::endl
                   << "(returned) executor_id: " << std::to_string(res.executor_id));
+
+  res.executor_id = g_kb.registerExecutor();
+  std::thread plan_and_execute_thread(planAndExecute, res.executor_id, std::move(req.goal));
+  plan_and_execute_thread.detach();
+
   return true;
 }
 
@@ -849,18 +850,13 @@ void land(drone_id_type drone_id)
   goal.action_type = urs_wearable::DroneGoal::TYPE_LAND;
   ac.sendGoal(goal);
 
-  double landing_duration = 10.0;
-  ac.waitForResult(ros::Duration(landing_duration));
+  ac.waitForResult();
   if (ac.getState().state_ == actionlib::SimpleClientGoalState::SUCCEEDED)
   {
     pred.type = urs_wearable::Predicate::TYPE_HOVERED;
     pred.truth_value = false;
     pred.hovered.d.value = drone_id;
     g_kb.upsertPredicates(0, std::vector<urs_wearable::Predicate>{pred});
-  }
-  else
-  {
-    ros_error("Drone " + std::to_string(drone_id) + " has not emergency landed within " + std::to_string(landing_duration) + " seconds");
   }
 }
 
