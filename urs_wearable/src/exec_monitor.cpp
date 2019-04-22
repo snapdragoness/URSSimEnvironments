@@ -5,13 +5,13 @@
 #include <utility>
 
 #include <actionlib/client/simple_action_client.h>
-#include <geometry_msgs/PoseStamped.h>
 #include <libcuckoo/cuckoohash_map.hh>
 #include <ros/ros.h>
 
 #include "urs_wearable/common.h"
 #include "urs_wearable/knowledge_base.h"
 
+#include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/String.h>
 #include <std_srvs/Empty.h>
 #include <urs_wearable/Action.h>
@@ -859,6 +859,11 @@ void land(drone_id_type drone_id)
   }
 }
 
+void gameScoreCB(const std_msgs::StringConstPtr& s)
+{
+  ros_info(s->data);
+}
+
 void batteryCB(const std_msgs::StringConstPtr& s)
 {
   std::vector<std::string> tokens = tokenizeString(s->data, " {':,}");
@@ -979,7 +984,8 @@ int main(int argc, char **argv)
   g_kb.upsertPredicates(0, initial_state);
 
   // Subscribe to topics
-  ros::Subscriber battery_subscribe = nh.subscribe("/w_battery_value", 1, batteryCB);
+  ros::Subscriber battery_sub = nh.subscribe("/w_battery_value", 1, batteryCB);
+  ros::Subscriber game_score_sub = nh.subscribe("/game_score", 1, gameScoreCB);
 
   // Advertise services
   ros::ServiceServer add_area_service = nh.advertiseService("urs_wearable/add_area", addAreaService);
