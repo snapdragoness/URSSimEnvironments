@@ -1,0 +1,8 @@
+
+
+
+
+
+1- The player need to know when the drone is landed by the system. There is no feedback message if the drone landed by the system (drone battery < 10%).
+
+2- In some sistuations, if the drone is landed by the system more than once, the battery will not be charged. 
