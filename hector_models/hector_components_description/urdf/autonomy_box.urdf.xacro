@@ -5,16 +5,17 @@
   <xacro:include filename="$(find hector_sensors_description)/urdf/generic_camera.urdf.xacro" />
   <xacro:include filename="$(find hector_components_description)/urdf/vlp16_mount.urdf.xacro.xml"/>
   <xacro:include filename="$(find hector_sensors_description)/urdf/camera360.urdf.xacro"/>
+  <xacro:include filename="$(find hector_sensors_description)/urdf/realsense_t265.urdf.xacro"/>
   
   
 <!--  <xacro:arg name="add_self_filter_geom" default="0"/>-->
   <!--<xacro:property name="add_self_filter_geom" value="${arg add_self_filter_geom}"/>-->
   
   <xacro:property name="alu_profile_side_length" value="0.02"/>
-  <xacro:property name="computer_box_height" value="0.121"/>
+  <xacro:property name="computer_box_height" value="0.119"/>
   <xacro:property name="computer_box_width" value="0.19"/>
   <xacro:property name="computer_box_length" value="0.19"/>
-  <xacro:property name="top_protection_bottom" value="0.4425"/>
+  <xacro:property name="top_protection_bottom" value="${computer_box_height + 0.32}"/>
   
   <xacro:property name="insta360_mounting_height" value="${top_protection_bottom + alu_profile_side_length + 0.12}"/>
   <xacro:property name="insta360_radius" value="0.011"/>
@@ -23,6 +24,9 @@
   <xacro:property name="M_PI" value="3.14159265359"/>
   
   <xacro:macro name="autonomy_box_macro" params="parent *origin alu_profile_collision_size_factor name:='autonomy_box' imu_link='imu_link' add_chilitags:='true'">
+    
+    <xacro:arg name="add_containment_self_filter_geom" default="false"/>
+    <xacro:arg name="add_manipulation_geom" default="false"/>
     
     <xacro:if value="${add_chilitags}">
       <xacro:include filename="$(find hector_chilitag_description)/urdf/chilitag.urdf.xacro"/>
@@ -33,9 +37,7 @@
       <xacro:property name="chilitag_29_y" value="${-computer_box_width/2 + 2*chilitag_white_border + chilitag_size/2}"/>
       <xacro:property name="chilitag_29_z" value="${top_protection_bottom + alu_profile_side_length + chilitag_thickness}"/>
     </xacro:if>
-    
-    <xacro:arg name="add_containment_self_filter_geom" default="false"/>
-    
+        
     <joint name="${name}_joint" type="fixed">
       <xacro:insert_block name="origin"/>
       <parent link="${parent}" />
@@ -271,6 +273,19 @@
           <color rgba="0.5 0.5 0.5 1"/>
         </material> 
       </collision>
+      
+      <xacro:if value="$(arg add_manipulation_geom)">
+        <!-- Lidar protection geom -->
+        <collision>
+          <origin xyz="0 0 ${computer_box_height + 0.5*(top_protection_bottom - computer_box_height)}" rpy="0 0 0"/>
+          <geometry>
+            <cylinder length="${top_protection_bottom - computer_box_height}" radius="${computer_box_width / 2.0}"/>
+          </geometry>
+          <material name="Grey">
+            <color rgba="0.5 0.5 0.5 1"/>
+          </material> 
+        </collision>
+      </xacro:if>
       </xacro:unless>
       
       
@@ -316,7 +331,7 @@
     
     <!-- Spinning VLP16 -->
     <xacro:spinning_sensor_mount_macro parent="${name}_link"  name="spin_lidar" scaling="0.001">
-      <origin xyz="0 0 ${0.27 + 0.0944673 - 0.029}" rpy="0.0 0.0 0.0"/>
+      <origin xyz="0 0 0.34708" rpy="0.0 0.0 0.0"/>
     </xacro:spinning_sensor_mount_macro>
       
     <!-- 360 camera -->
@@ -326,6 +341,28 @@
       <!--<origin xyz="0.00009742  0.00061696 -0.03850784" rpy="3.1373499 -0.0021358 -3.1279404"/>--> <!-- insta #1 -->
       <origin xyz="0.002862424041614364  -0.00013127655875068252 -0.03724378451297336" rpy="-3.1402707 0.0036289 -3.1175768"/> <!-- insta #3 -->
     </xacro:camera360>
+    
+    <!-- Realsense T265 Tracking camera -->
+    <xacro:realsense_t265_tracking_camera name="tracking_camera" parent="${name}_link">
+      <origin xyz="${computer_box_width/2.0 - realsense_t265_depth/2.0} ${computer_box_width/2.0 - alu_profile_side_length - realsense_t265_width/2.0} ${top_protection_bottom - realsense_t265_height/2.0}" rpy="0 0 0"/>
+    </xacro:realsense_t265_tracking_camera>
+
+    <!-- +++++ Cage Realsenses +++++ -->
+    <xacro:property name="autonomy_box_realsense_x_offset" value="0.07187"/>
+    <xacro:property name="autonomy_box_realsense_y_offset" value="0.03"/>
+    <xacro:property name="autonomy_box_realsense_z_offset" value="0.00395"/>
+<!--     <xacro:property name="autonomy_box_realsense_z_offset" value="0.46895"/> -->
+    <xacro:property name="autonomy_box_realsense_pitch" value="${25*M_PI/180.0}"/>
+    
+    <!-- Realsense D435 front -->
+    <xacro:realsense_d435_camera_with_mount_comprehensive_params name="front_rgbd_cam" parent="${name}_link" image_topic="image_rect_color" depth_points_topic="depth/color/points" min_range="0.3" max_range="9.0" update_rate="20">
+      <origin xyz="${autonomy_box_realsense_x_offset} ${-1 * autonomy_box_realsense_y_offset} ${top_protection_bottom + alu_profile_side_length + autonomy_box_realsense_z_offset}" rpy="0.0 ${autonomy_box_realsense_pitch} 0"/>
+    </xacro:realsense_d435_camera_with_mount_comprehensive_params>
+    
+    <!-- Realsense D435 back -->
+    <xacro:realsense_d435_camera_with_mount_comprehensive_params name="back_rgbd_cam" parent="${name}_link" image_topic="image_rect_color" depth_points_topic="depth/color/points" min_range="0.3" max_range="9.0" update_rate="20">
+      <origin xyz="${-1 * autonomy_box_realsense_x_offset} ${autonomy_box_realsense_y_offset} ${top_protection_bottom + alu_profile_side_length + autonomy_box_realsense_z_offset}" rpy="0.0 ${autonomy_box_realsense_pitch} ${M_PI}"/>
+    </xacro:realsense_d435_camera_with_mount_comprehensive_params>
     
     <gazebo reference="${name}_link">
       <visual>
