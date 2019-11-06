@@ -856,6 +856,17 @@ void land(drone_id_type drone_id)
     pred.truth_value = false;
     pred.hovered.d.value = drone_id;
     g_kb.upsertPredicates(0, std::vector<urs_wearable::Predicate>{pred});
+
+    urs_wearable::Action action;
+    action.land.d.value = drone_id;
+    action.type = urs_wearable::Action::TYPE_LAND;
+    urs_wearable::Feedback feedback;
+    feedback.executor_id = 0;
+    feedback.current_action = std::move(action);
+    feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
+    feedback.message = "Drone " + std::to_string(drone_id) + " has been emergency landed";
+    std::lock_guard<std::mutex> lock(g_feedback_pub_mutex_);
+    g_feedback_pub.publish(feedback);
   }
 }
 
