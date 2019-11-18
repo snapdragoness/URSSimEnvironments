@@ -386,7 +386,7 @@ void execute(KnowledgeBase::executor_id_type executor_id)
   });
 }
 
-void planAndExecute(KnowledgeBase::executor_id_type executor_id, const std::vector<urs_wearable::Predicate> goals)
+void planAndExecute(KnowledgeBase::executor_id_type executor_id, const std::vector<urs_wearable::Predicate>& goals)
 {
   ros_warn("p" + std::to_string(executor_id) + ": PENDING");
   urs_wearable::Feedback feedback;
@@ -818,16 +818,15 @@ bool removeLocationService(urs_wearable::RemoveLocation::Request& req, urs_weara
 
 bool setGoalService(urs_wearable::SetGoal::Request& req, urs_wearable::SetGoal::Response& res)
 {
+  res.executor_id = g_kb.registerExecutor();
+  std::thread plan_and_execute_thread(planAndExecute, res.executor_id, req.goal);
+  plan_and_execute_thread.detach();
+
   // Log the request
   ROS_INFO_STREAM("Received a set_goal request" << std::endl
                   << "player_id: " << std::to_string(req.player_id) << std::endl
                   << "goal: " << KnowledgeBase::getPredicateString(req.goal) << std::endl
                   << "(returned) executor_id: " << std::to_string(res.executor_id));
-
-  res.executor_id = g_kb.registerExecutor();
-  std::thread plan_and_execute_thread(planAndExecute, res.executor_id, std::move(req.goal));
-  plan_and_execute_thread.detach();
-
   return true;
 }
 
@@ -857,12 +856,10 @@ void land(drone_id_type drone_id)
     pred.hovered.d.value = drone_id;
     g_kb.upsertPredicates(0, std::vector<urs_wearable::Predicate>{pred});
 
-    urs_wearable::Action action;
-    action.land.d.value = drone_id;
-    action.type = urs_wearable::Action::TYPE_LAND;
     urs_wearable::Feedback feedback;
     feedback.executor_id = 0;
-    feedback.current_action = std::move(action);
+    feedback.current_action.type = urs_wearable::Action::TYPE_LAND;
+    feedback.current_action.land.d.value = drone_id;
     feedback.status = urs_wearable::Feedback::STATUS_SUCCEEDED;
     feedback.message = "Drone " + std::to_string(drone_id) + " has been emergency landed";
     std::lock_guard<std::mutex> lock(g_feedback_pub_mutex_);

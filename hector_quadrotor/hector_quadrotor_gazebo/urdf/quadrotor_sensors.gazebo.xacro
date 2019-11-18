@@ -1,9 +1,6 @@
 <?xml version="1.0"?>
 
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <!-- Arguments for GPS Sim -->
-  <xacro:arg name="reference_latitude" default="49.860246" />
-  <xacro:arg name="reference_longitude" default="8.687077" />
 
   <!-- Quadrotor Sensor Plugins -->
   <xacro:macro name="quadrotor_sensors">
@@ -48,8 +45,8 @@
             <frameId>$(arg base_link_frame)</frameId>
             <topicName>fix</topicName>
             <velocityTopicName>fix_velocity</velocityTopicName>
-            <referenceLatitude>$(arg reference_latitude)</referenceLatitude>
-            <referenceLongitude>$(arg reference_longitude)</referenceLongitude>
+            <referenceLatitude>49.860246</referenceLatitude>
+            <referenceLongitude>8.687077</referenceLongitude>
             <drift>5.0 5.0 5.0</drift>
             <gaussianNoise>0.01 0.01 0.01</gaussianNoise>
             <velocityDrift>0 0 0</velocityDrift>

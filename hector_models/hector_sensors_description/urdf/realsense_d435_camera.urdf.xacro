@@ -11,7 +11,7 @@ Note:
   
 -->
 
-<robot xmlns:xacro="http://ros.org/wiki/xacro">
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
   <xacro:property name="M_PI" value="3.1415926535897931" />
 
   <xacro:property name="realsense_d435_width" value="0.09"/>
@@ -44,21 +44,12 @@ Note:
           <origin xyz="0 0 0" rpy="0 0 0" />
           <inertia ixx="5.8083e-4" ixy="0" ixz="0" iyy="3.0833e-5" iyz="0" izz="5.9083e-4" />
         </inertial>
-        <visual>
-          <origin xyz="${realsense_d435_case_offset_x} ${realsense_d435_case_offset_y} ${realsense_d435_case_offset_z}" rpy="0 0 0" />
-          <geometry>
-            <box size="${realsense_d435_depth} ${realsense_d435_width} ${realsense_d435_height}" />
-          </geometry>
-          <material name="DarkGrey">
-            <color rgba="0.3 0.3 0.3 1"/>
-          </material>    
-        </visual>
-<!--        <visual>
+	<visual>
           <origin xyz="${realsense_d435_front_to_depth} ${realsense_d435_case_offset_y} 0.0" rpy="${M_PI/2} 0 ${M_PI/2}" />
           <geometry>
-            <mesh filename="package://realsense2_camera/meshes/d435.dae" />
+            <mesh filename="package://hector_sensors_description/meshes/intel_realsense_d435/D435.dae" scale="0.001 0.001 0.001" />
           </geometry>  
-        </visual>-->
+        </visual>
         <collision>
           <origin xyz="${realsense_d435_case_offset_x} ${realsense_d435_case_offset_y} ${realsense_d435_case_offset_z}" rpy="0 0 0" />
           <geometry>
@@ -141,12 +132,24 @@ Note:
       
     <!--
       Use the macro below for adding the realsense model with link geometry
+      The origin is the left infrared (depth) camera, which is also the origin of the depth image
     -->
     <xacro:macro name="realsense_d435_camera" params="name parent *origin">
       <xacro:realsense_d435_camera_model name="${name}" parent="${parent}">
         <xacro:insert_block name="origin" />
       </xacro:realsense_d435_camera_model>
   
+      <xacro:realsense_d435_camera_gazebo_plugin_macro name="${name}" parent="${parent}" image_topic="image_raw" depth_points_topic="depth/points" min_range="0.3" max_range="9.0" update_rate="20"/>
+    </xacro:macro>
+    
+    <!--
+      Insert the realsense with link geometry. Origin is the mounting hole at the back of the camera.
+    -->
+    <xacro:macro name="realsense_d435_camera_with_mount" params="name parent *origin">
+      <xacro:realsense_d435_camera_model_with_mount name="${name}" parent="${parent}">
+        <xacro:insert_block name="origin" />
+      </xacro:realsense_d435_camera_model_with_mount>
+      
       <xacro:realsense_d435_camera_gazebo_plugin_macro name="${name}" parent="${parent}" image_topic="image_raw" depth_points_topic="depth/points" min_range="0.3" max_range="9.0" update_rate="20"/>
     </xacro:macro>
     
